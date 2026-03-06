@@ -259,21 +259,21 @@ def plot_pca_yspace(
 
     # All storms — gray open circles
     ax.scatter(Y_r_full[:, 0], Y_r_full[:, 1],
-               s=15, facecolors="none", edgecolors="gray", linewidths=0.5,
+               s=30, facecolors="none", edgecolors="gray", linewidths=0.8,
                zorder=1)
 
     # Forced / pre-selected — blue open circles
     if forced_indices is not None and len(forced_indices) > 0:
         Y_forced = Y_r_full[forced_indices]
         ax.scatter(Y_forced[:, 0], Y_forced[:, 1],
-                   s=40, facecolors="none", edgecolors="#1565C0", linewidths=0.8,
+                   s=30, facecolors="none", edgecolors="#1565C0", linewidths=0.8,
                    zorder=2)
 
     # Newly selected — red open circles
     if new_indices is not None and len(new_indices) > 0:
         Y_new = Y_r_full[new_indices]
         ax.scatter(Y_new[:, 0], Y_new[:, 1],
-                   s=40, facecolors="none", edgecolors="#C62828", linewidths=0.8,
+                   s=30, facecolors="none", edgecolors="#C62828", linewidths=0.8,
                    zorder=3)
 
     ax.set(xlabel="PC 1", ylabel="PC 2")
