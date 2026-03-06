@@ -1,7 +1,7 @@
 """
 backend/orch/python/workflows/growth_evaluation.py
 ====================================================
-Mode 2 — Iterative growth loop with DSW and hazard-curve evaluation.
+RTCS Selection (optimal k) — Iterative growth loop with DSW and hazard-curve evaluation.
 
 Sweeps subset size from k_initial to k_max (step k_step).  At each k:
   - selects a k-medoid subset from the joint parameter/response space
@@ -38,7 +38,7 @@ from config.defaults import RTCS_SELECTION_DEFAULTS
 
 def run_growth_evaluation(cfg: Optional[dict] = None):
     """
-    Mode 2 — Iterative growth loop with HC evaluation.
+    RTCS Selection (optimal k) — Iterative growth loop with HC evaluation.
 
     Returns
     -------
@@ -55,7 +55,7 @@ def run_growth_evaluation(cfg: Optional[dict] = None):
     np.random.seed(cfg["random_seed"])
 
     print(f"\n{'='*60}")
-    print(f"  Mode 2 — Growth Loop  "
+    print(f"  RTCS Selection (optimal k) — Growth Loop  "
           f"(k {cfg['k_initial']} → {cfg['k_max']}, step {cfg['k_step']})")
     print(f"{'='*60}")
 
@@ -77,7 +77,7 @@ def run_growth_evaluation(cfg: Optional[dict] = None):
               f"→ {cfg['k_max'] - len(forced)} additional)")
     if HC_bench is None:
         raise ValueError(
-            "HC_bench is required for Mode 2.  "
+            "HC_bench is required for RTCS Selection (optimal k).  "
             "Set HC_source in the preprocessor config and re-run preprocess.py.")
 
     tbl_aer   = cfg["TBL_AER"]

@@ -1,8 +1,9 @@
 """
-cli/run_growth_evaluation.py
-==============================
-Mode 2 — Sweep subset size from k_initial to k_max, computing DSW weights
-and reconstructing hazard curves at each step.  Quantifies bias relative
+cli/run_rtcs_optimal.py
+========================
+RTCS Selection (optimal k) — Sweep subset size from k_initial to k_max,
+computing DSW weights and reconstructing hazard curves at each step to find
+the optimal number of storms.  Quantifies bias relative
 to benchmark HCs at the full AER table and at reporting return periods.
 
 Usage

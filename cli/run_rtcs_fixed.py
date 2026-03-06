@@ -1,8 +1,9 @@
 """
-cli/run_rtcs_selection.py
-==========================
-Mode 1 — Select a Representative TC Subset (RTCS) that best fills both the
-TC parameter space (X) and the hydrodynamic response space (Y).  No growth loop.
+cli/run_rtcs_fixed.py
+======================
+RTCS Selection (fixed k) — Select a Representative TC Subset (RTCS) with a
+fixed number of storms that best fills both the TC parameter space (X) and
+the hydrodynamic response space (Y).
 
 Usage
 -----

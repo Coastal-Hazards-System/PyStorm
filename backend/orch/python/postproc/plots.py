@@ -163,7 +163,7 @@ def plot_sensitivity(sens_df, cfg, out_dir):
 
 def plot_growth_evaluation(history_df, cfg, out_dir):
     """
-    Mode 2 growth-loop diagnostic: SF metrics + global HC metrics + per-RP bias.
+    Optimal k growth-loop diagnostic: SF metrics + global HC metrics + per-RP bias.
     Layout: 2 rows x 3 cols
       Row 0: coverage | discrepancy | global RMSE
       Row 1: global bias | global uncertainty | per-RP bias
@@ -177,7 +177,7 @@ def plot_growth_evaluation(history_df, cfg, out_dir):
     RP_COLORS = ["#E91E63", "#FF5722", "#795548"]
 
     fig, axes = plt.subplots(2, 3, figsize=(16, 10))
-    fig.suptitle("Mode 2 — Growth Loop: HC Evaluation vs Subset Size k",
+    fig.suptitle("RTCS Selection (optimal k) — HC Evaluation vs Subset Size k",
                  fontsize=13, fontweight="bold")
 
     ax = axes[0, 0]

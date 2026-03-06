@@ -38,12 +38,12 @@ RTCS_SELECTION_DEFAULTS: dict = {
     # ── PCA ───────────────────────────────────────────────────────────────────
     "pca_variance_threshold": 0.95,
 
-    # ── Mode 1: subset sizing ─────────────────────────────────────────────────
+    # ── Fixed k: subset sizing ─────────────────────────────────────────────────
     # k_additional: storms to select ON TOP of any pre-selected forced storms.
     # Total medoids passed to k-medoids = len(forced) + k_additional.
     "k_additional": 100,
 
-    # ── Mode 2: growth loop ───────────────────────────────────────────────────
+    # ── Optimal k: growth loop ───────────────────────────────────────────────────
     "k_initial": 20,
     "k_max":    100,
     "k_step":     5,
@@ -80,7 +80,7 @@ RTCS_SELECTION_DEFAULTS: dict = {
         1_000_000,
     ]),
     "dry_threshold":   0.0,
-    # Return periods (years) at which to report mean nodal bias in Mode 2.
+    # Return periods (years) at which to report mean nodal bias (optimal k).
     # Maps to AER = 1/RP; nearest column in TBL_AER is used.
     "bias_report_rp":  [10, 100, 1000],
     # Minimum number of wet storms required at a node for it to contribute

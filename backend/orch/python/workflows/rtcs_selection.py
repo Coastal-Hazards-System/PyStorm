@@ -1,11 +1,11 @@
 """
 backend/orch/python/workflows/rtcs_selection.py
 =================================================
-Mode 1 — Representative TC Subset (RTCS) selection.
+RTCS Selection (fixed k) — Representative TC Subset selection.
 
-Selects a fixed k_select storms that best covers both the TC parameter
+Selects a fixed number of storms that best covers both the TC parameter
 space (X) and the hydrodynamic response space (Y) using PCA + k-medoids
-on a weighted joint matrix.  No growth loop, no DSW, no HC evaluation.
+on a weighted joint matrix.
 
 Public API
 ----------
@@ -164,7 +164,7 @@ def _splom(X, x_cols, forced, new_indices, cfg, out_dir, filename):
 
 def run_rtcs_selection(cfg: Optional[dict] = None):
     """
-    Mode 1 — Select a fixed-size Representative TC Subset (RTCS).
+    RTCS Selection (fixed k) — Select a fixed-size Representative TC Subset.
 
     Returns
     -------
@@ -200,11 +200,11 @@ def run_rtcs_selection(cfg: Optional[dict] = None):
 
     print(f"\n{'='*60}")
     if forced is not None:
-        print(f"  Mode 1 — Space-Filling Subset Selection")
+        print(f"  RTCS Selection (fixed k)")
         print(f"  Pre-selected : {len(forced)}  +  additional : {n_additional}"
               f"  =  total k : {k}")
     else:
-        print(f"  Mode 1 — Space-Filling Subset Selection  (k = {k})")
+        print(f"  RTCS Selection (fixed k = {k})")
     print(f"{'='*60}")
 
     # 1b. Initial SPLOM  (all storms + pre-selected; no newly selected yet)
