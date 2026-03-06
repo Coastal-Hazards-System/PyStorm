@@ -60,6 +60,14 @@ RTCS_SELECTION_DEFAULTS: dict = {
     "alpha_default": 10.0,
     "beta_default":  0.1,
 
+    # Alpha/beta grid for DSW-based optimization (None = skip, use defaults)
+    "alpha_beta_grid": [
+        (0.1, 1.0), (0.5, 1.0), (1.0, 1.0), (2.0, 1.0),
+        (5.0, 1.0), (10.0, 1.0), (20.0, 1.0),
+        (0.1, 0.1), (1.0, 0.1), (5.0, 0.1), (10.0, 0.1), (20.0, 0.1),
+        (0.1, 0.5), (1.0, 0.5), (5.0, 0.5), (10.0, 0.5),
+    ],
+
     # ── Sensitivity analysis ──────────────────────────────────────────────────
     "alpha_sweep":   [0.0, 0.25, 0.5, 0.75, 1.0, 1.5, 2.0, 3.0, 5.0],
     "k_sensitivity": 100,

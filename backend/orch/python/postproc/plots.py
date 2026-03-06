@@ -448,3 +448,129 @@ def plot_tc_splom(
     fpath = out_dir / filename
     plt.savefig(fpath, dpi=150, bbox_inches="tight"); plt.close()
     print(f"    Saved: {fpath}")
+
+
+# ---------------------------------------------------------------------------
+# HC comparison: benchmark vs RTCS reconstruction
+# ---------------------------------------------------------------------------
+
+def _nodal_dsw_at_node(resp, hc_node, tbl_aer, dry_thr):
+    """
+    Back-compute nodal DSWs for a single node via DRM.
+
+    Returns (surge_sorted, dsw_sorted) arrays for valid (wet, finite) storms,
+    sorted by descending surge.  Returns (None, None) if fewer than 2 valid.
+    """
+    from backend.engines.weights.dsw import _surge_to_aer
+
+    valid = (~np.isnan(resp)) & (resp > dry_thr)
+    if valid.sum() < 2:
+        return None, None
+    desc      = np.argsort(resp[valid])[::-1]
+    surge     = resp[valid][desc]
+    aer_q     = _surge_to_aer(hc_node, tbl_aer, surge)
+    if np.all(np.isnan(aer_q)):
+        return None, None
+    dsw       = np.empty_like(aer_q)
+    dsw[0]    = np.where(np.isnan(aer_q[0]), 0.0, aer_q[0])
+    dsw[1:]   = np.where(
+        np.isnan(aer_q[1:]) | np.isnan(aer_q[:-1]), 0.0, np.diff(aer_q))
+    dsw       = np.clip(dsw, 0.0, None)
+    return surge, dsw
+
+
+def _plot_hc_grid(
+    Y_sub, DSW_global, HC_bench, tbl_aer, nodes, out_dir,
+    dry_thr, filename, title, show_nodal,
+):
+    """Shared 3x3 HC comparison grid (internal)."""
+    # Palette harmonized with SPLOM / PCA plots:
+    #   gray = all/benchmark, #1565C0 = blue (nodal), #C62828 = red (global)
+    CLR_BENCH = "gray"
+    CLR_NODAL = "#1565C0"
+    CLR_GLOBAL = "#C62828"
+
+    n_nodes = len(nodes)
+    ncols = 3
+    nrows = (n_nodes + ncols - 1) // ncols
+    fig, axes = plt.subplots(nrows, ncols,
+                             figsize=(5 * ncols, 4 * nrows), squeeze=False)
+    fig.suptitle(title, fontsize=13, fontweight="bold", y=1.02)
+
+    for ax_idx, node in enumerate(nodes):
+        r, c = divmod(ax_idx, ncols)
+        ax = axes[r][c]
+
+        # 1. Benchmark: gray solid line
+        ax.plot(tbl_aer, HC_bench[node, :], "-", color=CLR_BENCH,
+                lw=1.5, label="Benchmark")
+
+        # 2. RTCS — Nodal DSW: blue dots (optional)
+        if show_nodal:
+            surge_n, dsw_n = _nodal_dsw_at_node(
+                Y_sub[:, node], HC_bench[node, :], tbl_aer, dry_thr)
+            if surge_n is not None:
+                cum_aer_n = np.cumsum(dsw_n)
+                ax.plot(cum_aer_n, surge_n, "o", color=CLR_NODAL,
+                        ms=3, label="RTCS (Nodal DSW)")
+
+        # 3. RTCS — Global DSW: red dots
+        resp = Y_sub[:, node]
+        valid = (~np.isnan(resp)) & (~np.isnan(DSW_global)) & (resp > dry_thr)
+        if valid.sum() >= 2:
+            desc      = np.argsort(resp[valid])[::-1]
+            surge_g   = resp[valid][desc]
+            cum_aer_g = np.cumsum(DSW_global[valid][desc])
+            ax.plot(cum_aer_g, surge_g, "o", color=CLR_GLOBAL,
+                    ms=3, label="RTCS (Global DSW)")
+
+        ax.set_xscale("log")
+        ax.invert_xaxis()
+        ax.set_xlabel("AER (1/yr)")
+        ax.set_ylabel("TC Response")
+        ax.set_title(f"Node {node}", fontsize=10)
+        ax.grid(alpha=0.3)
+        if ax_idx == 0:
+            ax.legend(fontsize=8)
+
+    for ax_idx in range(n_nodes, nrows * ncols):
+        r, c = divmod(ax_idx, ncols)
+        axes[r][c].set_visible(False)
+
+    plt.tight_layout()
+    fpath = Path(out_dir) / filename
+    plt.savefig(fpath, dpi=150, bbox_inches="tight"); plt.close()
+    print(f"    Saved: {fpath}")
+
+
+def plot_hc_comparison(
+    Y_sub:       np.ndarray,
+    DSW_global:  np.ndarray,
+    HC_bench:    np.ndarray,
+    tbl_aer:     np.ndarray,
+    out_dir,
+    dry_thr:     float = 0.0,
+    n_nodes:     int = 9,
+    seed:        int = 42,
+):
+    """
+    Generate two HC comparison plots (3x3 grid, same sampled nodes):
+      1. hc_comparison.png       — Benchmark (gray) + Global DSW (red)
+      2. hc_comparison_nodal.png — Benchmark (gray) + Nodal DSW (blue) + Global DSW (red)
+    """
+    out_dir = Path(out_dir)
+    m = HC_bench.shape[0]
+    n_nodes = min(n_nodes, m)
+
+    rng   = np.random.default_rng(seed)
+    nodes = sorted(rng.choice(m, size=n_nodes, replace=False).tolist())
+
+    _plot_hc_grid(Y_sub, DSW_global, HC_bench, tbl_aer, nodes, out_dir,
+                  dry_thr, "hc_comparison.png",
+                  "HC Comparison — Benchmark vs RTCS (Global DSW)",
+                  show_nodal=False)
+
+    _plot_hc_grid(Y_sub, DSW_global, HC_bench, tbl_aer, nodes, out_dir,
+                  dry_thr, "hc_comparison_nodal.png",
+                  "HC Comparison — Benchmark vs RTCS (Nodal + Global DSW)",
+                  show_nodal=True)

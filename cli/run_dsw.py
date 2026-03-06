@@ -29,7 +29,11 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+_PROJECT_ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(_PROJECT_ROOT))
+
+import os
+os.chdir(_PROJECT_ROOT)
 
 from backend.io.store import read_store
 from backend.engines.weights.dsw import (
