@@ -1,0 +1,47 @@
+# RTCS Pre-processor Configuration Template
+# ==========================================
+# Generate this file with:
+#   python scripts/preprocess.py --generate-config > preprocess.yaml
+# Then edit paths and variable names for your dataset, and run:
+#   python scripts/preprocess.py --config preprocess.yaml
+
+output_path: "tc_data.h5"
+
+# X — TC atmospheric parameters
+# Supported source formats: .mat / .csv / .npy / .npz / .txt / .h5
+X_source:       "X_parameters.mat"
+X_variable:     "X"            # variable/dataset name (required for .mat, .npz, .h5)
+X_param_names:                 # null = use CSV headers or auto X0..Xp-1
+  - lat_ref
+  - lon_ref
+  - heading
+  - delta_p
+  - rmw
+  - fts
+X_storm_id_col: null           # CSV column name for storm IDs, or null
+X_columns:      null           # list of column names/indices; null = all numeric
+X_transpose:    false          # true if raw array is [p_params x n_storms]
+
+# Y — ADCIRC peak surge fields
+Y_source:       "Y_surges.mat"
+Y_variable:     "eta_max"
+Y_node_ids:     null
+Y_units:        "m NAVD88"
+Y_transpose:    false          # true if raw array is [m_nodes x n_storms]
+
+# HC — Benchmark hazard curves (set HC_source to null to omit /HC entirely)
+HC_source:      "HC_benchmark.mat"
+HC_variable:    "HC_bench"
+HC_units:       "m NAVD88"
+HC_transpose:   false          # true if raw array is [N_AER x m_nodes]
+HC_aer_levels:  null           # null = default 22-level table
+# HC_aer_levels:
+#   - 10.0
+#   - 5.0
+#   - 2.0
+#   - 1.0
+#   - 0.5
+#   - 0.2
+#   - 0.1
+
+validate: true
