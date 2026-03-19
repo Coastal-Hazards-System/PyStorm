@@ -35,7 +35,7 @@ CONFIG = {
     "output_path": str(_ROOT / "data/processed/tc_data.h5"),
 
     # X — TC atmospheric parameters
-    "X_source":       str(_ROOT / "data/raw/LPV/CHS-LA_ITCS_Param_MasterTable.mat"),
+    "X_source":       str(_ROOT / "data/raw/lpv/CHS-LA_ITCS_Param_MasterTable.mat"),
     "X_variable":     "Param_MT",      # shape (645, 10) = [n_storms x p_params]
     "X_param_names":  None,
     "X_storm_id_col": None,
@@ -43,19 +43,19 @@ CONFIG = {
     "X_transpose":    False,
 
     # Y — ADCIRC peak surge fields
-    "Y_source":    str(_ROOT / "data/raw/LPV/CHS-LA_SSL_TC_slc0_tide0_wave1_m_NAVD88.mat"),
+    "Y_source":    str(_ROOT / "data/raw/lpv/CHS-LA_SSL_TC_slc0_tide0_wave1_m_NAVD88.mat"),
     "Y_variable":  "Resp",             # MATLAB shape [m_nodes x n_storms]
     "Y_node_ids":  None,
     "Y_units":     "m NAVD88",
     "Y_transpose": True,               # restore MATLAB order → [n_storms x m_nodes]
 
     # Node filter — subset Y columns to kept nodes
-    "Y_node_filter_source":   str(_ROOT / "data/raw/LPV/CHS-LA_nodeID_probQ.mat"),
+    "Y_node_filter_source":   str(_ROOT / "data/raw/lpv/CHS-LA_nodeID_probQ.mat"),
     "Y_node_filter_variable": "nodeID",
     "Y_node_filter_col":      1,       # column index in the (n_kept, k) array
 
     # HC — Benchmark hazard curves
-    "HC_source":     str(_ROOT / "data/raw/LPV/CHS-LA-24_HC_tbl_TC_SSL_slc0_BE_22.mat"),
+    "HC_source":     str(_ROOT / "data/raw/lpv/CHS-LA-24_HC_tbl_TC_SSL_slc0_BE_22.mat"),
     "HC_variable":   "BE_22",
     "HC_units":      "m NAVD88",
     "HC_transpose":  False,

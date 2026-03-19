@@ -30,7 +30,7 @@ from backend.engines.sampling.python.kmedoids import select_kmedoids
 from backend.engines.sampling.metrics import evaluate_sf_metrics
 from backend.engines.weights.python.dsw import evaluate_hc_reconstruction
 from backend.orch.python.workflows.rtcs_selection import (
-    _load_pipeline_data, _load_forced_indices,
+    _load_pipeline_data, _load_forced_indices, _remap_forced_indices,
 )
 from backend.orch.python.postproc.plots import plot_growth_evaluation
 from config.defaults import RTCS_SELECTION_DEFAULTS
@@ -56,25 +56,25 @@ def run_growth_evaluation(cfg: Optional[dict] = None):
 
     print(f"\n{'='*60}")
     print(f"  RTCS Selection (optimal k) — Growth Loop  "
-          f"(k {cfg['k_initial']} → {cfg['k_max']}, step {cfg['k_step']})")
+          f"(k {cfg['k_initial']} -> {cfg['k_max']}, step {cfg['k_step']})")
     print(f"{'='*60}")
 
     # 1. Load  (HC_bench required for DSW evaluation)
     print("\n[1] Loading data ...")
     X_full, Y, HC_bench, storm_ids, x_cols_full = _load_pipeline_data(cfg)
-    forced = _load_forced_indices(cfg)
+    forced = _remap_forced_indices(cfg, _load_forced_indices(cfg))
 
     # Column filter: keep only physically meaningful TC parameters
     sel_cols = cfg.get("x_select_columns")
     if sel_cols is not None:
         X = X_full[:, sel_cols]
-        print(f"    X columns   : {sel_cols} → {[x_cols_full[i] for i in sel_cols]}")
+        print(f"    X columns   : {sel_cols} -> {[x_cols_full[i] for i in sel_cols]}")
     else:
         X = X_full
     if forced is not None:
         print(f"    Forced storms : {len(forced)}  "
               f"(growth loop selects {cfg['k_initial'] - len(forced)} "
-              f"→ {cfg['k_max'] - len(forced)} additional)")
+              f"-> {cfg['k_max'] - len(forced)} additional)")
     if HC_bench is None:
         raise ValueError(
             "HC_bench is required for RTCS Selection (optimal k).  "
@@ -110,7 +110,8 @@ def run_growth_evaluation(cfg: Optional[dict] = None):
         sf       = evaluate_sf_metrics(Z, X_scaled, Y_r, indices,
                                        cfg["n_coverage_clusters"], cfg["random_seed"])
         _, hc_m  = evaluate_hc_reconstruction(
-            Y[indices, :], HC_bench, tbl_aer, dry_thr, report_rp)
+            Y[indices, :], HC_bench, tbl_aer, dry_thr, report_rp,
+            dsw_method=cfg.get("dsw_method", 1))
 
         history.append({"k": k, **sf, **hc_m})
 
@@ -136,7 +137,13 @@ def run_growth_evaluation(cfg: Optional[dict] = None):
     df_sel = pd.DataFrame(X[indices], columns=x_cols)
     if storm_ids is not None:
         df_sel.insert(0, "storm_id", [storm_ids[i] for i in indices])
-    df_sel.insert(0, "original_index", indices)
+    # Map indices back to the original (pre-bbox-filter) ordering when applicable
+    bbox_storm_map = cfg.get("bbox_storm_indices")
+    if bbox_storm_map is not None:
+        orig_indices = np.asarray(bbox_storm_map, dtype=int)[indices]
+    else:
+        orig_indices = indices
+    df_sel.insert(0, "original_index", orig_indices)
     df_sel.to_csv(out_dir / "selected_storms.csv", index=False)
     history_df.to_csv(out_dir / "growth_history.csv", index=False)
     print(f"    selected_storms.csv -> {out_dir}")

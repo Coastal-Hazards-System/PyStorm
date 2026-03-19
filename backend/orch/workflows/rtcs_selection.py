@@ -121,7 +121,8 @@ def grow_subset(Z_full, X_scaled, Y_r_full, Y_full, HC_bench, cfg):
         if do_hc:
             row.update(evaluate_hc_metrics(
                 Y_full[indices, :], HC_bench, tbl_aer, dry_thr,
-                cfg.get("min_wet_storms", 2)))
+                cfg.get("min_wet_storms", 2),
+                dsw_method=cfg.get("dsw_method", 1)))
         history.append(row)
 
         msg = (f"    k={k:4d} | cov={sf['coverage']:.3f} | "
@@ -172,7 +173,8 @@ def sensitivity_analysis(X, Y_r, Y_full, HC_bench, cfg):
         if do_hc:
             row.update(evaluate_hc_metrics(
                 Y_full[indices, :], HC_bench, tbl_aer, dry_thr,
-                cfg.get("min_wet_storms", 2)))
+                cfg.get("min_wet_storms", 2),
+                dsw_method=cfg.get("dsw_method", 1)))
         results.append(row)
         msg = (f"    alpha={alpha:.2f} | cov={sf['coverage']:.3f} | "
                f"disc={sf['discrepancy']:.4f}")
@@ -250,7 +252,8 @@ def run_pipeline(cfg: Optional[dict] = None):
     if HC_bench is not None:
         final_metrics.update(evaluate_hc_metrics(
             Y[final_indices, :], HC_bench, cfg["TBL_AER"], cfg["dry_threshold"],
-            cfg.get("min_wet_storms", 2)))
+            cfg.get("min_wet_storms", 2),
+            dsw_method=cfg.get("dsw_method", 1)))
 
     print(f"\n    Final subset  k = {final_metrics['k']}")
     print(f"    Coverage          = {final_metrics['coverage']:.4f}  "

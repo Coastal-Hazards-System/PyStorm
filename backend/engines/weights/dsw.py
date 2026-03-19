@@ -122,24 +122,47 @@ def _hc_residual_metrics(HC_recon, HC_bench):
 # Public API
 # ---------------------------------------------------------------------------
 
+def _compute_node_weights(Y_sub, HC_bench, tbl_aer, method, dry_thr):
+    """
+    Pre-compute a single scalar weight per node for DSW aggregation.
+
+    Method 1: equal weights (all 1.0)
+    Method 2: per-storm surge (handled in the loop, returns None here)
+    Method 3: surge variance at each node — nodes with high response
+              variability contribute more to the global DSW average
+
+    Returns
+    -------
+    node_w : [m] array or None (for method 2, which is storm-dependent)
+    """
+    m = Y_sub.shape[1]
+    Y_clean = np.where(np.isnan(Y_sub) | (Y_sub <= dry_thr), 0.0, Y_sub)
+
+    if method == 1:
+        return np.ones(m, dtype=np.float64)
+    elif method == 2:
+        return None  # storm-dependent, handled in loop
+    elif method == 3:
+        return np.var(Y_clean, axis=0)
+    else:
+        raise ValueError(f"Unknown dsw_method: {method!r}.  Valid: 1, 2, 3")
+
+
 def compute_global_dsw(
     Y_sub:          np.ndarray,
     HC_bench:       np.ndarray,
     tbl_aer:        np.ndarray,
     dry_thr:        float = 0.0,
     min_wet_storms: int   = 2,
+    method:         int   = 1,
 ) -> np.ndarray:
     """
-    Back-compute one global DSW per selected storm by averaging nodal DSWs
+    Back-compute one global DSW per selected storm by aggregating nodal DSWs
     across active nodes only.
 
     A node is active for averaging when:
       - at least `min_wet_storms` of the k selected surges exceed dry_thr, AND
       - the HC interpolation returns at least one finite AER value.
-
-    This prevents dry-node bias: coastal meshes have large areas where most
-    storms produce zero surge, and including those nodes in the nanmean dilutes
-    the DSW signal and introduces systematic positive bias in HC reconstruction.
 
     Parameters
     ----------
@@ -149,12 +172,21 @@ def compute_global_dsw(
     dry_thr        : float    surges <= this treated as dry (m)
     min_wet_storms : int      minimum wet storms required at a node for it to
                               contribute to the global DSW average (default 2)
+    method         : int      aggregation method:
+                              1 = simple mean (equal node weights)
+                              2 = surge-weighted mean (per-storm-per-node)
+                              3 = variance-weighted mean (fixed per-node weight
+                                  = surge variance; nodes with high response
+                                  variability dominate the average)
 
     Returns
     -------
     DSW_global : [k]  one scalar weight per storm in original order
     """
     k, m = Y_sub.shape
+
+    # Pre-compute per-node weights (None for method 2)
+    node_w = _compute_node_weights(Y_sub, HC_bench, tbl_aer, method, dry_thr)
 
     # Pre-compute wet-storm count per node to gate node inclusion
     wet_counts = np.sum((~np.isnan(Y_sub)) & (Y_sub > dry_thr), axis=0)  # [m]
@@ -170,9 +202,8 @@ def compute_global_dsw(
     inv_perm[row_idx, sort_idx_T] = rank_idx
 
     # Accumulate nodal DSWs — only for active nodes
-    # Use a running sum + count to compute nanmean without storing [m x k]
-    dsw_sum   = np.zeros(k, dtype=np.float64)
-    node_count = np.zeros(k, dtype=np.float64)   # per-storm active node count
+    dsw_sum    = np.zeros(k, dtype=np.float64)
+    weight_sum = np.zeros(k, dtype=np.float64)
 
     n_clipped_total = 0
 
@@ -208,11 +239,21 @@ def compute_global_dsw(
         valid_pos  = np.where(valid)[0]
         dsw_sorted[valid_pos] = dsw_valid
 
-        # Map from sorted → original storm order and accumulate
-        dsw_orig   = dsw_sorted[inv_perm[node, :]]
-        active     = dsw_orig > 0                     # storms with non-zero DSW
-        dsw_sum   += dsw_orig
-        node_count += active.astype(np.float64)
+        # Map from sorted -> original storm order and accumulate
+        dsw_orig = dsw_sorted[inv_perm[node, :]]
+        active   = dsw_orig > 0                       # storms with non-zero DSW
+
+        if method == 2:
+            # Per-storm surge weight: Y(j, node)
+            surge_orig = np.maximum(Y_sub[:, node], 0.0)
+            surge_orig = np.where(np.isnan(surge_orig), 0.0, surge_orig)
+            dsw_sum    += dsw_orig * surge_orig
+            weight_sum += surge_orig * active.astype(np.float64)
+        else:
+            # Methods 1, 3a-3e: fixed per-node weight
+            w = node_w[node]
+            dsw_sum    += dsw_orig * w
+            weight_sum += w * active.astype(np.float64)
 
     if n_clipped_total:
         warnings.warn(
@@ -221,9 +262,9 @@ def compute_global_dsw(
             RuntimeWarning, stacklevel=2,
         )
 
-    # Global DSW: mean over active nodes per storm (NaN where no node contributed)
+    # Global DSW: weighted mean per storm (NaN where no node contributed)
     with np.errstate(invalid="ignore"):
-        DSW_global = np.where(node_count > 0, dsw_sum / node_count, np.nan)
+        DSW_global = np.where(weight_sum > 0, dsw_sum / weight_sum, np.nan)
 
     return DSW_global
 
@@ -255,12 +296,14 @@ def evaluate_hc_metrics(
     tbl_aer:        np.ndarray,
     dry_thr:        float = 0.0,
     min_wet_storms: int   = 2,
+    dsw_method:     int   = 1,
 ) -> dict:
     """
     Run the full DSW pipeline and return scalar HC quality metrics.
 
     Returns dict with keys: mean_bias, mean_uncertainty, mean_rmse
     """
-    DSW_global = compute_global_dsw(Y_sub, HC_bench, tbl_aer, dry_thr, min_wet_storms)
+    DSW_global = compute_global_dsw(Y_sub, HC_bench, tbl_aer, dry_thr,
+                                    min_wet_storms, method=dsw_method)
     HC_recon   = reconstruct_hc_global_dsw(Y_sub, DSW_global, tbl_aer, dry_thr)
     return _hc_residual_metrics(HC_recon, HC_bench)

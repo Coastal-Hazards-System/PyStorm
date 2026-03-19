@@ -103,15 +103,26 @@ def compute_global_dsw(
     Y_sub:    np.ndarray,
     HC_bench: np.ndarray,
     tbl_aer:  np.ndarray,
+    method:   int = 1,
 ) -> np.ndarray:
     """
     Back-compute one global DSW per selected storm.
+
+    Parameters
+    ----------
+    method : int
+        1 = simple mean (equal node weights)
+        2 = surge-weighted mean (per-storm-per-node weight)
+        3 = variance-weighted mean (fixed per-node weight = surge variance)
 
     Returns
     -------
     DSW_global : [k]  one scalar weight per storm in original order
     """
+    from backend.engines.weights.dsw import _compute_node_weights
+
     k, m = Y_sub.shape
+    node_w = _compute_node_weights(Y_sub, HC_bench, tbl_aer, method, dry_thr=0.0)
     DSW_node_orig = np.full((m, k), np.nan)
     sort_idx   = np.argsort(Y_sub, axis=0)[::-1]
     sort_idx_T = sort_idx.T
@@ -144,7 +155,22 @@ def compute_global_dsw(
         dsw_sorted[valid_positions] = dsw_valid
         DSW_node_orig[node, :]      = dsw_sorted[inv_perm[node, :]]
 
-    return np.nanmean(DSW_node_orig, axis=0)
+    active    = ~np.isnan(DSW_node_orig)
+    dsw_clean = np.where(active, DSW_node_orig, 0.0)
+
+    if method == 2:
+        # Per-storm surge weight
+        surge = np.where(np.isnan(Y_sub.T), 0.0, np.maximum(Y_sub.T, 0.0))  # [m x k]
+        weighted_sum = np.sum(dsw_clean * surge * active, axis=0)
+        weight_total = np.sum(surge * active, axis=0)
+    else:
+        # Methods 1, 3a-3e: fixed per-node weight
+        w = node_w[:, np.newaxis]  # [m x 1]
+        weighted_sum = np.sum(dsw_clean * w * active, axis=0)
+        weight_total = np.sum(w * active, axis=0)
+
+    with np.errstate(invalid="ignore"):
+        return np.where(weight_total > 0, weighted_sum / weight_total, np.nan)
 
 
 def reconstruct_hc_global_dsw(
@@ -169,17 +195,18 @@ def reconstruct_hc_global_dsw(
 
 
 def evaluate_hc_metrics(
-    Y_sub:    np.ndarray,
-    HC_bench: np.ndarray,
-    tbl_aer:  np.ndarray,
-    dry_thr:  float = 0.0,
+    Y_sub:      np.ndarray,
+    HC_bench:   np.ndarray,
+    tbl_aer:    np.ndarray,
+    dry_thr:    float = 0.0,
+    dsw_method: int = 1,
 ) -> dict:
     """
-    Run the full DSW pipeline (Steps 1–4) and return scalar HC quality metrics.
+    Run the full DSW pipeline (Steps 1-4) and return scalar HC quality metrics.
 
     Returns dict with keys: mean_bias, mean_uncertainty, mean_rmse
     """
-    DSW_global = compute_global_dsw(Y_sub, HC_bench, tbl_aer)
+    DSW_global = compute_global_dsw(Y_sub, HC_bench, tbl_aer, method=dsw_method)
     HC_recon   = reconstruct_hc_global_dsw(Y_sub, DSW_global, tbl_aer, dry_thr)
     return _hc_residual_metrics(HC_recon, HC_bench)
 
@@ -211,11 +238,12 @@ def _bias_at_return_periods(
 
 
 def evaluate_hc_reconstruction(
-    Y_sub:     np.ndarray,
-    HC_bench:  np.ndarray,
-    tbl_aer:   np.ndarray,
-    dry_thr:   float = 0.0,
-    report_rp: list  = None,
+    Y_sub:      np.ndarray,
+    HC_bench:   np.ndarray,
+    tbl_aer:    np.ndarray,
+    dry_thr:    float = 0.0,
+    report_rp:  list  = None,
+    dsw_method: int = 1,
 ) -> tuple:
     """
     Full DSW + HC reconstruction + global and per-return-period metrics.
@@ -228,7 +256,7 @@ def evaluate_hc_reconstruction(
     """
     if report_rp is None:
         report_rp = []
-    DSW_global = compute_global_dsw(Y_sub, HC_bench, tbl_aer)
+    DSW_global = compute_global_dsw(Y_sub, HC_bench, tbl_aer, method=dsw_method)
     HC_recon   = reconstruct_hc_global_dsw(Y_sub, DSW_global, tbl_aer, dry_thr)
     metrics    = {
         **_hc_residual_metrics(HC_recon, HC_bench),

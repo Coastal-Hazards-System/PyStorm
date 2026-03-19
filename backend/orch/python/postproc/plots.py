@@ -525,8 +525,8 @@ def _plot_hc_grid(
                     ms=3, label="RTCS (Global DSW)")
 
         ax.set_xscale("log")
-        ax.invert_xaxis()
-        ax.set_xlabel("AER (1/yr)")
+        ax.set_xlim(1e1, 1e-6)
+        ax.set_xlabel("AER (year$^{-1}$)")
         ax.set_ylabel("TC Response")
         ax.set_title(f"Node {node}", fontsize=10)
         ax.grid(alpha=0.3)
@@ -574,3 +574,97 @@ def plot_hc_comparison(
                   dry_thr, "hc_comparison_nodal.png",
                   "HC Comparison — Benchmark vs RTCS (Nodal + Global DSW)",
                   show_nodal=True)
+
+
+def plot_hc_qbm(
+    Y_sub:        np.ndarray,
+    DSW_global:   np.ndarray,
+    bias_array:   np.ndarray,
+    HC_bench:     np.ndarray,
+    tbl_aer:      np.ndarray,
+    out_dir,
+    dry_thr:      float = 0.0,
+    n_nodes:      int = 9,
+    seed:         int = 42,
+    aer_mode:     str = "631",
+    win_frac:     float = 0.10,
+    ramp_frac:    float = 0.03,
+):
+    """
+    Plot HC comparison: Benchmark vs DSW-only vs QBM-corrected (3x3 grid).
+
+    aer_mode controls the intermediate grid for bias correction:
+      "631"      — dense 631-point AER grid (10^1 … 10^-6).
+      "standard" — 22 tbl_aer levels.
+
+    Red circles  = raw DSW per-storm dots at (cum_aer, surge).
+    Green circles = bias-corrected response values.
+    """
+    from backend.engines.weights.qbm import correct_node_qbm
+
+    CLR_BENCH = "gray"
+    CLR_DSW   = "#C62828"    # red — DSW-only (uncorrected)
+    CLR_QBM   = "#2E7D32"    # green — QBM-corrected
+
+    out_dir = Path(out_dir)
+    m = HC_bench.shape[0]
+    n_nodes = min(n_nodes, m)
+
+    rng   = np.random.default_rng(seed)
+    nodes = sorted(rng.choice(m, size=n_nodes, replace=False).tolist())
+
+    ncols = 3
+    nrows = (n_nodes + ncols - 1) // ncols
+    fig, axes = plt.subplots(nrows, ncols,
+                             figsize=(5 * ncols, 4 * nrows), squeeze=False)
+    fig.suptitle("HC Comparison — Benchmark vs DSW vs QBM-Corrected",
+                 fontsize=13, fontweight="bold", y=1.02)
+
+    for ax_idx, node in enumerate(nodes):
+        r, c = divmod(ax_idx, ncols)
+        ax = axes[r][c]
+
+        ax.plot(tbl_aer, HC_bench[node, :], "-", color=CLR_BENCH,
+                lw=1.5, label="Benchmark")
+
+        # DSW dots: per-storm cumulative AER (same as hc_comparison.png)
+        resp = Y_sub[:, node]
+        valid = (~np.isnan(resp)) & (~np.isnan(DSW_global)) & (resp > dry_thr)
+        if valid.sum() >= 2:
+            desc      = np.argsort(resp[valid])[::-1]
+            surge_g   = resp[valid][desc]
+            cum_aer_g = np.cumsum(DSW_global[valid][desc])
+            ax.plot(cum_aer_g, surge_g, "o", color=CLR_DSW,
+                    ms=3, label="RTCS (Global DSW)")
+
+            # QBM-corrected dots via correct_node_qbm
+            cum_aer_corr, surge_corr = correct_node_qbm(
+                resp, DSW_global, HC_bench[node, :],
+                bias_array[node, :], tbl_aer,
+                dry_thr=dry_thr, aer_mode=aer_mode,
+                win_frac=win_frac, ramp_frac=ramp_frac)
+
+            if cum_aer_corr is not None:
+                # Only plot if there was actual correction
+                if not np.allclose(surge_corr, surge_g):
+                    ax.plot(cum_aer_corr, surge_corr, "o",
+                            color=CLR_QBM, ms=3,
+                            label="RTCS (QBM-corrected)")
+
+        ax.set_xscale("log")
+        ax.set_xlim(1e1, 1e-6)
+        ax.set_xlabel("AER (year$^{-1}$)")
+        ax.set_ylabel("TC Response")
+        ax.set_title(f"Node {node}", fontsize=10)
+        ax.grid(alpha=0.3)
+        if ax_idx == 0:
+            ax.legend(fontsize=8)
+
+    for ax_idx in range(n_nodes, nrows * ncols):
+        r, c = divmod(ax_idx, ncols)
+        axes[r][c].set_visible(False)
+
+    plt.tight_layout()
+    fpath = out_dir / "hc_comparison_qbm.png"
+    plt.savefig(fpath, dpi=150, bbox_inches="tight"); plt.close()
+    print(f"    Saved: {fpath}")

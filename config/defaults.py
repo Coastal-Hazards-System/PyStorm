@@ -80,6 +80,22 @@ RTCS_SELECTION_DEFAULTS: dict = {
         1_000_000,
     ]),
     "dry_threshold":   0.0,
+    # QBM (Quantile Bias Mapping) post-correction parameters:
+    #   win_frac  = Gaussian kernel width as fraction of AER levels (+-3sigma)
+    #   ramp_frac = smoothstep ramp-in fraction at endpoints
+    "qbm_win_frac":  0.10,
+    "qbm_ramp_frac": 0.03,
+    # Intermediate AER grid for QBM bias correction:
+    #   "631" (default) = dense 631-point grid (10^1 … 10^-6, d=1/90 in log10)
+    #   "standard"      = standard tbl_aer grid (22 levels)
+    "qbm_aer_mode": "631",
+    # DSW aggregation method:
+    #   1 = simple mean (equal node weights — classic JPM-OS)
+    #   2 = surge-weighted mean (per-storm-per-node; nodes where a storm hits
+    #       harder contribute more to that storm's global weight)
+    #   3 = variance-weighted mean (fixed per-node weight = surge variance;
+    #       nodes with high response variability dominate the average)
+    "dsw_method": 3,
     # Return periods (years) at which to report mean nodal bias (optimal k).
     # Maps to AER = 1/RP; nearest column in TBL_AER is used.
     "bias_report_rp":  [10, 100, 1000],
