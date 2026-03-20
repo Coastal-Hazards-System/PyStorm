@@ -64,8 +64,8 @@ CONFIG = {
     "h5_path":    str(_ROOT / "data/processed/tc_data.h5"),
     "output_dir": str(_ROOT / "data/processed/outputs"),
 
-    # Node subsampling (None = use all nodes)
-    "node_stride": 100,
+    # Node subsampling (1 = use all nodes, N = keep every Nth node)
+    "node_stride": 1,
 
     # Growth loop bounds
     "k_initial": 20,

@@ -4,6 +4,9 @@ backend/engines/weights/dsw.py
 Discrete Storm Weight (DSW) back-computation and JPM-OS hazard-curve
 reconstruction.
 
+Dispatches to a C++ accelerated backend when available, otherwise falls
+back to the pure-Python implementation.
+
 Algorithm
 ---------
 Given selected storm surges Y_sub [k x m] and benchmark HCs HC_bench [m x N]:
@@ -52,7 +55,23 @@ from scipy.interpolate import interp1d
 
 
 # ---------------------------------------------------------------------------
-# Private helpers
+# C++ backend (optional)
+# ---------------------------------------------------------------------------
+
+try:
+    from backend.engines.weights.cpp._dsw_cpp import (
+        compute_global_dsw   as _cpp_compute_global_dsw,
+        reconstruct_hc       as _cpp_reconstruct_hc,
+        evaluate_hc_metrics  as _cpp_evaluate_hc_metrics,
+        compute_node_weights as _cpp_compute_node_weights,
+    )
+    _HAS_CPP = True
+except ImportError:
+    _HAS_CPP = False
+
+
+# ---------------------------------------------------------------------------
+# Private helpers  (Python fallback)
 # ---------------------------------------------------------------------------
 
 def _surge_to_aer(hc_surge, hc_aer, query):
@@ -135,6 +154,10 @@ def _compute_node_weights(Y_sub, HC_bench, tbl_aer, method, dry_thr):
     -------
     node_w : [m] array or None (for method 2, which is storm-dependent)
     """
+    if _HAS_CPP and method != 2:
+        return np.asarray(_cpp_compute_node_weights(
+            np.ascontiguousarray(Y_sub, dtype=np.float64), method, dry_thr))
+
     m = Y_sub.shape[1]
     Y_clean = np.where(np.isnan(Y_sub) | (Y_sub <= dry_thr), 0.0, Y_sub)
 
@@ -183,25 +206,29 @@ def compute_global_dsw(
     -------
     DSW_global : [k]  one scalar weight per storm in original order
     """
+    # ── C++ fast path ─────────────────────────────────────────────────────
+    if _HAS_CPP:
+        Y_c  = np.ascontiguousarray(Y_sub,   dtype=np.float64)
+        HC_c = np.ascontiguousarray(HC_bench, dtype=np.float64)
+        A_c  = np.ascontiguousarray(tbl_aer,  dtype=np.float64)
+        nw   = _compute_node_weights(Y_sub, HC_bench, tbl_aer, method, dry_thr)
+        return np.asarray(_cpp_compute_global_dsw(
+            Y_c, HC_c, A_c, dry_thr, min_wet_storms, method, nw))
+
+    # ── Python fallback ───────────────────────────────────────────────────
     k, m = Y_sub.shape
 
-    # Pre-compute per-node weights (None for method 2)
     node_w = _compute_node_weights(Y_sub, HC_bench, tbl_aer, method, dry_thr)
+    wet_counts = np.sum((~np.isnan(Y_sub)) & (Y_sub > dry_thr), axis=0)
 
-    # Pre-compute wet-storm count per node to gate node inclusion
-    wet_counts = np.sum((~np.isnan(Y_sub)) & (Y_sub > dry_thr), axis=0)  # [m]
-
-    # Sort indices descending by surge at each node: sort_idx [k x m]
     sort_idx   = np.argsort(Y_sub, axis=0)[::-1]
-    sort_idx_T = sort_idx.T                          # [m x k]
+    sort_idx_T = sort_idx.T
 
-    # Inverse permutation: inv_perm[node, orig_storm] = rank at that node
     inv_perm = np.empty((m, k), dtype=int)
     row_idx  = np.arange(m)[:, np.newaxis]
     rank_idx = np.tile(np.arange(k), (m, 1))
     inv_perm[row_idx, sort_idx_T] = rank_idx
 
-    # Accumulate nodal DSWs — only for active nodes
     dsw_sum    = np.zeros(k, dtype=np.float64)
     weight_sum = np.zeros(k, dtype=np.float64)
 
@@ -234,23 +261,19 @@ def compute_global_dsw(
             n_clipped_total += int(neg.sum())
             dsw_valid = np.clip(dsw_valid, 0.0, None)
 
-        # Map valid DSWs back to original storm positions
-        dsw_sorted = np.zeros(k, dtype=np.float64)   # zeros for dry/NaN storms
+        dsw_sorted = np.zeros(k, dtype=np.float64)
         valid_pos  = np.where(valid)[0]
         dsw_sorted[valid_pos] = dsw_valid
 
-        # Map from sorted -> original storm order and accumulate
         dsw_orig = dsw_sorted[inv_perm[node, :]]
-        active   = dsw_orig > 0                       # storms with non-zero DSW
+        active   = dsw_orig > 0
 
         if method == 2:
-            # Per-storm surge weight: Y(j, node)
             surge_orig = np.maximum(Y_sub[:, node], 0.0)
             surge_orig = np.where(np.isnan(surge_orig), 0.0, surge_orig)
             dsw_sum    += dsw_orig * surge_orig
             weight_sum += surge_orig * active.astype(np.float64)
         else:
-            # Methods 1, 3a-3e: fixed per-node weight
             w = node_w[node]
             dsw_sum    += dsw_orig * w
             weight_sum += w * active.astype(np.float64)
@@ -262,7 +285,6 @@ def compute_global_dsw(
             RuntimeWarning, stacklevel=2,
         )
 
-    # Global DSW: weighted mean per storm (NaN where no node contributed)
     with np.errstate(invalid="ignore"):
         DSW_global = np.where(weight_sum > 0, dsw_sum / weight_sum, np.nan)
 
@@ -282,6 +304,15 @@ def reconstruct_hc_global_dsw(
     -------
     HC_recon : [m x N_AER]
     """
+    # ── C++ fast path ─────────────────────────────────────────────────────
+    if _HAS_CPP:
+        return np.asarray(_cpp_reconstruct_hc(
+            np.ascontiguousarray(Y_sub,      dtype=np.float64),
+            np.ascontiguousarray(DSW_global, dtype=np.float64),
+            np.ascontiguousarray(tbl_aer,    dtype=np.float64),
+            dry_thr))
+
+    # ── Python fallback ───────────────────────────────────────────────────
     k, m     = Y_sub.shape
     HC_recon = np.full((m, len(tbl_aer)), np.nan)
     for node in range(m):
@@ -303,6 +334,16 @@ def evaluate_hc_metrics(
 
     Returns dict with keys: mean_bias, mean_uncertainty, mean_rmse
     """
+    # ── C++ fast path ─────────────────────────────────────────────────────
+    if _HAS_CPP:
+        Y_c  = np.ascontiguousarray(Y_sub,   dtype=np.float64)
+        HC_c = np.ascontiguousarray(HC_bench, dtype=np.float64)
+        A_c  = np.ascontiguousarray(tbl_aer,  dtype=np.float64)
+        nw   = _compute_node_weights(Y_sub, HC_bench, tbl_aer, dsw_method, dry_thr)
+        return dict(_cpp_evaluate_hc_metrics(
+            Y_c, HC_c, A_c, dry_thr, min_wet_storms, dsw_method, nw))
+
+    # ── Python fallback ───────────────────────────────────────────────────
     DSW_global = compute_global_dsw(Y_sub, HC_bench, tbl_aer, dry_thr,
                                     min_wet_storms, method=dsw_method)
     HC_recon   = reconstruct_hc_global_dsw(Y_sub, DSW_global, tbl_aer, dry_thr)

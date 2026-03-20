@@ -27,7 +27,7 @@ RTCS_SELECTION_DEFAULTS: dict = {
     "pre_selected_indices": None,   # explicit list of original storm indices
 
     # ── Node subsampling ──────────────────────────────────────────────────────
-    "node_stride": None,   # int → keep every Nth node; None → use all nodes
+    "node_stride": 1,   # int → keep every Nth node; 1 → use all nodes
 
     # ── X column selection ─────────────────────────────────────────────────────
     # 0-based column indices into X used for the joint matrix, k-medoids, and
@@ -60,13 +60,14 @@ RTCS_SELECTION_DEFAULTS: dict = {
     "alpha_default": 10.0,
     "beta_default":  0.1,
 
-    # Alpha/beta grid for DSW-based optimization (None = skip, use defaults)
-    "alpha_beta_grid": [
-        (0.1, 1.0), (0.5, 1.0), (1.0, 1.0), (2.0, 1.0),
-        (5.0, 1.0), (10.0, 1.0), (20.0, 1.0),
-        (0.1, 0.1), (1.0, 0.1), (5.0, 0.1), (10.0, 0.1), (20.0, 0.1),
-        (0.1, 0.5), (1.0, 0.5), (5.0, 0.5), (10.0, 0.5),
-    ],
+    # Alpha/beta optimization via Bayesian GP surrogate.
+    # Set to None to skip optimization and use alpha_default / beta_default.
+    # "ab_grid" is kept for backward compatibility; when present the old
+    # brute-force grid search is used instead of Bayesian optimization.
+    "alpha_beta_grid": None,          # legacy grid (list of tuples); None → use BO
+    "ab_opt_n_calls":    16,          # total objective evaluations (initial + BO)
+    "ab_opt_n_initial":   5,          # Latin Hypercube initial samples
+    "ab_opt_bounds": ((0.01, 50.0), (0.01, 2.0)),  # (alpha, beta) search bounds
 
     # ── Sensitivity analysis ──────────────────────────────────────────────────
     "alpha_sweep":   [0.0, 0.25, 0.5, 0.75, 1.0, 1.5, 2.0, 3.0, 5.0],

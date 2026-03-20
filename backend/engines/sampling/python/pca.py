@@ -29,6 +29,6 @@ def reduce_output(
     Y_r : [n_storms x r]  PCA score matrix
     pca : fitted sklearn PCA object
     """
-    pca = PCA(n_components=variance_threshold, svd_solver="full")
+    pca = PCA(n_components=variance_threshold, svd_solver="auto")
     Y_r = pca.fit_transform(Y)
     return Y_r, pca

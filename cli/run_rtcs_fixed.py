@@ -67,8 +67,8 @@ CONFIG = {
     # Additional storms to select ON TOP of pre-selected (total = pre + additional)
     "k_additional": 200,
 
-    # Node subsampling (None = use all nodes)
-    "node_stride": 100,
+    # Node subsampling (1 = use all nodes, N = keep every Nth node)
+    "node_stride": 1,
 
     # TC parameter SPLOM — 0-based column indices in X (Param_MT)
     "splom_params": [6, 7, 8, 9],

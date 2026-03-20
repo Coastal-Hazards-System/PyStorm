@@ -45,6 +45,20 @@ from scipy.interpolate import interp1d
 
 
 # ---------------------------------------------------------------------------
+# C++ backend (optional)
+# ---------------------------------------------------------------------------
+
+try:
+    from backend.engines.weights.cpp._dsw_cpp import (
+        compute_qbm_bias_aer      as _cpp_compute_qbm_bias_aer,
+        compute_qbm_bias_response as _cpp_compute_qbm_bias_response,
+    )
+    _HAS_CPP = True
+except ImportError:
+    _HAS_CPP = False
+
+
+# ---------------------------------------------------------------------------
 # 631-AER dense grid
 # ---------------------------------------------------------------------------
 
@@ -367,6 +381,24 @@ def compute_qbm_bias(
     """
     k, m = Y_sub.shape
     n_aer = len(tbl_aer)
+
+    # ── C++ fast path ─────────────────────────────────────────────────────
+    if _HAS_CPP:
+        Y_c  = np.ascontiguousarray(Y_sub,      dtype=np.float64)
+        D_c  = np.ascontiguousarray(DSW_global,  dtype=np.float64)
+        HC_c = np.ascontiguousarray(HC_bench,    dtype=np.float64)
+        A_c  = np.ascontiguousarray(tbl_aer,     dtype=np.float64)
+
+        if qbm_mode == "aer":
+            return np.asarray(_cpp_compute_qbm_bias_aer(
+                Y_c, D_c, HC_c, A_c, dry_thr))
+        else:
+            inter = _get_aer_631() if aer_mode == "631" else tbl_aer
+            G_c = np.ascontiguousarray(inter, dtype=np.float64)
+            return np.asarray(_cpp_compute_qbm_bias_response(
+                Y_c, D_c, HC_c, A_c, dry_thr, G_c, win_frac, ramp_frac))
+
+    # ── Python fallback ───────────────────────────────────────────────────
     bias_tbl = np.zeros((m, n_aer), dtype=np.float64)
 
     if qbm_mode == "aer":
