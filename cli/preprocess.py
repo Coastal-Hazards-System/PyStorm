@@ -50,9 +50,10 @@ CONFIG = {
     "Y_transpose": True,               # restore MATLAB order → [n_storms x m_nodes]
 
     # Node filter — subset Y columns to kept nodes
-    "Y_node_filter_source":   str(_ROOT / "data/raw/lpv/CHS-LA_nodeID_probQ.mat"),
+    "Y_node_filter_source":   str(_ROOT / "data/raw/lpv/CHS-LA_nodeID.mat"),
     "Y_node_filter_variable": "nodeID",
-    "Y_node_filter_col":      1,       # column index in the (n_kept, k) array
+    "Y_node_filter_col":      1,       # column with 1-based ADCIRC IDs (for indexing into Resp)
+    "Y_node_id_col":          0,       # column with main node IDs (for storage/display/lookups)
 
     # HC — Benchmark hazard curves
     "HC_source":     str(_ROOT / "data/raw/lpv/CHS-LA-24_HC_tbl_TC_SSL_slc0_BE_22.mat"),

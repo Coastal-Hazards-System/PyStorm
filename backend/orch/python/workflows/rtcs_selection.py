@@ -393,32 +393,37 @@ def run_rtcs_selection(cfg: Optional[dict] = None):
 
         # ── QBM bias correction ──────────────────────────────────────
         step += 1
-        qbm_mode = cfg.get("qbm_aer_mode", "631")
-        print(f"\n[{step}] Quantile Bias Mapping (QBM) post-correction "
-              f"(aer_mode={qbm_mode}) ...")
+        qbm_m = cfg.get("qbm_mode", "aer")
+        qbm_aer = cfg.get("qbm_aer_mode", "631")
         qbm_win = cfg.get("qbm_win_frac", 0.10)
         qbm_ramp = cfg.get("qbm_ramp_frac", 0.03)
+        print(f"\n[{step}] Quantile Bias Mapping (QBM) post-correction "
+              f"(qbm_mode={qbm_m}, aer_mode={qbm_aer}) ...")
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", RuntimeWarning)
             bias_tbl = compute_qbm_bias(
                 Y[indices, :], DSW_global, HC_bench, cfg["TBL_AER"],
                 dry_thr=cfg["dry_threshold"],
                 win_frac=qbm_win, ramp_frac=qbm_ramp,
-                aer_mode=qbm_mode)
+                aer_mode=qbm_aer, qbm_mode=qbm_m)
 
         # Save QBM bias (standard AER levels per node) to HDF5
         import h5py
         qbm_path = out_dir / "qbm_bias.h5"
+        bias_label = "log_aer_delta" if qbm_m == "aer" else "response_bias"
         with h5py.File(str(qbm_path), "w") as hf:
             hf.create_dataset("bias", data=bias_tbl)
             hf.create_dataset("tbl_aer", data=cfg["TBL_AER"])
+            hf.attrs["qbm_mode"] = qbm_m
+            hf.attrs["bias_type"] = bias_label
         print(f"    QBM bias saved: {qbm_path}  "
-              f"({bias_tbl.shape[0]} nodes x {bias_tbl.shape[1]} AER levels)")
+              f"({bias_tbl.shape[0]} nodes x {bias_tbl.shape[1]} AER levels, "
+              f"type={bias_label})")
 
         plot_hc_qbm(Y[indices, :], DSW_global, bias_tbl, HC_bench,
                      cfg["TBL_AER"], out_dir, dry_thr=cfg["dry_threshold"],
                      n_nodes=9, seed=cfg["random_seed"],
-                     aer_mode=qbm_mode,
+                     aer_mode=qbm_aer, qbm_mode=qbm_m,
                      win_frac=qbm_win, ramp_frac=qbm_ramp)
 
     print("\n=== Subset selection complete ===")

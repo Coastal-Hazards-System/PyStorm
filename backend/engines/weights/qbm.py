@@ -3,42 +3,39 @@ backend/engines/weights/qbm.py
 ================================
 Quantile Bias Mapping (QBM) — post-DSW bias correction.
 
-Algorithm (per node)
+Two correction modes
 --------------------
-1. From selected storms and their global DSWs, build per-storm
-   cumulative AER positions (sort descending surge, cumsum DSW).
+**qbm_mode="aer"** (default) — AER-based correction.
+    The global-DSW bias is a horizontal displacement in (AER, surge) space.
+    For each storm at each node, the corrected AER is obtained by inverting
+    the benchmark hazard curve:  lambda_corrected = H_bench^{-1}(surge).
+    Surge values are untouched; only cumulative AER positions are remapped.
 
-2. For each red circle at cum_aer_j, look up the benchmark HC value
-   at that EXACT AER (log-linear interpolation within the benchmark
-   range only — NO extrapolation).  If cum_aer_j is outside the
-   benchmark's AER range, bias is zero for that circle.
+**qbm_mode="response"** — Response-based correction (legacy).
+    Computes b_j = surge_j - H_bench(lambda_j) and subtracts the bias from
+    the surge values.  Produces corrected surge values that fall near the
+    benchmark curve, but alters the physical model output and corrects along
+    the wrong axis.  Retained for backward compatibility and comparison.
 
-3. Raw bias at each overlapping storm = storm_surge - bench_surge.
-   If there is no overlap at all, bias is zero for every circle.
-
-4. Intermediate grid (user's choice via aer_mode):
-     "631"      (default) — map per-storm bias to a dense 631-point
-                  AER grid (10^1 … 10^-6, d=1/90 in log10 space).
-     "standard" (22 AERs) — map per-storm bias to the 22 tbl_aer grid.
-
-   Smoothing is applied on the intermediate grid.
-
-5. Map intermediate-grid bias back to per-storm AER positions to
-   correct the red circles (green circles).
-
-6. Corrected green circles are mapped to the 22 tbl_aer grid
-   for final output (regardless of intermediate grid choice).
+Intermediate AER grid (applies to response mode only)
+------------------------------------------------------
+    "631"      (default) — dense 631-point grid (10^1 … 10^-6, d=1/90).
+    "standard" — 22 tbl_aer levels.
 
 Public API
 ----------
   build_aer_631()  -> ndarray [631]
 
-  compute_qbm_bias(Y_sub, DSW_global, HC_bench, tbl_aer, ...)
-      -> bias_22  [m x N_AER]
+  compute_qbm_bias(Y_sub, DSW_global, HC_bench, tbl_aer, ..., qbm_mode)
+      -> bias_tbl  [m x N_AER]
+         qbm_mode="response": response bias (surge units)
+         qbm_mode="aer":      log-AER delta (dimensionless, diagnostic)
 
   correct_node_qbm(resp, DSW_global, HC_bench_node, bias_22_node,
-                    tbl_aer, dry_thr, aer_mode)
-      -> (cum_aer, surge_corrected)   — for plotting green circles
+                    tbl_aer, ..., qbm_mode)
+      -> (cum_aer, surge)
+         qbm_mode="response": (cum_aer_original, surge_corrected)
+         qbm_mode="aer":      (cum_aer_corrected, surge_original)
 """
 
 from __future__ import annotations
@@ -79,7 +76,7 @@ def build_aer_631() -> np.ndarray:
 
 def _interp_log_linear(x_known, y_known, x_query, extrapolate=True):
     """
-    Log-linear interpolation.
+    Log-linear interpolation (log in x, linear in y).
 
     Parameters
     ----------
@@ -101,6 +98,56 @@ def _interp_log_linear(x_known, y_known, x_query, extrapolate=True):
                   kind="linear", bounds_error=False,
                   fill_value=fill)
     return fn(np.log(x_query))
+
+
+def _invert_hc_bench(hc_surge, tbl_aer, query_surge, extrapolate=False):
+    """
+    Invert the benchmark hazard curve: given surge values, return AER.
+
+    Interpolates in (surge, log-AER) space — surge is the independent
+    variable, log(AER) is the dependent variable.
+
+    Parameters
+    ----------
+    hc_surge     : [N_AER] benchmark surge values at standard AER levels
+    tbl_aer      : [N_AER] standard AER levels (descending)
+    query_surge  : [k] surge values to look up
+    extrapolate  : bool — if False (default), returns NaN outside
+                   the benchmark surge range
+
+    Returns
+    -------
+    aer_at_surge : [k] AER values corresponding to each query surge
+    """
+    valid = np.isfinite(hc_surge)
+    if valid.sum() < 2:
+        return np.full_like(query_surge, np.nan)
+
+    surge_v = hc_surge[valid]
+    log_aer_v = np.log(tbl_aer[valid])
+
+    # Sort by surge (ascending) for interp1d
+    order = np.argsort(surge_v)
+    surge_sorted = surge_v[order]
+    log_aer_sorted = log_aer_v[order]
+
+    # Remove duplicate surge values (keep first occurrence)
+    _, uniq_idx = np.unique(surge_sorted, return_index=True)
+    surge_sorted = surge_sorted[uniq_idx]
+    log_aer_sorted = log_aer_sorted[uniq_idx]
+
+    if len(surge_sorted) < 2:
+        return np.full_like(query_surge, np.nan)
+
+    if extrapolate:
+        fill = (log_aer_sorted[0], log_aer_sorted[-1])
+    else:
+        fill = np.nan
+
+    fn = interp1d(surge_sorted, log_aer_sorted,
+                  kind="linear", bounds_error=False,
+                  fill_value=fill)
+    return np.exp(fn(query_surge))
 
 
 def _gaussian_smooth(bias_raw: np.ndarray, win_frac: float = 0.10) -> np.ndarray:
@@ -155,20 +202,29 @@ def _enforce_monotonicity(surge: np.ndarray) -> np.ndarray:
     return out
 
 
+def _enforce_monotonicity_aer(aer: np.ndarray) -> np.ndarray:
+    """Enforce non-decreasing cumulative AER (must increase with index)."""
+    out = aer.copy()
+    for j in range(1, len(out)):
+        if out[j] < out[j - 1]:
+            out[j] = out[j - 1]
+    return out
+
+
 # ---------------------------------------------------------------------------
-# Per-node storm-level bias computation (shared by both modes)
+# Per-node helpers: response-based bias (legacy)
 # ---------------------------------------------------------------------------
 
-def _node_storm_bias(resp, DSW_global, HC_bench_node, tbl_aer, dry_thr):
+def _node_storm_bias_response(resp, DSW_global, HC_bench_node, tbl_aer, dry_thr):
     """
-    Compute raw bias at per-storm AER positions for a single node.
+    Compute raw response bias at per-storm AER positions for a single node.
 
     Returns
     -------
     cum_aer_s    : cumulative AER at each storm (descending surge order)
     surge_s      : surge values (descending)
-    bias_raw     : raw bias at overlapping positions (len = overlap.sum())
-    overlap_mask : bool mask over cum_aer_s — True where benchmark covers
+    bias_raw     : raw response bias at overlapping positions
+    overlap_mask : bool mask over cum_aer_s
     None, None, None, None  when fewer than 2 valid storms
     """
     valid = (~np.isnan(resp)) & (~np.isnan(DSW_global)) & (resp > dry_thr)
@@ -201,16 +257,10 @@ def _bias_via_intermediate_grid(cum_aer_s, overlap, bias_raw,
     """
     Map per-storm raw bias to an intermediate AER grid, smooth there,
     and return the smoothed bias on the intermediate grid.
-
-    Returns
-    -------
-    bias_inter : ndarray [len(inter_grid)]
     """
-    # Map raw per-storm bias to intermediate grid
     bias_inter = _interp_log_linear(
         cum_aer_s[overlap], bias_raw, inter_grid, extrapolate=True)
 
-    # Smooth on the intermediate grid
     valid_n = np.isfinite(bias_inter)
     if valid_n.sum() >= 3:
         bias_raw_copy = bias_inter.copy()
@@ -223,7 +273,50 @@ def _bias_via_intermediate_grid(cum_aer_s, overlap, bias_raw,
 
 
 # ---------------------------------------------------------------------------
-# Public API: compute bias at 22 standard AERs (for storage)
+# Per-node helpers: AER-based correction
+# ---------------------------------------------------------------------------
+
+def _node_aer_correction(resp, DSW_global, HC_bench_node, tbl_aer, dry_thr):
+    """
+    Compute AER-based correction at a single node.
+
+    For each storm (sorted descending by surge):
+      - cum_aer_global = cumsum(DSW_global)   [the uncorrected x-position]
+      - cum_aer_corrected = H_bench^{-1}(surge)  [the benchmark AER for that surge]
+
+    Returns
+    -------
+    cum_aer_global    : [n_valid] global-DSW cumulative AER (uncorrected)
+    cum_aer_corrected : [n_valid] benchmark-inverted AER (corrected)
+    surge_s           : [n_valid] surge values (descending, untouched)
+    overlap_mask      : [n_valid] bool — True where benchmark inversion is valid
+    None x 4  when fewer than 2 valid storms
+    """
+    valid = (~np.isnan(resp)) & (~np.isnan(DSW_global)) & (resp > dry_thr)
+    if valid.sum() < 2:
+        return None, None, None, None
+
+    desc = np.argsort(resp[valid])[::-1]
+    surge_s = resp[valid][desc]
+    cum_aer_global = np.cumsum(DSW_global[valid][desc])
+
+    # Invert benchmark: surge → AER (no extrapolation)
+    cum_aer_corrected = _invert_hc_bench(
+        HC_bench_node, tbl_aer, surge_s, extrapolate=False)
+
+    overlap = np.isfinite(cum_aer_corrected)
+
+    # For storms outside the benchmark surge range, keep their global AER
+    cum_aer_corrected[~overlap] = cum_aer_global[~overlap]
+
+    # Enforce monotonicity: corrected AER must be non-decreasing
+    cum_aer_corrected = _enforce_monotonicity_aer(cum_aer_corrected)
+
+    return cum_aer_global, cum_aer_corrected, surge_s, overlap
+
+
+# ---------------------------------------------------------------------------
+# Cached 631-AER grid
 # ---------------------------------------------------------------------------
 
 _AER_631_CACHE = None
@@ -236,6 +329,10 @@ def _get_aer_631():
     return _AER_631_CACHE
 
 
+# ---------------------------------------------------------------------------
+# Public API: compute bias at 22 standard AERs (for storage)
+# ---------------------------------------------------------------------------
+
 def compute_qbm_bias(
     Y_sub:      np.ndarray,
     DSW_global: np.ndarray,
@@ -245,19 +342,24 @@ def compute_qbm_bias(
     win_frac:   float = 0.10,
     ramp_frac:  float = 0.03,
     aer_mode:   str   = "631",
+    qbm_mode:   str   = "aer",
 ) -> np.ndarray:
     """
     Compute QBM bias at the standard tbl_aer grid for every node.
 
-    Both modes follow the same pipeline:
-      per-storm bias → map to intermediate grid → smooth → map to 22 AERs
-
     Parameters
     ----------
     aer_mode : str
-        "631"      (default) — intermediate grid is a dense 631-point
-                    AER grid (10^1 … 10^-6, d=1/90 in log10 space).
-        "standard" — intermediate grid is the 22 tbl_aer grid.
+        Intermediate grid resolution (applies to response mode only).
+        "631"      (default) — dense 631-point AER grid.
+        "standard" — 22 tbl_aer grid.
+
+    qbm_mode : str
+        "aer"      (default) — AER-based correction.  Stored values are
+                    the log-AER delta: log(lambda_global) - log(lambda_corrected).
+                    Positive delta means global DSW overestimates the AER.
+        "response" — response-based correction (legacy).  Stored values
+                    are surge bias in physical units (metres).
 
     Returns
     -------
@@ -267,13 +369,40 @@ def compute_qbm_bias(
     n_aer = len(tbl_aer)
     bias_tbl = np.zeros((m, n_aer), dtype=np.float64)
 
+    if qbm_mode == "aer":
+        # ── AER mode: store log-AER delta at 22 AERs (diagnostic) ──
+        for node in range(m):
+            result = _node_aer_correction(
+                Y_sub[:, node], DSW_global, HC_bench[node, :],
+                tbl_aer, dry_thr)
+            cum_aer_global, cum_aer_corrected, surge_s, overlap = result
+
+            if cum_aer_global is None:
+                continue
+            if overlap.sum() < 2:
+                continue
+
+            # Log-AER delta at per-storm positions (where overlap exists)
+            log_delta = (np.log(cum_aer_global[overlap])
+                         - np.log(cum_aer_corrected[overlap]))
+
+            # Map to 22 standard AERs via log-linear interpolation
+            delta_22 = _interp_log_linear(
+                cum_aer_global[overlap], log_delta,
+                tbl_aer, extrapolate=True)
+
+            bias_tbl[node, :] = delta_22
+
+        return bias_tbl
+
+    # ── Response mode (legacy): per-storm response bias → intermediate → 22 ──
     if aer_mode == "631":
         inter_grid = _get_aer_631()
     else:
         inter_grid = tbl_aer
 
     for node in range(m):
-        cum_aer_s, surge_s, bias_raw, overlap = _node_storm_bias(
+        cum_aer_s, surge_s, bias_raw, overlap = _node_storm_bias_response(
             Y_sub[:, node], DSW_global, HC_bench[node, :], tbl_aer, dry_thr)
 
         if bias_raw is None:
@@ -284,11 +413,9 @@ def compute_qbm_bias(
             cum_aer_s, overlap, bias_raw, inter_grid, win_frac, ramp_frac)
 
         if aer_mode == "631":
-            # Map from 631 intermediate grid to 22 standard AERs
             bias_node = _interp_log_linear(
                 inter_grid, bias_inter, tbl_aer, extrapolate=True)
         else:
-            # Already on the 22 standard AERs
             bias_node = bias_inter
 
         bias_tbl[node, :] = bias_node
@@ -308,43 +435,60 @@ def correct_node_qbm(
     tbl_aer:        np.ndarray,
     dry_thr:        float = 0.0,
     aer_mode:       str   = "631",
+    qbm_mode:       str   = "aer",
     win_frac:       float = 0.10,
     ramp_frac:      float = 0.03,
 ):
     """
-    Correct a single node's storm responses using QBM bias.
-
-    Both modes: per-storm bias → map to intermediate grid → smooth →
-    map back to per-storm positions → correct.
+    Correct a single node's storm data using QBM.
 
     Parameters
     ----------
-    resp          : [k] storm responses at this node
-    DSW_global    : [k] global DSW weights
-    HC_bench_node : [N_AER] benchmark HC at this node
-    bias_22_node  : [N_AER] stored bias at 22 AERs (unused for "631" mode,
-                    used as fallback; "standard" mode uses this directly)
-    tbl_aer       : [N_AER] standard AER levels
-    dry_thr       : dry threshold
-    aer_mode      : "631" or "standard"
-    win_frac      : smoothing window fraction
-    ramp_frac     : endpoint ramp fraction
+    qbm_mode : str
+        "aer"      (default) — returns (cum_aer_corrected, surge_original).
+                    Surge values are untouched; AER positions are remapped
+                    by inverting the benchmark HC.
+        "response" — returns (cum_aer_original, surge_corrected).
+                    AER positions are untouched; surge values are shifted
+                    to match the benchmark (legacy).
 
     Returns
     -------
-    cum_aer       : [n_valid] cumulative AER positions (descending surge)
-    surge_corr    : [n_valid] corrected surge values (green circles)
-
-    Returns (None, None) if correction is not possible.
+    cum_aer    : [n_valid] AER positions
+    surge      : [n_valid] surge values
+    (None, None) if correction is not possible.
     """
-    cum_aer_s, surge_s, bias_raw, overlap = _node_storm_bias(
+    if qbm_mode == "aer":
+        return _correct_node_aer(
+            resp, DSW_global, HC_bench_node, tbl_aer, dry_thr)
+    else:
+        return _correct_node_response(
+            resp, DSW_global, HC_bench_node, bias_22_node, tbl_aer,
+            dry_thr, aer_mode, win_frac, ramp_frac)
+
+
+def _correct_node_aer(resp, DSW_global, HC_bench_node, tbl_aer, dry_thr):
+    """AER-based correction: remap AER positions, keep surge untouched."""
+    result = _node_aer_correction(
+        resp, DSW_global, HC_bench_node, tbl_aer, dry_thr)
+    cum_aer_global, cum_aer_corrected, surge_s, overlap = result
+
+    if cum_aer_global is None:
+        return None, None
+
+    return cum_aer_corrected, surge_s
+
+
+def _correct_node_response(resp, DSW_global, HC_bench_node, bias_22_node,
+                           tbl_aer, dry_thr, aer_mode, win_frac, ramp_frac):
+    """Response-based correction (legacy): shift surge, keep AER."""
+    cum_aer_s, surge_s, bias_raw, overlap = _node_storm_bias_response(
         resp, DSW_global, HC_bench_node, tbl_aer, dry_thr)
 
     if cum_aer_s is None:
         return None, None
 
     if bias_raw is None:
-        # No overlap → no correction
         return cum_aer_s, surge_s.copy()
 
     if aer_mode == "631":
@@ -352,17 +496,13 @@ def correct_node_qbm(
     else:
         inter_grid = tbl_aer
 
-    # Map per-storm bias to intermediate grid and smooth
     bias_inter = _bias_via_intermediate_grid(
         cum_aer_s, overlap, bias_raw, inter_grid, win_frac, ramp_frac)
 
-    # Map smoothed bias from intermediate grid back to per-storm positions
     bias_at_storm = _interp_log_linear(
         inter_grid, bias_inter, cum_aer_s, extrapolate=True)
 
     surge_corr = surge_s - bias_at_storm
-
-    # Enforce monotonicity: non-increasing with increasing cum_aer
     surge_corr = _enforce_monotonicity(surge_corr)
 
     return cum_aer_s, surge_corr

@@ -45,18 +45,24 @@ def haversine_km(lat1: float, lon1: float,
 def load_node_coordinates(
     mat_path: str | Path,
     variable: str = "nodeID",
-    node_id_col: int = 1,
+    node_id_col: int = 0,
     lat_col: int = 2,
     lon_col: int = 3,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """
-    Load ADCIRC node coordinates from the probQ .mat file.
+    Load node coordinates from the nodeID .mat file.
+
+    Parameters
+    ----------
+    node_id_col : int
+        Column containing the node IDs to use for lookups.
+        Default 0 = main node IDs (must match IDs stored in HDF5).
 
     Returns
     -------
-    node_ids_1based : int64 array [N]
-    lats            : float64 array [N]
-    lons            : float64 array [N]
+    node_ids : int64 array [N]
+    lats     : float64 array [N]
+    lons     : float64 array [N]
     """
     arr, _, _ = load_array(Path(mat_path), varname=variable)
     node_ids = arr[:, node_id_col].astype(np.int64)
@@ -81,8 +87,8 @@ def filter_nodes_in_bbox(
 
     Parameters
     ----------
-    store_node_ids : node IDs from the HDF5 store (strings, 1-based ADCIRC IDs)
-    all_node_ids   : full coordinate table node IDs (int64, 1-based)
+    store_node_ids : node IDs from the HDF5 store (strings, main node IDs)
+    all_node_ids   : full coordinate table node IDs (int64, same ID scheme as store)
     all_lats, all_lons : coordinate arrays matching all_node_ids
     bbox : dict with keys "lat_min", "lat_max", "lon_min", "lon_max"
 
@@ -265,7 +271,7 @@ def apply_bbox_filter(
     all_node_ids, all_lats, all_lons = load_node_coordinates(
         bbox_cfg["node_coord_source"],
         bbox_cfg.get("node_coord_variable", "nodeID"),
-        bbox_cfg.get("node_id_col", 1),
+        bbox_cfg.get("node_id_col", 0),
         bbox_cfg.get("lat_col", 2),
         bbox_cfg.get("lon_col", 3),
     )

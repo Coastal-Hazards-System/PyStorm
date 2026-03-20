@@ -85,7 +85,13 @@ RTCS_SELECTION_DEFAULTS: dict = {
     #   ramp_frac = smoothstep ramp-in fraction at endpoints
     "qbm_win_frac":  0.10,
     "qbm_ramp_frac": 0.03,
-    # Intermediate AER grid for QBM bias correction:
+    # QBM correction mode:
+    #   "aer"      (default) = correct cumulative AER positions via benchmark
+    #               HC inversion; surge values are untouched.
+    #   "response" = correct surge values by subtracting response bias (legacy);
+    #               AER positions are untouched.
+    "qbm_mode": "aer",
+    # Intermediate AER grid (applies to qbm_mode="response" only):
     #   "631" (default) = dense 631-point grid (10^1 … 10^-6, d=1/90 in log10)
     #   "standard"      = standard tbl_aer grid (22 levels)
     "qbm_aer_mode": "631",

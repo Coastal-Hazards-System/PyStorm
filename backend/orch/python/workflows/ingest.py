@@ -94,32 +94,61 @@ class Preprocessor:
         units    = cfg.get("Y_units", "m NAVD88")
         return arr.astype(np.float32), node_ids, units, str(path)
 
-    def _load_node_filter(self) -> Optional[np.ndarray]:
+    def _load_node_filter(self) -> tuple[Optional[np.ndarray], Optional[list[str]]]:
         """
-        Load 0-based column indices for subsetting Y nodes.
+        Load 0-based column indices for subsetting Y nodes and the
+        corresponding main node IDs for storage.
 
         Config keys:
           Y_node_filter_source   : path to .mat/.npy/etc. file
           Y_node_filter_variable : variable name in the file (required for .mat)
           Y_node_filter_col      : which column (0-based) in the 2-D array holds
-                                   the 1-based ADCIRC node IDs (default 1)
+                                   the 1-based ADCIRC node IDs (default 1) —
+                                   used for indexing into the raw Resp matrix
+          Y_node_id_col          : which column holds the main node IDs
+                                   (default 0) — stored in HDF5 and used for
+                                   display, geographic lookups, and labels
 
-        Returns a sorted int64 array of 0-based indices, or None if not configured.
+        Returns
+        -------
+        filter_indices : sorted int64 array of 0-based column indices into Y,
+                         or None if not configured
+        main_node_ids  : list of main node ID strings (same row order as
+                         filter_indices), or None if not configured
         """
         cfg = self.cfg
         src = cfg.get("Y_node_filter_source")
         if not src:
-            return None
+            return None, None
 
         path = Path(src)
         print(f"\n  [NF] Loading node filter: {path}")
         arr, _, _ = load_array(path, varname=cfg.get("Y_node_filter_variable"))
-        col = int(cfg.get("Y_node_filter_col", 1))
-        ids_1based = arr[:, col].astype(np.int64)   # 1-indexed ADCIRC node IDs
-        indices    = ids_1based - 1                  # convert to 0-based
-        print(f"       Keeping {len(indices):,} nodes  "
-              f"(node IDs {ids_1based.min():,} – {ids_1based.max():,})")
-        return np.sort(indices)
+
+        # Column 1: ADCIRC node IDs → 0-based indices for Resp matrix subsetting
+        filter_col = int(cfg.get("Y_node_filter_col", 1))
+        adcirc_ids_1based = arr[:, filter_col].astype(np.int64)
+        filter_indices = adcirc_ids_1based - 1  # convert to 0-based
+
+        # Column 0: main node IDs → stored in HDF5, used for display/lookups
+        id_col = int(cfg.get("Y_node_id_col", 0))
+        main_ids = arr[:, id_col].astype(np.int64)
+
+        # Sort by filter index, keeping row correspondence
+        order = np.argsort(filter_indices)
+        filter_indices = filter_indices[order]
+        main_ids = main_ids[order]
+
+        main_node_ids = [str(nid) for nid in main_ids.tolist()]
+
+        print(f"       Keeping {len(filter_indices):,} nodes")
+        print(f"       ADCIRC IDs (col {filter_col}): "
+              f"{adcirc_ids_1based.min():,} – {adcirc_ids_1based.max():,}  "
+              f"(used for Resp indexing)")
+        print(f"       Main IDs   (col {id_col}): "
+              f"{main_ids.min():,} – {main_ids.max():,}  "
+              f"(stored in HDF5)")
+        return filter_indices, main_node_ids
 
     def _load_HC(
         self, m_expected: int
@@ -184,10 +213,10 @@ class Preprocessor:
 
         Y_arr, node_ids, Y_units, Y_src = self._load_Y(n_storms)
 
-        node_filter = self._load_node_filter()
+        node_filter, main_node_ids = self._load_node_filter()
         if node_filter is not None:
-            Y_arr    = Y_arr[:, node_filter]
-            node_ids = [str(i) for i in (node_filter + 1).tolist()]  # store 1-based IDs as strings
+            Y_arr    = Y_arr[:, node_filter]       # subset using ADCIRC indices (col 1)
+            node_ids = main_node_ids               # store main node IDs (col 0)
             print(f"       Y after filter: {Y_arr.shape}")
 
         _, m_nodes = Y_arr.shape

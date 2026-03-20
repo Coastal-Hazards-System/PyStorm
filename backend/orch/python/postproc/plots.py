@@ -587,24 +587,32 @@ def plot_hc_qbm(
     n_nodes:      int = 9,
     seed:         int = 42,
     aer_mode:     str = "631",
+    qbm_mode:     str = "aer",
     win_frac:     float = 0.10,
     ramp_frac:    float = 0.03,
 ):
     """
     Plot HC comparison: Benchmark vs DSW-only vs QBM-corrected (3x3 grid).
 
-    aer_mode controls the intermediate grid for bias correction:
-      "631"      — dense 631-point AER grid (10^1 … 10^-6).
-      "standard" — 22 tbl_aer levels.
+    qbm_mode controls correction type:
+      "aer"      — green circles have corrected AER, original surge.
+      "response" — green circles have original AER, corrected surge.
 
-    Red circles  = raw DSW per-storm dots at (cum_aer, surge).
-    Green circles = bias-corrected response values.
+    Red circles  = raw DSW per-storm dots at (cum_aer_global, surge).
+    Green circles = QBM-corrected points.
     """
     from backend.engines.weights.qbm import correct_node_qbm
 
     CLR_BENCH = "gray"
     CLR_DSW   = "#C62828"    # red — DSW-only (uncorrected)
     CLR_QBM   = "#2E7D32"    # green — QBM-corrected
+
+    if qbm_mode == "aer":
+        qbm_label = "QBM (AER-corrected)"
+        suptitle = "HC Comparison — Benchmark vs DSW vs QBM (AER-Corrected)"
+    else:
+        qbm_label = "QBM (Response-corrected)"
+        suptitle = "HC Comparison — Benchmark vs DSW vs QBM (Response-Corrected)"
 
     out_dir = Path(out_dir)
     m = HC_bench.shape[0]
@@ -617,8 +625,7 @@ def plot_hc_qbm(
     nrows = (n_nodes + ncols - 1) // ncols
     fig, axes = plt.subplots(nrows, ncols,
                              figsize=(5 * ncols, 4 * nrows), squeeze=False)
-    fig.suptitle("HC Comparison — Benchmark vs DSW vs QBM-Corrected",
-                 fontsize=13, fontweight="bold", y=1.02)
+    fig.suptitle(suptitle, fontsize=13, fontweight="bold", y=1.02)
 
     for ax_idx, node in enumerate(nodes):
         r, c = divmod(ax_idx, ncols)
@@ -637,19 +644,21 @@ def plot_hc_qbm(
             ax.plot(cum_aer_g, surge_g, "o", color=CLR_DSW,
                     ms=3, label="RTCS (Global DSW)")
 
-            # QBM-corrected dots via correct_node_qbm
+            # QBM-corrected dots
             cum_aer_corr, surge_corr = correct_node_qbm(
                 resp, DSW_global, HC_bench[node, :],
                 bias_array[node, :], tbl_aer,
                 dry_thr=dry_thr, aer_mode=aer_mode,
+                qbm_mode=qbm_mode,
                 win_frac=win_frac, ramp_frac=ramp_frac)
 
             if cum_aer_corr is not None:
-                # Only plot if there was actual correction
-                if not np.allclose(surge_corr, surge_g):
+                # Detect if there was actual correction
+                changed = (not np.allclose(cum_aer_corr, cum_aer_g)
+                           or not np.allclose(surge_corr, surge_g))
+                if changed:
                     ax.plot(cum_aer_corr, surge_corr, "o",
-                            color=CLR_QBM, ms=3,
-                            label="RTCS (QBM-corrected)")
+                            color=CLR_QBM, ms=3, label=qbm_label)
 
         ax.set_xscale("log")
         ax.set_xlim(1e1, 1e-6)
