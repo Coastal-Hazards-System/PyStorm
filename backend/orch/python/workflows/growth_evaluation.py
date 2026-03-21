@@ -28,7 +28,11 @@ from backend.engines.sampling.python.pca import reduce_output
 from backend.engines.sampling.python.joint_matrix import build_joint_matrix
 from backend.engines.sampling.python.kmedoids import select_kmedoids
 from backend.engines.sampling.metrics import evaluate_sf_metrics
-from backend.engines.weights.python.dsw import evaluate_hc_reconstruction
+from backend.engines.weights.dsw import (
+    compute_global_dsw,
+    reconstruct_hc_global_dsw,
+    evaluate_hc_metrics,
+)
 from backend.orch.python.workflows.rtcs_selection import (
     _load_pipeline_data, _load_forced_indices, _remap_forced_indices,
 )
@@ -68,9 +72,11 @@ def run_growth_evaluation(cfg: Optional[dict] = None):
     sel_cols = cfg.get("x_select_columns")
     if sel_cols is not None:
         X = X_full[:, sel_cols]
-        print(f"    X columns   : {sel_cols} -> {[x_cols_full[i] for i in sel_cols]}")
+        x_cols = [x_cols_full[i] for i in sel_cols]
+        print(f"    X columns   : {sel_cols} -> {x_cols}")
     else:
         X = X_full
+        x_cols = x_cols_full
     if forced is not None:
         print(f"    Forced storms : {len(forced)}  "
               f"(growth loop selects {cfg['k_initial'] - len(forced)} "
@@ -109,9 +115,17 @@ def run_growth_evaluation(cfg: Optional[dict] = None):
         indices  = select_kmedoids(Z, k, cfg["random_seed"], forced_indices=forced)
         sf       = evaluate_sf_metrics(Z, X_scaled, Y_r, indices,
                                        cfg["n_coverage_clusters"], cfg["random_seed"])
-        _, hc_m  = evaluate_hc_reconstruction(
-            Y[indices, :], HC_bench, tbl_aer, dry_thr, report_rp,
-            dsw_method=cfg.get("dsw_method", 1))
+        dsw_method = cfg.get("dsw_method", 1)
+        Y_sel = Y[indices, :]
+        DSW_g = compute_global_dsw(Y_sel, HC_bench, tbl_aer,
+                                   dry_thr=dry_thr, method=dsw_method)
+        HC_rec = reconstruct_hc_global_dsw(Y_sel, DSW_g, tbl_aer, dry_thr=dry_thr)
+        hc_m = evaluate_hc_metrics(Y_sel, HC_bench, tbl_aer,
+                                   dry_thr=dry_thr, dsw_method=dsw_method)
+        for rp in report_rp:
+            col = int(np.argmin(np.abs(tbl_aer - 1.0 / rp)))
+            hc_m[f"bias_rp{rp}"] = float(np.nanmean(
+                HC_rec[:, col] - HC_bench[:, col]))
 
         history.append({"k": k, **sf, **hc_m})
 

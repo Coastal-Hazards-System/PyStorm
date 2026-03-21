@@ -357,6 +357,7 @@ def compute_qbm_bias(
     ramp_frac:  float = 0.03,
     aer_mode:   str   = "631",
     qbm_mode:   str   = "aer",
+    n_threads:  int   = 0,
 ) -> np.ndarray:
     """
     Compute QBM bias at the standard tbl_aer grid for every node.
@@ -391,12 +392,13 @@ def compute_qbm_bias(
 
         if qbm_mode == "aer":
             return np.asarray(_cpp_compute_qbm_bias_aer(
-                Y_c, D_c, HC_c, A_c, dry_thr))
+                Y_c, D_c, HC_c, A_c, dry_thr, n_threads))
         else:
             inter = _get_aer_631() if aer_mode == "631" else tbl_aer
             G_c = np.ascontiguousarray(inter, dtype=np.float64)
             return np.asarray(_cpp_compute_qbm_bias_response(
-                Y_c, D_c, HC_c, A_c, dry_thr, G_c, win_frac, ramp_frac))
+                Y_c, D_c, HC_c, A_c, dry_thr, G_c, win_frac, ramp_frac,
+                n_threads))
 
     # ── Python fallback ───────────────────────────────────────────────────
     bias_tbl = np.zeros((m, n_aer), dtype=np.float64)

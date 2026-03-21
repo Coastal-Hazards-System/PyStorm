@@ -20,7 +20,8 @@
 #include <numeric>
 #include <vector>
 
-#include "dsw_core.hpp"  // for dsw::interp_linear, dsw::NaN, dsw::is_nan, dsw::is_finite
+#include "dsw_core.hpp"   // for dsw::interp_linear, dsw::NaN, dsw::is_nan, dsw::is_finite
+#include "thread_pool.hpp"
 
 namespace qbm {
 
@@ -222,24 +223,28 @@ inline void ramp_endpoints(const double* bias_smooth, const double* bias_raw,
  * out_bias : [m x n_aer] row-major
  */
 inline void compute_bias_aer(
-    const double* Y_sub, int k, int m,
+    const double* Y_T, int k, int m,
     const double* DSW_global,
     const double* HC_bench,
     const double* tbl_aer, int n_aer,
     double dry_thr,
-    double* out_bias  // [m x n_aer]
+    double* out_bias,  // [m x n_aer]
+    int n_threads = 0
 ) {
+    if (n_threads <= 0) n_threads = threading::default_threads();
+
     // Zero-initialise output
     for (int i = 0; i < m * n_aer; ++i) out_bias[i] = 0.0;
 
-    for (int node = 0; node < m; ++node) {
-        // Extract column
+    threading::parallel_for(m, n_threads, [&](int tid, int start, int end) {
+    for (int node = start; node < end; ++node) {
+        const double* resp = &Y_T[node * k];
+
         std::vector<int> valid_idx;
         valid_idx.reserve(k);
         for (int j = 0; j < k; ++j) {
-            double r = Y_sub[j * m + node];
             double d = DSW_global[j];
-            if (!is_nan(r) && !is_nan(d) && r > dry_thr)
+            if (!is_nan(resp[j]) && !is_nan(d) && resp[j] > dry_thr)
                 valid_idx.push_back(j);
         }
         if (static_cast<int>(valid_idx.size()) < 2) continue;
@@ -247,14 +252,14 @@ inline void compute_bias_aer(
         // Sort descending by surge
         std::sort(valid_idx.begin(), valid_idx.end(),
                   [&](int a, int b) {
-                      return Y_sub[a * m + node] > Y_sub[b * m + node];
+                      return resp[a] > resp[b];
                   });
 
         int nv = static_cast<int>(valid_idx.size());
         std::vector<double> surge_s(nv), cum_aer_g(nv);
         double cum = 0.0;
         for (int i = 0; i < nv; ++i) {
-            surge_s[i] = Y_sub[valid_idx[i] * m + node];
+            surge_s[i] = resp[valid_idx[i]];
             cum += DSW_global[valid_idx[i]];
             cum_aer_g[i] = cum;
         }
@@ -305,6 +310,7 @@ inline void compute_bias_aer(
             tbl_aer, n_aer, true,
             &out_bias[node * n_aer]);
     }
+    }); // parallel_for
 }
 
 
@@ -324,25 +330,29 @@ inline void compute_bias_aer(
  * out_bias       : [m x n_aer] row-major
  */
 inline void compute_bias_response(
-    const double* Y_sub, int k, int m,
+    const double* Y_T, int k, int m,
     const double* DSW_global,
     const double* HC_bench,
     const double* tbl_aer, int n_aer,
     double dry_thr,
     const double* inter_grid, int n_inter,
     double win_frac, double ramp_frac,
-    double* out_bias  // [m x n_aer]
+    double* out_bias,  // [m x n_aer]
+    int n_threads = 0
 ) {
+    if (n_threads <= 0) n_threads = threading::default_threads();
+
     for (int i = 0; i < m * n_aer; ++i) out_bias[i] = 0.0;
 
-    for (int node = 0; node < m; ++node) {
-        // Collect valid storms
+    threading::parallel_for(m, n_threads, [&](int tid, int start, int end) {
+    for (int node = start; node < end; ++node) {
+        const double* resp = &Y_T[node * k];
+
         std::vector<int> valid_idx;
         valid_idx.reserve(k);
         for (int j = 0; j < k; ++j) {
-            double r = Y_sub[j * m + node];
             double d = DSW_global[j];
-            if (!is_nan(r) && !is_nan(d) && r > dry_thr)
+            if (!is_nan(resp[j]) && !is_nan(d) && resp[j] > dry_thr)
                 valid_idx.push_back(j);
         }
         if (static_cast<int>(valid_idx.size()) < 2) continue;
@@ -350,14 +360,14 @@ inline void compute_bias_response(
         // Sort descending by surge
         std::sort(valid_idx.begin(), valid_idx.end(),
                   [&](int a, int b) {
-                      return Y_sub[a * m + node] > Y_sub[b * m + node];
+                      return resp[a] > resp[b];
                   });
 
         int nv = static_cast<int>(valid_idx.size());
         std::vector<double> surge_s(nv), cum_aer_s(nv);
         double cum = 0.0;
         for (int i = 0; i < nv; ++i) {
-            surge_s[i] = Y_sub[valid_idx[i] * m + node];
+            surge_s[i] = resp[valid_idx[i]];
             cum += DSW_global[valid_idx[i]];
             cum_aer_s[i] = cum;
         }
@@ -436,6 +446,7 @@ inline void compute_bias_response(
                 out_bias[node * n_aer + a] = bias_inter[a];
         }
     }
+    }); // parallel_for
 }
 
 } // namespace qbm

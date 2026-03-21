@@ -178,6 +178,7 @@ def compute_global_dsw(
     dry_thr:        float = 0.0,
     min_wet_storms: int   = 2,
     method:         int   = 1,
+    n_threads:      int   = 0,
 ) -> np.ndarray:
     """
     Back-compute one global DSW per selected storm by aggregating nodal DSWs
@@ -213,7 +214,8 @@ def compute_global_dsw(
         A_c  = np.ascontiguousarray(tbl_aer,  dtype=np.float64)
         nw   = _compute_node_weights(Y_sub, HC_bench, tbl_aer, method, dry_thr)
         return np.asarray(_cpp_compute_global_dsw(
-            Y_c, HC_c, A_c, dry_thr, min_wet_storms, method, nw))
+            Y_c, HC_c, A_c, dry_thr, min_wet_storms, method, nw,
+            n_threads))
 
     # ── Python fallback ───────────────────────────────────────────────────
     k, m = Y_sub.shape
@@ -296,6 +298,7 @@ def reconstruct_hc_global_dsw(
     DSW_global: np.ndarray,
     tbl_aer:    np.ndarray,
     dry_thr:    float = 0.0,
+    n_threads:  int   = 0,
 ) -> np.ndarray:
     """
     Reconstruct the hazard curve at every node via JPM-OS integration.
@@ -310,7 +313,7 @@ def reconstruct_hc_global_dsw(
             np.ascontiguousarray(Y_sub,      dtype=np.float64),
             np.ascontiguousarray(DSW_global, dtype=np.float64),
             np.ascontiguousarray(tbl_aer,    dtype=np.float64),
-            dry_thr))
+            dry_thr, n_threads))
 
     # ── Python fallback ───────────────────────────────────────────────────
     k, m     = Y_sub.shape
@@ -328,6 +331,7 @@ def evaluate_hc_metrics(
     dry_thr:        float = 0.0,
     min_wet_storms: int   = 2,
     dsw_method:     int   = 1,
+    n_threads:      int   = 0,
 ) -> dict:
     """
     Run the full DSW pipeline and return scalar HC quality metrics.
@@ -341,7 +345,8 @@ def evaluate_hc_metrics(
         A_c  = np.ascontiguousarray(tbl_aer,  dtype=np.float64)
         nw   = _compute_node_weights(Y_sub, HC_bench, tbl_aer, dsw_method, dry_thr)
         return dict(_cpp_evaluate_hc_metrics(
-            Y_c, HC_c, A_c, dry_thr, min_wet_storms, dsw_method, nw))
+            Y_c, HC_c, A_c, dry_thr, min_wet_storms, dsw_method, nw,
+            n_threads))
 
     # ── Python fallback ───────────────────────────────────────────────────
     DSW_global = compute_global_dsw(Y_sub, HC_bench, tbl_aer, dry_thr,

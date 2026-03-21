@@ -41,7 +41,7 @@ BBOX_CONFIG = {
     },
 
     # Node coordinate source (the probQ .mat file from preprocessing)
-    "node_coord_source":   str(_ROOT / "data/raw/lpv/CHS-LA_nodeID_probQ.mat"),
+    "node_coord_source":   str(_ROOT / "data/raw/lpv/CHS-LA_nodeID.mat"),
     "node_coord_variable": "nodeID",
     "node_id_col": 0,        # column with main node IDs (must match IDs stored in HDF5)
     "lat_col":     2,        # column with latitude

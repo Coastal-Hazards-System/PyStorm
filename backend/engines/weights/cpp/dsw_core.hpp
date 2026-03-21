@@ -24,6 +24,8 @@
 #include <numeric>
 #include <vector>
 
+#include "thread_pool.hpp"
+
 namespace dsw {
 
 // ─── Constants ───────────────────────────────────────────────────────────────
@@ -225,7 +227,7 @@ inline void jpm_integrate(
 /**
  * Compute global DSW per storm.
  *
- * Y_sub    : [k x m] row-major  (storm-major)
+ * Y_T      : [m x k] node-major  (Y_T[node*k + j] = storm j at node)
  * HC_bench : [m x N] row-major  (node-major)
  * tbl_aer  : [N]
  * node_w   : [m]  per-node weights (method 1: all 1s, method 3: variance)
@@ -235,122 +237,119 @@ inline void jpm_integrate(
  * Returns DSW_global via out_dsw[k].
  */
 inline void compute_global_dsw(
-    const double* Y_sub, int k, int m,
+    const double* Y_T, int k, int m,
     const double* HC_bench, const double* tbl_aer, int n_aer,
     double dry_thr, int min_wet_storms, int method,
     const double* node_w,  // [m] or nullptr for method 2
-    double* out_dsw        // [k] output
+    double* out_dsw,       // [k] output
+    int n_threads = 0
 ) {
-    // Accumulators
+    if (n_threads <= 0) n_threads = threading::default_threads();
+
+    // Per-thread accumulators
+    int nt = std::max(1, std::min(n_threads, m));
+    std::vector<std::vector<double>> t_dsw_sum(nt, std::vector<double>(k, 0.0));
+    std::vector<std::vector<double>> t_weight_sum(nt, std::vector<double>(k, 0.0));
+
+    threading::parallel_for(m, nt, [&](int tid, int start, int end) {
+        std::vector<int> sort_buf(k);
+
+        for (int node = start; node < end; ++node) {
+            // Node's k values are contiguous: Y_T[node*k .. node*k + k-1]
+            const double* resp = &Y_T[node * k];
+
+            // Count wet storms
+            int wet_count = 0;
+            for (int j = 0; j < k; ++j) {
+                if (!is_nan(resp[j]) && resp[j] > dry_thr)
+                    wet_count++;
+            }
+            if (wet_count < min_wet_storms)
+                continue;
+
+            std::iota(sort_buf.begin(), sort_buf.end(), 0);
+            std::sort(sort_buf.begin(), sort_buf.end(),
+                      [&](int a, int b) {
+                          if (is_nan(resp[a])) return false;
+                          if (is_nan(resp[b])) return true;
+                          return resp[a] > resp[b];
+                      });
+
+            std::vector<int> inv_perm(k);
+            for (int r = 0; r < k; ++r)
+                inv_perm[sort_buf[r]] = r;
+
+            std::vector<double> resp_sorted(k);
+            for (int r = 0; r < k; ++r)
+                resp_sorted[r] = resp[sort_buf[r]];
+
+            std::vector<int> valid_pos;
+            valid_pos.reserve(k);
+            for (int r = 0; r < k; ++r) {
+                if (!is_nan(resp_sorted[r]) && resp_sorted[r] > dry_thr)
+                    valid_pos.push_back(r);
+            }
+            int n_valid = static_cast<int>(valid_pos.size());
+            if (n_valid < 2) continue;
+
+            std::vector<double> query(n_valid);
+            for (int i = 0; i < n_valid; ++i)
+                query[i] = resp_sorted[valid_pos[i]];
+
+            std::vector<double> aer_q(n_valid);
+            surge_to_aer(
+                &HC_bench[node * n_aer], tbl_aer, n_aer,
+                query.data(), n_valid,
+                aer_q.data());
+
+            bool all_nan = true;
+            for (int i = 0; i < n_valid; ++i) {
+                if (!is_nan(aer_q[i])) { all_nan = false; break; }
+            }
+            if (all_nan) continue;
+
+            std::vector<double> dsw_valid(n_valid);
+            dsw_valid[0] = is_nan(aer_q[0]) ? 0.0 : aer_q[0];
+            for (int i = 1; i < n_valid; ++i) {
+                if (is_nan(aer_q[i]) || is_nan(aer_q[i - 1]))
+                    dsw_valid[i] = 0.0;
+                else
+                    dsw_valid[i] = aer_q[i] - aer_q[i - 1];
+            }
+
+            for (int i = 0; i < n_valid; ++i) {
+                if (dsw_valid[i] < 0.0) dsw_valid[i] = 0.0;
+            }
+
+            std::vector<double> dsw_sorted(k, 0.0);
+            for (int i = 0; i < n_valid; ++i)
+                dsw_sorted[valid_pos[i]] = dsw_valid[i];
+
+            for (int j = 0; j < k; ++j) {
+                double dsw_orig = dsw_sorted[inv_perm[j]];
+                bool active = dsw_orig > 0.0;
+
+                if (method == 2) {
+                    double s = resp[j];
+                    double sw = (is_nan(s) || s < 0.0) ? 0.0 : s;
+                    t_dsw_sum[tid][j] += dsw_orig * sw;
+                    if (active) t_weight_sum[tid][j] += sw;
+                } else {
+                    double w = node_w[node];
+                    t_dsw_sum[tid][j] += dsw_orig * w;
+                    if (active) t_weight_sum[tid][j] += w;
+                }
+            }
+        }
+    });
+
+    // Merge per-thread accumulators
     std::vector<double> dsw_sum(k, 0.0);
     std::vector<double> weight_sum(k, 0.0);
-
-    // Pre-compute wet counts per node
-    std::vector<int> wet_counts(m, 0);
-    for (int node = 0; node < m; ++node) {
+    for (int t = 0; t < nt; ++t) {
         for (int j = 0; j < k; ++j) {
-            double val = Y_sub[j * m + node];  // Y_sub[j, node] row-major
-            if (!is_nan(val) && val > dry_thr)
-                wet_counts[node]++;
-        }
-    }
-
-    // Pre-compute sort indices (descending) for each node
-    // and inverse permutation
-    std::vector<int> sort_buf(k);  // reusable buffer
-
-    for (int node = 0; node < m; ++node) {
-        if (wet_counts[node] < min_wet_storms)
-            continue;
-
-        // Extract column: resp[j] = Y_sub[j, node]
-        std::vector<double> resp(k);
-        for (int j = 0; j < k; ++j)
-            resp[j] = Y_sub[j * m + node];
-
-        // Sort indices descending by resp
-        std::iota(sort_buf.begin(), sort_buf.end(), 0);
-        std::sort(sort_buf.begin(), sort_buf.end(),
-                  [&](int a, int b) {
-                      // NaN sorts to end
-                      if (is_nan(resp[a])) return false;
-                      if (is_nan(resp[b])) return true;
-                      return resp[a] > resp[b];
-                  });
-
-        // Build inverse permutation
-        std::vector<int> inv_perm(k);
-        for (int r = 0; r < k; ++r)
-            inv_perm[sort_buf[r]] = r;
-
-        // Sorted resp and valid mask
-        std::vector<double> resp_sorted(k);
-        for (int r = 0; r < k; ++r)
-            resp_sorted[r] = resp[sort_buf[r]];
-
-        std::vector<int> valid_pos;
-        valid_pos.reserve(k);
-        for (int r = 0; r < k; ++r) {
-            if (!is_nan(resp_sorted[r]) && resp_sorted[r] > dry_thr)
-                valid_pos.push_back(r);
-        }
-        int n_valid = static_cast<int>(valid_pos.size());
-        if (n_valid < 2) continue;
-
-        // Extract valid sorted surges
-        std::vector<double> query(n_valid);
-        for (int i = 0; i < n_valid; ++i)
-            query[i] = resp_sorted[valid_pos[i]];
-
-        // Interpolate: surge → AER
-        std::vector<double> aer_q(n_valid);
-        surge_to_aer(
-            &HC_bench[node * n_aer], tbl_aer, n_aer,
-            query.data(), n_valid,
-            aer_q.data());
-
-        // Check if all NaN
-        bool all_nan = true;
-        for (int i = 0; i < n_valid; ++i) {
-            if (!is_nan(aer_q[i])) { all_nan = false; break; }
-        }
-        if (all_nan) continue;
-
-        // Finite-difference → nodal DSWs (valid positions only)
-        std::vector<double> dsw_valid(n_valid);
-        dsw_valid[0] = is_nan(aer_q[0]) ? 0.0 : aer_q[0];
-        for (int i = 1; i < n_valid; ++i) {
-            if (is_nan(aer_q[i]) || is_nan(aer_q[i - 1]))
-                dsw_valid[i] = 0.0;
-            else
-                dsw_valid[i] = aer_q[i] - aer_q[i - 1];
-        }
-
-        // Clip negatives
-        for (int i = 0; i < n_valid; ++i) {
-            if (dsw_valid[i] < 0.0) dsw_valid[i] = 0.0;
-        }
-
-        // Map back to sorted order (zeros for dry/NaN storms)
-        std::vector<double> dsw_sorted(k, 0.0);
-        for (int i = 0; i < n_valid; ++i)
-            dsw_sorted[valid_pos[i]] = dsw_valid[i];
-
-        // Map from sorted → original storm order and accumulate
-        for (int j = 0; j < k; ++j) {
-            double dsw_orig = dsw_sorted[inv_perm[j]];
-            bool active = dsw_orig > 0.0;
-
-            if (method == 2) {
-                double s = resp[j];
-                double sw = (is_nan(s) || s < 0.0) ? 0.0 : s;
-                dsw_sum[j] += dsw_orig * sw;
-                if (active) weight_sum[j] += sw;
-            } else {
-                double w = node_w[node];
-                dsw_sum[j] += dsw_orig * w;
-                if (active) weight_sum[j] += w;
-            }
+            dsw_sum[j]    += t_dsw_sum[t][j];
+            weight_sum[j] += t_weight_sum[t][j];
         }
     }
 
@@ -365,31 +364,31 @@ inline void compute_global_dsw(
 /**
  * Reconstruct hazard curves at all nodes via JPM-OS integration.
  *
- * Y_sub      : [k x m] row-major
+ * Y_T        : [m x k] node-major
  * DSW_global : [k]
  * tbl_aer    : [N]
  * out_hc     : [m x N] row-major output
  */
 inline void reconstruct_hc(
-    const double* Y_sub, int k, int m,
+    const double* Y_T, int k, int m,
     const double* DSW_global,
     const double* tbl_aer, int n_aer,
     double dry_thr,
-    double* out_hc  // [m x N]
+    double* out_hc,  // [m x N]
+    int n_threads = 0
 ) {
-    // Per-node: extract column, call jpm_integrate
-    std::vector<double> resp(k);
+    if (n_threads <= 0) n_threads = threading::default_threads();
 
-    for (int node = 0; node < m; ++node) {
-        for (int j = 0; j < k; ++j)
-            resp[j] = Y_sub[j * m + node];
-
-        jpm_integrate(
-            resp.data(), DSW_global, k,
-            tbl_aer, n_aer,
-            dry_thr,
-            &out_hc[node * n_aer]);
-    }
+    threading::parallel_for(m, n_threads, [&](int tid, int start, int end) {
+        for (int node = start; node < end; ++node) {
+            // Node's k values are contiguous — pass directly
+            jpm_integrate(
+                &Y_T[node * k], DSW_global, k,
+                tbl_aer, n_aer,
+                dry_thr,
+                &out_hc[node * n_aer]);
+        }
+    });
 }
 
 /**
@@ -403,35 +402,49 @@ inline void reconstruct_hc(
 inline void hc_residual_metrics(
     const double* HC_recon, const double* HC_bench,
     int m, int n_aer,
-    double* mean_bias, double* mean_uncertainty, double* mean_rmse
+    double* mean_bias, double* mean_uncertainty, double* mean_rmse,
+    int n_threads = 0
 ) {
+    if (n_threads <= 0) n_threads = threading::default_threads();
+    int nt = std::max(1, std::min(n_threads, m));
+
+    std::vector<double> t_bias(nt, 0.0), t_unc(nt, 0.0), t_rmse(nt, 0.0);
+    std::vector<int> t_count(nt, 0);
+
+    threading::parallel_for(m, nt, [&](int tid, int start, int end) {
+        for (int node = start; node < end; ++node) {
+            double sum_r = 0.0, sum_r2 = 0.0;
+            int cnt = 0;
+            for (int a = 0; a < n_aer; ++a) {
+                double r = HC_recon[node * n_aer + a] - HC_bench[node * n_aer + a];
+                if (!is_nan(r)) {
+                    sum_r += r;
+                    sum_r2 += r * r;
+                    cnt++;
+                }
+            }
+            if (cnt == 0) continue;
+
+            double node_bias = sum_r / cnt;
+            double node_mse  = sum_r2 / cnt;
+            double node_var  = node_mse - node_bias * node_bias;
+            double node_unc  = (node_var > 0.0) ? std::sqrt(node_var) : 0.0;
+            double node_rmse = std::sqrt(node_mse);
+
+            t_bias[tid]  += node_bias;
+            t_unc[tid]   += node_unc;
+            t_rmse[tid]  += node_rmse;
+            t_count[tid]++;
+        }
+    });
+
     double sum_bias = 0.0, sum_unc = 0.0, sum_rmse = 0.0;
     int n_valid_nodes = 0;
-
-    for (int node = 0; node < m; ++node) {
-        // Per-node: compute bias, std, rmse across AER levels
-        double sum_r = 0.0, sum_r2 = 0.0;
-        int cnt = 0;
-        for (int a = 0; a < n_aer; ++a) {
-            double r = HC_recon[node * n_aer + a] - HC_bench[node * n_aer + a];
-            if (!is_nan(r)) {
-                sum_r += r;
-                sum_r2 += r * r;
-                cnt++;
-            }
-        }
-        if (cnt == 0) continue;
-
-        double node_bias = sum_r / cnt;
-        double node_mse  = sum_r2 / cnt;
-        double node_var  = node_mse - node_bias * node_bias;
-        double node_unc  = (node_var > 0.0) ? std::sqrt(node_var) : 0.0;
-        double node_rmse = std::sqrt(node_mse);
-
-        sum_bias += node_bias;
-        sum_unc  += node_unc;
-        sum_rmse += node_rmse;
-        n_valid_nodes++;
+    for (int t = 0; t < nt; ++t) {
+        sum_bias += t_bias[t];
+        sum_unc  += t_unc[t];
+        sum_rmse += t_rmse[t];
+        n_valid_nodes += t_count[t];
     }
 
     if (n_valid_nodes > 0) {
@@ -452,24 +465,25 @@ inline void hc_residual_metrics(
  * node_w must be pre-computed by the caller (Python side).
  */
 inline void evaluate_hc_metrics(
-    const double* Y_sub, int k, int m,
+    const double* Y_T, int k, int m,
     const double* HC_bench,
     const double* tbl_aer, int n_aer,
     double dry_thr, int min_wet_storms, int method,
     const double* node_w,
-    double* mean_bias, double* mean_uncertainty, double* mean_rmse
+    double* mean_bias, double* mean_uncertainty, double* mean_rmse,
+    int n_threads = 0
 ) {
     std::vector<double> DSW_global(k);
-    compute_global_dsw(Y_sub, k, m, HC_bench, tbl_aer, n_aer,
+    compute_global_dsw(Y_T, k, m, HC_bench, tbl_aer, n_aer,
                        dry_thr, min_wet_storms, method, node_w,
-                       DSW_global.data());
+                       DSW_global.data(), n_threads);
 
     std::vector<double> HC_recon(static_cast<size_t>(m) * n_aer);
-    reconstruct_hc(Y_sub, k, m, DSW_global.data(),
-                   tbl_aer, n_aer, dry_thr, HC_recon.data());
+    reconstruct_hc(Y_T, k, m, DSW_global.data(),
+                   tbl_aer, n_aer, dry_thr, HC_recon.data(), n_threads);
 
     hc_residual_metrics(HC_recon.data(), HC_bench, m, n_aer,
-                        mean_bias, mean_uncertainty, mean_rmse);
+                        mean_bias, mean_uncertainty, mean_rmse, n_threads);
 }
 
 } // namespace dsw
