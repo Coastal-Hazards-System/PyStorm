@@ -99,9 +99,8 @@ def run_growth_evaluation(cfg: Optional[dict] = None):
     print(f"    Variance explained  : {np.cumsum(pca.explained_variance_ratio_)[-1]*100:.2f}%")
 
     # 3. Joint matrix
-    print(f"\n[3] Building joint matrix  "
-          f"(alpha={cfg['alpha_default']}, beta={cfg['beta_default']}) ...")
-    Z, scaler_X, _ = build_joint_matrix(X, Y_r, cfg["alpha_default"], cfg["beta_default"])
+    print(f"\n[3] Building joint matrix  (w={cfg['w_default']}) ...")
+    Z, scaler_X, _ = build_joint_matrix(X, Y_r, cfg["w_default"])
     X_scaled = scaler_X.transform(X)
 
     # 4. Growth loop

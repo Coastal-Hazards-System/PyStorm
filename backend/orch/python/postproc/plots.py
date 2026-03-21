@@ -99,7 +99,7 @@ def plot_sensitivity(sens_df, cfg, out_dir):
     if nrows == 1:
         axes = axes[np.newaxis, :]
 
-    a = sens_df["alpha"].values
+    a = sens_df["w"].values if "w" in sens_df.columns else sens_df["alpha"].values
     BLUE, GREEN, ORANGE, RED, PURPLE = (
         "#2196F3", "#4CAF50", "#FF9800", "#F44336", "#9C27B0")
 
@@ -107,9 +107,9 @@ def plot_sensitivity(sens_df, cfg, out_dir):
     ln1 = ax1.plot(a, sens_df["coverage"], "o-", color=BLUE, lw=2,
                    label="Coverage (Y-space)")
     ax1.axhline(cfg["coverage_threshold"], color=BLUE, ls=":", alpha=0.5)
-    ax1.set_xlabel("alpha"); ax1.set_ylabel("Y-space Coverage", color=BLUE)
+    ax1.set_xlabel("w"); ax1.set_ylabel("Y-space Coverage", color=BLUE)
     ax1.tick_params(axis="y", labelcolor=BLUE); ax1.set_ylim(0, 1.05)
-    ax1.set_title("Coverage & Discrepancy vs Alpha")
+    ax1.set_title("Coverage & Discrepancy vs w")
 
     ax1r = ax1.twinx()
     ln2  = ax1r.plot(a, sens_df["discrepancy"], "s--", color=GREEN, lw=2,
@@ -130,8 +130,8 @@ def plot_sensitivity(sens_df, cfg, out_dir):
 
     ax = axes[0, 1]
     ax.plot(a, sens_df["maximin"], "^-", color=ORANGE, lw=2)
-    ax.set(xlabel="alpha", ylabel="Maximin Distance",
-           title="Maximin Distance vs Alpha"); ax.grid(alpha=0.3)
+    ax.set(xlabel="w", ylabel="Maximin Distance",
+           title="Maximin Distance vs w"); ax.grid(alpha=0.3)
 
     if not do_hc and ncols == 3:
         axes[0, 2].set_visible(False)
@@ -143,22 +143,22 @@ def plot_sensitivity(sens_df, cfg, out_dir):
         if thr is not None:
             ax.axhline(thr, color=RED, ls="--", label=f"Threshold = {thr}")
             ax.legend(fontsize=8)
-        ax.set(xlabel="alpha", ylabel="Mean RMSE  (m)",
-               title="HC Mean RMSE vs Alpha"); ax.grid(alpha=0.3)
+        ax.set(xlabel="w", ylabel="Mean RMSE  (m)",
+               title="HC Mean RMSE vs w"); ax.grid(alpha=0.3)
 
         ax = axes[1, 1]
         ax.plot(a, sens_df["mean_bias"], "o-", color=PURPLE, lw=2)
         ax.axhline(0, color="grey", lw=0.8, ls=":")
-        ax.set(xlabel="alpha", ylabel="Mean Bias  (m)",
-               title="HC Mean Bias vs Alpha"); ax.grid(alpha=0.3)
+        ax.set(xlabel="w", ylabel="Mean Bias  (m)",
+               title="HC Mean Bias vs w"); ax.grid(alpha=0.3)
 
         ax = axes[1, 2]
         ax.plot(a, sens_df["mean_uncertainty"], "s-", color=PURPLE, lw=2)
-        ax.set(xlabel="alpha", ylabel="Mean Uncertainty  (m)",
-               title="HC Mean Uncertainty vs Alpha"); ax.grid(alpha=0.3)
+        ax.set(xlabel="w", ylabel="Mean Uncertainty  (m)",
+               title="HC Mean Uncertainty vs w"); ax.grid(alpha=0.3)
 
     plt.tight_layout()
-    fpath = out_dir / "sensitivity_alpha.png"
+    fpath = out_dir / "sensitivity_w.png"
     plt.savefig(fpath, dpi=150, bbox_inches="tight"); plt.close()
     print(f"    Saved: {fpath}")
 

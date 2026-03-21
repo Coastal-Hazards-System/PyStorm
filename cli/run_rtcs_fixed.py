@@ -12,11 +12,11 @@ Pipeline
   2. Data loading: reads storm parameters (X), surge responses (Y), and
      benchmark hazard curves (HC) from the preprocessed HDF5 store.
   3. PCA dimensionality reduction on Y (retaining 95% variance by default).
-  4. Bayesian optimization of joint matrix weights (alpha, beta) by
-     minimizing HC reconstruction RMSE over continuous (alpha, beta) space
-     using a GP surrogate with Expected Improvement acquisition.
-  5. K-medoids clustering on the joint matrix Z = [alpha*X | beta*Y_r]
-     to select k storms maximizing spread in both parameter and response space.
+  4. Bayesian optimization of the joint matrix weight w by minimizing HC
+     reconstruction score over continuous log-space using a GP surrogate
+     with Expected Improvement acquisition.
+  5. K-medoids clustering on the joint matrix Z = [w*X~ | Y_r~] to select
+     k storms maximizing spread in both parameter and response space.
   6. DSW back-computation and JPM hazard curve reconstruction at all nodes.
   7. Quantile Bias Mapping (QBM) post-correction of AER positions.
 
@@ -102,9 +102,8 @@ CONFIG = {
     "pre_selected_csv": str(_ROOT / "data/raw/lpv/LACS_100_TC_Subset.csv"),
     # "pre_selected_indices": [0, 5, 42],   # alternative: explicit list
 
-    # Joint matrix weights
-    # "alpha_default": 1.0,
-    # "beta_default":  1.0,
+    # Joint matrix weight  (w > 1 emphasises X; w < 1 emphasises Y_r)
+    # "w_default": 10.0,
 
     # DSW aggregation method — how nodal DSWs are averaged into a global weight:
     #   1 = Simple mean: every node counts equally (classic JPM).

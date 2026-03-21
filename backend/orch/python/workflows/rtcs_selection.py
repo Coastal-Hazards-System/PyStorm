@@ -33,7 +33,7 @@ from backend.engines.weights.dsw import (
     evaluate_hc_metrics, compute_global_dsw,
 )
 from backend.engines.weights.qbm import compute_qbm_bias
-from backend.engines.optimization.bayesian_ab import optimize_alpha_beta
+from backend.engines.optimization.bayesian_ab import optimize_w
 from backend.orch.python.postproc.plots import (
     plot_pca_yspace, plot_tc_splom, plot_hc_comparison, plot_hc_qbm,
 )
@@ -293,17 +293,15 @@ def run_rtcs_selection(cfg: Optional[dict] = None):
     plot_pca_yspace(Y_r, forced, None, out_dir, "pca_yspace_initial.png",
                     title="Y-space PCA — Initial (Pre-selected)")
 
-    # 2c. Alpha/beta optimization via DSW HC evaluation
-    ab_grid = cfg.get("alpha_beta_grid")
-    do_ab_opt = HC_bench is not None and (
-        ab_grid is not None or cfg.get("ab_opt_n_calls"))
+    # 2c. Weight optimization via DSW HC evaluation
+    do_w_opt = HC_bench is not None and cfg.get("w_opt_n_calls")
 
-    if do_ab_opt:
+    if do_w_opt:
         # Shared objective: build joint matrix → k-medoids → DSW metrics
         eval_count = [0]
-        def _ab_objective(alpha, beta):
+        def _w_objective(w):
             eval_count[0] += 1
-            Z_trial, _, _ = build_joint_matrix(X, Y_r, alpha, beta)
+            Z_trial, _, _ = build_joint_matrix(X, Y_r, w)
             idx_trial = select_kmedoids(Z_trial, k, cfg["random_seed"],
                                          forced_indices=forced)
             hc_m = evaluate_hc_metrics(
@@ -311,73 +309,44 @@ def run_rtcs_selection(cfg: Optional[dict] = None):
                 cfg["dry_threshold"], cfg.get("min_wet_storms", 2),
                 dsw_method=cfg.get("dsw_method", 1))
             score = abs(hc_m["mean_bias"]) + hc_m["mean_rmse"]
-            tag = " ***" if not hasattr(_ab_objective, '_best') or score < _ab_objective._best else ""
+            tag = " ***" if not hasattr(_w_objective, '_best') or score < _w_objective._best else ""
             if tag:
-                _ab_objective._best = score
-            print(f"    [{eval_count[0]:>2d}] a={alpha:>7.3f}  b={beta:>6.3f} | "
+                _w_objective._best = score
+            print(f"    [{eval_count[0]:>2d}] w={w:>8.4f} | "
                   f"bias={hc_m['mean_bias']:+.4f} | rmse={hc_m['mean_rmse']:.4f} | "
                   f"score={score:.4f}{tag}")
             return hc_m
 
-        if ab_grid is not None:
-            # Legacy: brute-force grid search
-            print("\n[3] Optimizing alpha/beta via grid search ...")
-            _ab_objective._best = np.inf
-            best_alpha, best_beta = cfg["alpha_default"], cfg["beta_default"]
-            best_score = np.inf
-            sweep_rows = []
+        n_calls   = cfg.get("w_opt_n_calls", 16)
+        n_initial = cfg.get("w_opt_n_initial", 5)
+        w_bounds  = cfg.get("w_opt_bounds", (0.01, 50.0))
+        print(f"\n[3] Optimizing w via Bayesian optimization "
+              f"({n_calls} evaluations) ...")
+        _w_objective._best = np.inf
 
-            with warnings.catch_warnings():
-                warnings.simplefilter("ignore", RuntimeWarning)
-                for alpha, beta in ab_grid:
-                    hc_m = _ab_objective(alpha, beta)
-                    score = abs(hc_m["mean_bias"]) + hc_m["mean_rmse"]
-                    sweep_rows.append({"alpha": alpha, "beta": beta,
-                                       **hc_m, "score": score})
-                    if score < best_score:
-                        best_score = score
-                        best_alpha, best_beta = alpha, beta
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", RuntimeWarning)
+            bo_result = optimize_w(
+                _w_objective, bounds=w_bounds,
+                n_calls=n_calls, n_initial=n_initial,
+                seed=cfg.get("random_seed", 42))
 
-            cfg["alpha_default"] = best_alpha
-            cfg["beta_default"]  = best_beta
-            pd.DataFrame(sweep_rows).to_csv(
-                out_dir / "alpha_beta_sweep.csv", index=False)
-        else:
-            # Bayesian optimization (GP surrogate + Expected Improvement)
-            n_calls   = cfg.get("ab_opt_n_calls", 16)
-            n_initial = cfg.get("ab_opt_n_initial", 5)
-            ab_bounds = cfg.get("ab_opt_bounds", ((0.01, 50.0), (0.01, 2.0)))
-            print(f"\n[3] Optimizing alpha/beta via Bayesian optimization "
-                  f"({n_calls} evaluations) ...")
-            _ab_objective._best = np.inf
+        best_w = bo_result.best_w
+        best_score = bo_result.best_score
+        cfg["w_default"] = best_w
+        pd.DataFrame(bo_result.all_rows).to_csv(
+            out_dir / "w_sweep.csv", index=False)
 
-            with warnings.catch_warnings():
-                warnings.simplefilter("ignore", RuntimeWarning)
-                bo_result = optimize_alpha_beta(
-                    _ab_objective, bounds=ab_bounds,
-                    n_calls=n_calls, n_initial=n_initial,
-                    seed=cfg.get("random_seed", 42))
-
-            best_alpha = bo_result.best_alpha
-            best_beta  = bo_result.best_beta
-            best_score = bo_result.best_score
-            cfg["alpha_default"] = best_alpha
-            cfg["beta_default"]  = best_beta
-            pd.DataFrame(bo_result.all_rows).to_csv(
-                out_dir / "alpha_beta_sweep.csv", index=False)
-
-        print(f"\n    Optimal: alpha={best_alpha:.4f}, beta={best_beta:.4f}  "
-              f"(score={best_score:.4f})")
+        print(f"\n    Optimal: w={best_w:.4f}  (score={best_score:.4f})")
         step = 4
     else:
         if HC_bench is None:
-            print("\n    [alpha/beta optimization skipped — no HC_bench available]")
+            print("\n    [w optimization skipped — no HC_bench available]")
         step = 3
 
     # Joint matrix
-    print(f"\n[{step}] Building joint matrix  "
-          f"(alpha={cfg['alpha_default']}, beta={cfg['beta_default']}) ...")
-    Z, scaler_X, _ = build_joint_matrix(X, Y_r, cfg["alpha_default"], cfg["beta_default"])
+    print(f"\n[{step}] Building joint matrix  (w={cfg['w_default']}) ...")
+    Z, scaler_X, _ = build_joint_matrix(X, Y_r, cfg["w_default"])
     X_scaled = scaler_X.transform(X)
 
     # Select

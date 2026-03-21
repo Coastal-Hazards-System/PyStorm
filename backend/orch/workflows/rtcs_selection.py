@@ -155,28 +155,28 @@ def grow_subset(Z_full, X_scaled, Y_r_full, Y_full, HC_bench, cfg):
 # ---------------------------------------------------------------------------
 
 def sensitivity_analysis(X, Y_r, Y_full, HC_bench, cfg):
-    print(f"\n[6] Sensitivity analysis — sweeping alpha  "
-          f"(k={cfg['k_sensitivity']}, beta=1 fixed) ...")
+    print(f"\n[6] Sensitivity analysis — sweeping w  "
+          f"(k={cfg['k_sensitivity']}) ...")
     tbl_aer = cfg["TBL_AER"]
     dry_thr = cfg["dry_threshold"]
     do_hc   = HC_bench is not None
     k       = cfg["k_sensitivity"]
     results = []
 
-    for alpha in cfg["alpha_sweep"]:
-        Z, scaler_X, _ = build_joint_matrix(X, Y_r, alpha, 1.0)
+    for w_val in cfg["alpha_sweep"]:
+        Z, scaler_X, _ = build_joint_matrix(X, Y_r, w_val)
         X_sc            = scaler_X.transform(X)
         indices = select_kmedoids(Z, k, cfg["random_seed"])
         sf      = evaluate_sf_metrics(Z, X_sc, Y_r, indices,
                                       cfg["n_coverage_clusters"], cfg["random_seed"])
-        row = {"alpha": alpha, "beta": 1.0, **sf}
+        row = {"w": w_val, **sf}
         if do_hc:
             row.update(evaluate_hc_metrics(
                 Y_full[indices, :], HC_bench, tbl_aer, dry_thr,
                 cfg.get("min_wet_storms", 2),
                 dsw_method=cfg.get("dsw_method", 1)))
         results.append(row)
-        msg = (f"    alpha={alpha:.2f} | cov={sf['coverage']:.3f} | "
+        msg = (f"    w={w_val:.2f} | cov={sf['coverage']:.3f} | "
                f"disc={sf['discrepancy']:.4f}")
         if do_hc:
             msg += (f" | bias={row['mean_bias']:+.4f} | "
@@ -236,10 +236,8 @@ def run_pipeline(cfg: Optional[dict] = None):
     print(f"    Variance explained  : {cumvar[-1]*100:.2f}%")
 
     # 3. Joint matrix
-    print(f"\n[3] Building joint matrix  "
-          f"(alpha={cfg['alpha_default']}, beta={cfg['beta_default']}) ...")
-    Z, scaler_X, _ = build_joint_matrix(
-        X, Y_r, cfg["alpha_default"], cfg["beta_default"])
+    print(f"\n[3] Building joint matrix  (w={cfg['w_default']}) ...")
+    Z, scaler_X, _ = build_joint_matrix(X, Y_r, cfg["w_default"])
     X_scaled = scaler_X.transform(X)
 
     # 4. Growth loop
@@ -268,7 +266,7 @@ def run_pipeline(cfg: Optional[dict] = None):
 
     # 6. Sensitivity
     sens_df = sensitivity_analysis(X, Y_r, Y, HC_bench, cfg)
-    sens_df.to_csv(out_dir / "sensitivity_alpha.csv", index=False)
+    sens_df.to_csv(out_dir / "sensitivity_w.csv", index=False)
 
     # 7. Plots
     print("\n[7] Generating plots ...")

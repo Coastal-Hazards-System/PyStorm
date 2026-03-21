@@ -1,12 +1,12 @@
 """
 backend/engines/optimization/bayesian_ab.py
 ============================================
-Bayesian optimization for (alpha, beta) weight selection in the RTCS
-joint-matrix formulation.
+Bayesian optimization for the joint-matrix weight *w* in the RTCS
+formulation  Z = [w * X~  |  Y_r~].
 
 Uses a lightweight Gaussian Process (GP) surrogate with Expected Improvement
-(EI) acquisition to find the optimal (alpha, beta) that minimises the
-DSW-based HC reconstruction score (|mean_bias| + mean_rmse).
+(EI) acquisition to find the scalar w that minimises the DSW-based HC
+reconstruction score (|mean_bias| + mean_rmse).
 
 No external dependencies beyond numpy and scipy.
 
@@ -14,7 +14,7 @@ Developed by: Norberto C. Nadal-Caraballo, PhD
 
 Public API
 ----------
-  optimize_alpha_beta(objective, bounds, n_calls, n_initial, seed)
+  optimize_w(objective, bounds, n_calls, n_initial, seed)
       -> OptimizeResult
 """
 
@@ -34,11 +34,10 @@ from scipy.stats import norm
 
 @dataclass
 class OptimizeResult:
-    """Result of Bayesian alpha/beta optimization."""
-    best_alpha: float
-    best_beta:  float
+    """Result of Bayesian w optimization."""
+    best_w:     float
     best_score: float
-    X_sampled:  np.ndarray          # [n_calls x 2] in original space
+    X_sampled:  np.ndarray          # [n_calls x 1] in original space
     y_sampled:  np.ndarray          # [n_calls]
     all_rows:   list = field(default_factory=list)  # dicts for sweep CSV
 
@@ -56,11 +55,9 @@ def _matern52_kernel(X1: np.ndarray, X2: np.ndarray,
     X2 : [n2 x d]
     Returns [n1 x n2] covariance matrix.
     """
-    # Scaled distances
     X1s = X1 / length_scales
     X2s = X2 / length_scales
 
-    # Pairwise Euclidean distance
     sq = np.sum(X1s**2, axis=1, keepdims=True) + \
          np.sum(X2s**2, axis=1, keepdims=False) - \
          2.0 * X1s @ X2s.T
@@ -72,7 +69,7 @@ def _matern52_kernel(X1: np.ndarray, X2: np.ndarray,
 
 
 class _GaussianProcess:
-    """Minimal GP with Matérn 5/2 kernel for 2-D surrogate modelling."""
+    """Minimal GP with Matérn 5/2 kernel for 1-D surrogate modelling."""
 
     def __init__(self, noise_var: float = 1e-6):
         self.noise_var = noise_var
@@ -154,22 +151,22 @@ def _latin_hypercube(n: int, d: int, rng: np.random.Generator) -> np.ndarray:
 # Public API
 # ---------------------------------------------------------------------------
 
-def optimize_alpha_beta(
+def optimize_w(
     objective,
-    bounds: tuple = ((0.01, 50.0), (0.01, 2.0)),
+    bounds: tuple = (0.01, 50.0),
     n_calls: int = 16,
     n_initial: int = 5,
     seed: int = 42,
     xi: float = 0.01,
 ) -> OptimizeResult:
     """
-    Bayesian optimization of (alpha, beta) using a GP surrogate.
+    Bayesian optimization of scalar weight w using a GP surrogate.
 
     Parameters
     ----------
-    objective : callable(alpha, beta) -> dict
+    objective : callable(w) -> dict
         Must return a dict with at least 'mean_bias' and 'mean_rmse' keys.
-    bounds : ((alpha_lo, alpha_hi), (beta_lo, beta_hi))
+    bounds : (w_lo, w_hi)
         Search bounds in original space.  Optimisation runs in log10 space.
     n_calls : int
         Total number of objective evaluations (initial + BO iterations).
@@ -182,17 +179,17 @@ def optimize_alpha_beta(
 
     Returns
     -------
-    OptimizeResult with best_alpha, best_beta, best_score, and full history.
+    OptimizeResult with best_w, best_score, and full history.
     """
     rng = np.random.default_rng(seed)
 
-    # Work in log10 space for both alpha and beta
-    log_bounds = np.array([[np.log10(b[0]), np.log10(b[1])] for b in bounds])
+    # Work in log10 space
+    log_lo = np.log10(bounds[0])
+    log_hi = np.log10(bounds[1])
 
-    # Initial design: Latin Hypercube in log10 space
-    X_log = _latin_hypercube(n_initial, 2, rng)
-    for d in range(2):
-        X_log[:, d] = log_bounds[d, 0] + X_log[:, d] * (log_bounds[d, 1] - log_bounds[d, 0])
+    # Initial design: Latin Hypercube in log10 space (1-D)
+    X_log = _latin_hypercube(n_initial, 1, rng)
+    X_log[:, 0] = log_lo + X_log[:, 0] * (log_hi - log_lo)
 
     # Evaluate initial points
     X_all = []  # log10 space
@@ -200,13 +197,12 @@ def optimize_alpha_beta(
     rows  = []
 
     for i in range(n_initial):
-        alpha = 10.0 ** X_log[i, 0]
-        beta  = 10.0 ** X_log[i, 1]
-        hc_m = objective(alpha, beta)
+        w = 10.0 ** X_log[i, 0]
+        hc_m = objective(w)
         score = abs(hc_m["mean_bias"]) + hc_m["mean_rmse"]
-        X_all.append(X_log[i])
+        X_all.append(X_log[i].copy())
         y_all.append(score)
-        rows.append({"alpha": alpha, "beta": beta, **hc_m, "score": score})
+        rows.append({"w": w, **hc_m, "score": score})
 
     # Bayesian optimization loop
     gp = _GaussianProcess(noise_var=1e-6)
@@ -223,12 +219,8 @@ def optimize_alpha_beta(
         best_ei = -np.inf
         best_x  = None
 
-        # Random candidates + L-BFGS-B restarts
         n_restarts = 20
-        X_cand = np.empty((n_restarts, 2))
-        for d in range(2):
-            X_cand[:, d] = rng.uniform(log_bounds[d, 0], log_bounds[d, 1],
-                                        size=n_restarts)
+        X_cand = rng.uniform(log_lo, log_hi, size=(n_restarts, 1))
 
         for x0 in X_cand:
             def neg_ei(x):
@@ -237,7 +229,7 @@ def optimize_alpha_beta(
 
             res = sp_minimize(
                 neg_ei, x0,
-                bounds=[(log_bounds[d, 0], log_bounds[d, 1]) for d in range(2)],
+                bounds=[(log_lo, log_hi)],
                 method="L-BFGS-B")
 
             if -res.fun > best_ei:
@@ -245,28 +237,50 @@ def optimize_alpha_beta(
                 best_x  = res.x
 
         # Evaluate the best acquisition point
-        alpha = 10.0 ** best_x[0]
-        beta  = 10.0 ** best_x[1]
-        hc_m = objective(alpha, beta)
+        w = 10.0 ** best_x[0]
+        hc_m = objective(w)
         score = abs(hc_m["mean_bias"]) + hc_m["mean_rmse"]
         X_all.append(best_x.copy())
         y_all.append(score)
-        rows.append({"alpha": alpha, "beta": beta, **hc_m, "score": score})
+        rows.append({"w": w, **hc_m, "score": score})
 
     # Find best
     y_arr = np.array(y_all)
     best_idx = int(np.argmin(y_arr))
-    best_alpha = 10.0 ** X_all[best_idx][0]
-    best_beta  = 10.0 ** X_all[best_idx][1]
+    best_w = 10.0 ** X_all[best_idx][0]
 
     # Build X_sampled in original space
-    X_orig = np.array([[10.0 ** x[0], 10.0 ** x[1]] for x in X_all])
+    X_orig = np.array([[10.0 ** x[0]] for x in X_all])
 
     return OptimizeResult(
-        best_alpha=best_alpha,
-        best_beta=best_beta,
+        best_w=best_w,
         best_score=y_arr[best_idx],
         X_sampled=X_orig,
         y_sampled=y_arr,
         all_rows=rows,
     )
+
+
+# ---------------------------------------------------------------------------
+# Backward compatibility
+# ---------------------------------------------------------------------------
+
+def optimize_alpha_beta(
+    objective,
+    bounds: tuple = ((0.01, 50.0), (0.01, 2.0)),
+    n_calls: int = 16,
+    n_initial: int = 5,
+    seed: int = 42,
+    xi: float = 0.01,
+) -> OptimizeResult:
+    """Deprecated — wraps optimize_w for callers still using alpha/beta."""
+    import warnings
+    warnings.warn("optimize_alpha_beta is deprecated; use optimize_w instead",
+                  DeprecationWarning, stacklevel=2)
+    w_bounds = (bounds[0][0] / bounds[1][1], bounds[0][1] / bounds[1][0])
+
+    def wrapped(w):
+        return objective(w, 1.0)
+
+    return optimize_w(wrapped, bounds=w_bounds, n_calls=n_calls,
+                      n_initial=n_initial, seed=seed, xi=xi)

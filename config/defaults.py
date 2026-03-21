@@ -58,18 +58,16 @@ RTCS_SELECTION_DEFAULTS: dict = {
     # ── Y-space coverage ──────────────────────────────────────────────────────
     "n_coverage_clusters": 20,
 
-    # ── Joint matrix weights ──────────────────────────────────────────────────
-    "alpha_default": 10.0,
-    "beta_default":  0.1,
+    # ── Joint matrix weight ───────────────────────────────────────────────────
+    # Scalar weight for the joint matrix Z = [w * X~ | Y_r~].
+    # w > 1 emphasises TC parameters; w < 1 emphasises hydrodynamic response.
+    "w_default": 10.0,
 
-    # Alpha/beta optimization via Bayesian GP surrogate.
-    # Set to None to skip optimization and use alpha_default / beta_default.
-    # "ab_grid" is kept for backward compatibility; when present the old
-    # brute-force grid search is used instead of Bayesian optimization.
-    "alpha_beta_grid": None,          # legacy grid (list of tuples); None → use BO
-    "ab_opt_n_calls":    16,          # total objective evaluations (initial + BO)
-    "ab_opt_n_initial":   5,          # Latin Hypercube initial samples
-    "ab_opt_bounds": ((0.01, 50.0), (0.01, 2.0)),  # (alpha, beta) search bounds
+    # w optimization via Bayesian GP surrogate.
+    # Set w_opt_n_calls to None to skip optimization and use w_default.
+    "w_opt_n_calls":    16,          # total objective evaluations (initial + BO)
+    "w_opt_n_initial":   5,          # Latin Hypercube initial samples
+    "w_opt_bounds": (0.01, 50.0),    # search bounds in original space
 
     # ── Sensitivity analysis ──────────────────────────────────────────────────
     "alpha_sweep":   [0.0, 0.25, 0.5, 0.75, 1.0, 1.5, 2.0, 3.0, 5.0],

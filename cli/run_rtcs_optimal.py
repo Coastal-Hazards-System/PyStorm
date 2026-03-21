@@ -101,9 +101,8 @@ CONFIG = {
     # Optional RMSE stopping threshold (m); None = run to k_max
     # "rmse_threshold": 0.20,
 
-    # Joint matrix weights
-    # "alpha_default": 1.0,
-    # "beta_default":  1.0,
+    # Joint matrix weight  (w > 1 emphasises X; w < 1 emphasises Y_r)
+    # "w_default": 10.0,
 }
 # ---------------------------------------------------------------------------
 
