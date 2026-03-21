@@ -7,6 +7,8 @@ Verbatim from tc_subset_selection_v3_hdf5.py Section 9.
 Lives in orch/diagnostics/ because these functions consume structured
 pipeline outputs (history list, sensitivity DataFrame), not raw arrays.
 
+Developed by: Norberto C. Nadal-Caraballo, PhD
+
 Public API
 ----------
   plot_growth_history(history, cfg, out_dir)     -> None
@@ -305,7 +307,7 @@ def plot_pca_yspace(
 
 
 # ---------------------------------------------------------------------------
-# TC parameter SPLOM  (JPM-OS-Q pairs plot)
+# TC parameter SPLOM  (JPM pairs plot)
 # ---------------------------------------------------------------------------
 
 def _bubble_scatter(ax, x, y, color, base_area=30, filled=False):

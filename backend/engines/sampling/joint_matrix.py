@@ -3,7 +3,12 @@ backend/engines/sampling/joint_matrix.py
 ==========================================
 Joint input-output feature matrix  Z = [alpha * X~  |  beta * Y_r~].
 
+Each block is independently standardised (zero mean, unit variance) before
+weighting to prevent scale-dependent dominance of either space.
+
 Engine contract: arrays in, arrays out.  No config, no I/O.
+
+Developed by: Norberto C. Nadal-Caraballo, PhD
 """
 
 from __future__ import annotations

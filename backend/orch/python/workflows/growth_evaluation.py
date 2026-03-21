@@ -6,9 +6,11 @@ RTCS Selection (optimal k) — Iterative growth loop with DSW and hazard-curve e
 Sweeps subset size from k_initial to k_max (step k_step).  At each k:
   - selects a k-medoid subset from the joint parameter/response space
   - back-computes global DSW weights
-  - reconstructs hazard curves at every node via JPM-OS
+  - reconstructs hazard curves at every node via JPM
   - compares to benchmark HCs: logs global bias/uncertainty/RMSE and
     mean nodal bias at user-specified return period levels
+
+Developed by: Norberto C. Nadal-Caraballo, PhD
 
 Public API
 ----------

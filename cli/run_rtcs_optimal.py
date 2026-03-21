@@ -3,8 +3,25 @@ cli/run_rtcs_optimal.py
 ========================
 RTCS Selection (optimal k) — Sweep subset size from k_initial to k_max,
 computing DSW weights and reconstructing hazard curves at each step to find
-the optimal number of storms.  Quantifies bias relative
-to benchmark HCs at the full AER table and at reporting return periods.
+the optimal number of storms.
+
+Pipeline
+--------
+  1. (Optional) Geographic bounding-box filter: restricts nodes and storms
+     to a region of interest based on node coordinates and TC track proximity.
+  2. Data loading: reads storm parameters (X), surge responses (Y), and
+     benchmark hazard curves (HC) from the preprocessed HDF5 store.
+  3. PCA dimensionality reduction on Y.
+  4. For each k from k_initial to k_max (step k_step):
+     a. K-medoids selection of k storms from the joint matrix.
+     b. DSW back-computation and JPM hazard curve reconstruction.
+     c. Evaluation of sampling metrics (coverage, discrepancy) and
+        HC reconstruction quality (bias, RMSE at standard AER levels).
+  5. Stop when all quality thresholds are met or k_max is reached.
+
+The DSW and HC reconstruction engines use C++ with multi-threaded
+parallelism and node-major memory layout for efficient operation at full
+node count (>1M nodes).
 
 Usage
 -----
@@ -18,6 +35,8 @@ Outputs: data/processed/outputs/    (selected_storms.csv, growth_history.csv,
                                      growth_evaluation.png, bbox_filter_map.png)
 
 All default values are defined in config/defaults.py.
+
+Developed by: Norberto C. Nadal-Caraballo, PhD
 """
 
 import sys
@@ -40,7 +59,7 @@ BBOX_CONFIG = {
         "lon_max": -89.0,
     },
 
-    # Node coordinate source (the probQ .mat file from preprocessing)
+    # Node coordinate source
     "node_coord_source":   str(_ROOT / "data/raw/lpv/CHS-LA_nodeID.mat"),
     "node_coord_variable": "nodeID",
     "node_id_col": 0,        # column with main node IDs (must match IDs stored in HDF5)
@@ -72,7 +91,7 @@ CONFIG = {
     "k_max":    100,
     # "k_step":    5,
 
-    # Return periods (years) to report bias at
+    # AER levels to report bias at (as 1/AER, e.g. 10 = aer=1/10)
     "bias_report_rp": [10, 100, 1000],
 
     # Pre-selected storms to build upon (optional — pick one or neither)

@@ -8,6 +8,8 @@ Space-filling quality metrics for a selected storm subset.
   Maximin      — minimum pairwise distance in joint Z-space
 
 Engine contract: arrays in, scalars/dict out.  No config, no I/O.
+
+Developed by: Norberto C. Nadal-Caraballo, PhD
 """
 
 from __future__ import annotations

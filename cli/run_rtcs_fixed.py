@@ -5,19 +5,42 @@ RTCS Selection (fixed k) — Select a Representative TC Subset (RTCS) with a
 fixed number of storms that best fills both the TC parameter space (X) and
 the hydrodynamic response space (Y).
 
+Pipeline
+--------
+  1. (Optional) Geographic bounding-box filter: restricts nodes and storms
+     to a region of interest based on node coordinates and TC track proximity.
+  2. Data loading: reads storm parameters (X), surge responses (Y), and
+     benchmark hazard curves (HC) from the preprocessed HDF5 store.
+  3. PCA dimensionality reduction on Y (retaining 95% variance by default).
+  4. Bayesian optimization of joint matrix weights (alpha, beta) by
+     minimizing HC reconstruction RMSE over continuous (alpha, beta) space
+     using a GP surrogate with Expected Improvement acquisition.
+  5. K-medoids clustering on the joint matrix Z = [alpha*X | beta*Y_r]
+     to select k storms maximizing spread in both parameter and response space.
+  6. DSW back-computation and JPM hazard curve reconstruction at all nodes.
+  7. Quantile Bias Mapping (QBM) post-correction of AER positions.
+
+The DSW, HC reconstruction, and QBM engines use C++ with multi-threaded
+parallelism and node-major memory layout for efficient operation at full
+node count (>1M nodes).
+
 Usage
 -----
-  1. Set CONFIG overrides below (or leave empty to use all defaults).
-  2. Optionally set BBOX_CONFIG to restrict to a geographic region.
-  3. Run:  python cli/run_rtcs_fixed.py
+  1. Run cli/preprocess.py first to produce data/processed/tc_data.h5.
+  2. Set CONFIG overrides below (or leave empty to use all defaults).
+  3. Optionally set BBOX_CONFIG to restrict to a geographic region.
+  4. Run:  python cli/run_rtcs_fixed.py
 
 Input:   data/processed/tc_data.h5  (produced by cli/preprocess.py)
 Outputs: data/processed/outputs/    (selected_storms.csv, selection_metrics.csv,
                                      pca_yspace_initial.png, pca_yspace_final.png,
-                                     bbox_filter_map.png)
+                                     bbox_filter_map.png, hc_comparison.png,
+                                     hc_comparison_qbm.png, qbm_bias.h5)
 
 All default values are defined in config/defaults.py.
 Only keys you want to change need to appear in CONFIG below.
+
+Developed by: Norberto C. Nadal-Caraballo, PhD
 """
 
 import sys
@@ -40,7 +63,7 @@ BBOX_CONFIG = {
         "lon_max": -88.5,
     },
 
-    # Node coordinate source (the probQ .mat file from preprocessing)
+    # Node coordinate source
     "node_coord_source":   str(_ROOT / "data/raw/lpv/CHS-LA_nodeID.mat"),
     "node_coord_variable": "nodeID",
     "node_id_col": 0,        # column with main node IDs (must match IDs stored in HDF5)
@@ -84,7 +107,7 @@ CONFIG = {
     # "beta_default":  1.0,
 
     # DSW aggregation method — how nodal DSWs are averaged into a global weight:
-    #   1 = Simple mean: every node counts equally (classic JPM-OS).
+    #   1 = Simple mean: every node counts equally (classic JPM).
     #   2 = Surge-weighted: each node's DSW contribution to storm j is weighted
     #       by storm j's surge at that node.  Storm-specific — a storm's weight
     #       is dominated by nodes where it actually produces large surge.

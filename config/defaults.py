@@ -5,6 +5,8 @@ Default configuration for the RTCS (Representative TC Subset) selection pipeline
 
 Cross-cutting: consumed by both the API layer and the orchestration workflow.
 Neither owns it.
+
+Developed by: Norberto C. Nadal-Caraballo, PhD
 """
 
 import numpy as np
@@ -97,7 +99,7 @@ RTCS_SELECTION_DEFAULTS: dict = {
     #   "standard"      = standard tbl_aer grid (22 levels)
     "qbm_aer_mode": "631",
     # DSW aggregation method:
-    #   1 = simple mean (equal node weights — classic JPM-OS)
+    #   1 = simple mean (equal node weights — classic JPM)
     #   2 = surge-weighted mean (per-storm-per-node; nodes where a storm hits
     #       harder contribute more to that storm's global weight)
     #   3 = variance-weighted mean (fixed per-node weight = surge variance;

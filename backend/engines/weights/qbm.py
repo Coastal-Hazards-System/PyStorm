@@ -22,6 +22,8 @@ Intermediate AER grid (applies to response mode only)
     "631"      (default) — dense 631-point grid (10^1 … 10^-6, d=1/90).
     "standard" — 22 tbl_aer levels.
 
+Developed by: Norberto C. Nadal-Caraballo, PhD
+
 Public API
 ----------
   build_aer_631()  -> ndarray [631]

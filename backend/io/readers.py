@@ -15,6 +15,8 @@ Supported formats
   .npz           numpy.load archive
   .h5 / .hdf5    h5py dataset by path
 
+Developed by: Norberto C. Nadal-Caraballo, PhD
+
 Public API
 ----------
   load_array(path, varname, columns, id_col)

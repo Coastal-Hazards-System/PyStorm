@@ -17,6 +17,8 @@ Standard layout (tc_data.h5)
 Engine contract: well-formed arrays in, well-formed arrays out.
 No pipeline logic, no config parsing.
 
+Developed by: Norberto C. Nadal-Caraballo, PhD
+
 Public API
 ----------
   write_store(path, X, Y, ...)            -> None

@@ -10,6 +10,8 @@ Two implementations:
   2. _greedy_kmedoids                (built-in fallback — BUILD + SWAP)
 
 select_kmedoids() dispatches automatically.
+
+Developed by: Norberto C. Nadal-Caraballo, PhD
 """
 
 from __future__ import annotations

@@ -7,6 +7,8 @@ Selects a fixed number of storms that best covers both the TC parameter
 space (X) and the hydrodynamic response space (Y) using PCA + k-medoids
 on a weighted joint matrix.
 
+Developed by: Norberto C. Nadal-Caraballo, PhD
+
 Public API
 ----------
   run_rtcs_selection(cfg)  ->  (indices, metrics)
@@ -206,7 +208,7 @@ def _splom(X, x_cols, forced, new_indices, cfg, out_dir, filename):
         new_indices=new_indices,
         param_spec=cfg.get("splom_params"),
         param_labels=cfg.get("splom_labels"),
-        title=cfg.get("splom_title", "JPM-OS-Q"),
+        title=cfg.get("splom_title", "JPM"),
         out_dir=out_dir,
         filename=filename,
     )

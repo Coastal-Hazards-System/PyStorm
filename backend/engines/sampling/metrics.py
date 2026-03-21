@@ -9,6 +9,8 @@ Space-filling quality metrics for a selected storm subset.
 
 Engine contract: arrays in, scalars/dict out.  No config, no I/O.
 
+Developed by: Norberto C. Nadal-Caraballo, PhD
+
 Notes on metric definitions
 ---------------------------
 Discrepancy

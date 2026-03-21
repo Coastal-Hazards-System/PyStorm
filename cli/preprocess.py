@@ -1,7 +1,8 @@
 """
 cli/preprocess.py
 ==================
-Thin launcher — ingest raw source files and write the standard tc_data.h5 store.
+TC Data Pre-Processor — ingest raw source files and write the standard
+tc_data.h5 store for the RTCS selection pipeline.
 
 Usage
 -----
@@ -20,6 +21,8 @@ Optional flags (no CONFIG editing required):
 
   python cli/preprocess.py --export-csv data/processed/tc_data.h5 [--export-dir DIR]
       Export /X /Y /HC to CSV files and exit.
+
+Developed by: Norberto C. Nadal-Caraballo, PhD
 """
 
 import argparse

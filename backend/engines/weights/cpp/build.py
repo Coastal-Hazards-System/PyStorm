@@ -12,6 +12,8 @@ Build strategies (tried in order):
   1. setuptools Extension (MSVC on Windows, gcc/clang elsewhere)
   2. CMake (if available)
   3. Direct g++/clang++ invocation (uses lld on Windows to avoid MinGW ld bugs)
+
+Developed by: Norberto C. Nadal-Caraballo, PhD
 """
 
 import shutil

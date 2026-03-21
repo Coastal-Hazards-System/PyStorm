@@ -7,6 +7,8 @@ Owns the sequence; delegates format I/O to backend.io.readers and
 store writes to backend.io.store.  The Preprocessor class is the verbatim
 logic of tc_preprocess.py, re-homed here.
 
+Developed by: Norberto C. Nadal-Caraballo, PhD
+
 Public API
 ----------
   Preprocessor(config).run()         -> Path

@@ -10,6 +10,8 @@ DSW-based HC reconstruction score (|mean_bias| + mean_rmse).
 
 No external dependencies beyond numpy and scipy.
 
+Developed by: Norberto C. Nadal-Caraballo, PhD
+
 Public API
 ----------
   optimize_alpha_beta(objective, bounds, n_calls, n_initial, seed)

@@ -10,6 +10,8 @@ Provides:
   - filter_storms_near_point: return 0-based storm indices whose track passes within a
                               radial distance of a given point
   - apply_bbox_filter       : high-level orchestrator called from the CLI run scripts
+
+Developed by: Norberto C. Nadal-Caraballo, PhD
 """
 
 from __future__ import annotations

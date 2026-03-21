@@ -1,7 +1,7 @@
 """
 backend/engines/weights/dsw.py
 ================================
-Discrete Storm Weight (DSW) back-computation and JPM-OS hazard-curve
+Discrete Storm Weight (DSW) back-computation and JPM hazard-curve
 reconstruction.
 
 Algorithm (from tc_subset_selection_v3_hdf5.py, Section 6)
@@ -17,7 +17,7 @@ Step 1 — Nodal DSW back-computation
 Step 2 — Global DSW set
     DSW_global[j] = nanmean across nodes of nodal DSW for storm j.
 
-Step 3 — HC reconstruction (JPM-OS)
+Step 3 — HC reconstruction (JPM)
     At each node: sort storms by descending surge, cumsum global DSWs,
     interpolate surge vs cumulative AER onto tbl_aer.
 
@@ -26,7 +26,8 @@ Step 4 — Residual metrics
     node_bias, node_unc, node_rmse → nanmean across nodes.
 
 Engine contract: arrays in, arrays/dict out.  No config, no I/O.
-CyHAN-compliant: pure numpy + scipy, no external state.
+
+Developed by: Norberto C. Nadal-Caraballo, PhD
 
 Public API
 ----------
@@ -180,7 +181,7 @@ def reconstruct_hc_global_dsw(
     dry_thr:    float = 0.0,
 ) -> np.ndarray:
     """
-    Reconstruct hazard curve at every node via JPM-OS integration.
+    Reconstruct hazard curve at every node via JPM integration.
 
     Returns
     -------

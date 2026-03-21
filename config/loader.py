@@ -5,6 +5,8 @@ Load YAML or JSON configuration files.
 
 Cross-cutting: imported by both the API layer and orchestration workflows.
 
+Developed by: Norberto C. Nadal-Caraballo, PhD
+
 Public API
 ----------
   load_config(path)  -> dict

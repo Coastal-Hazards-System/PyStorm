@@ -1,8 +1,9 @@
 """
 cli/run_dsw.py
 ===============
-Thin launcher — compute Discrete Storm Weights and reconstruct hazard curves
-for a selected storm subset.
+DSW + HC Reconstruction — compute Discrete Storm Weights (DSW) via
+back-computation from benchmark hazard curves, and reconstruct hazard
+curves at every node via JPM integration for a selected storm subset.
 
 Usage
 -----
@@ -20,6 +21,8 @@ Output:
   data/processed/outputs/hc_reconstructed.csv — reconstructed HC  [m x N_AER]
   data/processed/outputs/dsw_metrics.csv      — mean_bias, mean_uncertainty, mean_rmse
   data/processed/outputs/hc_comparison.png    — reconstructed vs benchmark overlay
+
+Developed by: Norberto C. Nadal-Caraballo, PhD
 """
 
 import sys

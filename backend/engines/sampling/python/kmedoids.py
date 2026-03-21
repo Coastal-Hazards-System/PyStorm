@@ -12,6 +12,8 @@ Two implementations:
 select_kmedoids() dispatches automatically.
 When forced_indices are provided, the greedy implementation is always used
 because sklearn_extra does not support fixed medoids.
+
+Developed by: Norberto C. Nadal-Caraballo, PhD
 """
 
 from __future__ import annotations
