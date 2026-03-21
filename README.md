@@ -31,7 +31,7 @@ pystorm/
 │       ├── metamodel/               # Metamodel inference and prediction
 │       ├── hazard/                  # Hazard curve construction, AEF computation
 │       ├── sampling/                # Experimental design, k-medoids, LHS
-│       └── weights/                 # DSW / JPM-OS weighting schemes
+│       └── weights/                 # DSW / JPM weighting schemes
 │
 ├── frontend/
 │   ├── desktop/                     # Qt desktop client (if/when added)

@@ -300,7 +300,7 @@ PYBIND11_MODULE(_dsw_cpp, m) {
           py::arg("Y_sub"), py::arg("DSW_global"), py::arg("tbl_aer"),
           py::arg("dry_thr"),
           py::arg("n_threads") = 0,
-          "Reconstruct hazard curves [m x N_AER] via JPM-OS integration.");
+          "Reconstruct hazard curves [m x N_AER] via JPM integration.");
 
     m.def("evaluate_hc_metrics", &evaluate_hc_metrics_py,
           py::arg("Y_sub"), py::arg("HC_bench"), py::arg("tbl_aer"),

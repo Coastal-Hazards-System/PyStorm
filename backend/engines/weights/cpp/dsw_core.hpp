@@ -3,7 +3,7 @@
  * dsw_core.hpp
  * ============
  * Header-only C++ implementation of the DSW (Discrete Storm Weight)
- * back-computation and JPM-OS hazard-curve reconstruction.
+ * back-computation and JPM hazard-curve reconstruction.
  *
  * Algorithm
  * ---------
@@ -142,7 +142,7 @@ inline void surge_to_aer(
 }
 
 /**
- * JPM-OS integration at a single node: reconstruct the hazard curve.
+ * JPM integration at a single node: reconstruct the hazard curve.
  *
  * resp[k]    : storm surge responses
  * dsw[k]     : global DSW per storm
@@ -362,7 +362,7 @@ inline void compute_global_dsw(
 }
 
 /**
- * Reconstruct hazard curves at all nodes via JPM-OS integration.
+ * Reconstruct hazard curves at all nodes via JPM integration.
  *
  * Y_T        : [m x k] node-major
  * DSW_global : [k]

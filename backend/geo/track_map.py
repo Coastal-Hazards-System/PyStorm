@@ -60,15 +60,15 @@ _JOURNAL_RC = {
 
 # Muted, colour-blind-safe palette
 _CLR = {
-    "mesh_all":     "#C0C0C0",   # light grey — full mesh
-    "mesh_bbox":    "#B71C1C",   # dark red — bbox mesh nodes
-    "track_out":    "#9E9E9E",   # medium grey — excluded tracks
-    "track_in":     "#1565C0",   # blue — selected tracks
-    "bbox_edge":    "#E65100",   # deep orange — bounding box
-    "radius":       "#6A1B9A",   # purple — radial circle
-    "medoid":       "#E65100",   # deep orange — medoid marker
-    "medoid_edge":  "#212121",   # near-black — marker edge
-    "scale_bar":    "#212121",
+    "mesh_all":     "#D5D0CB",   # warm grey — full mesh (recedes)
+    "mesh_bbox":    "#2A9D8F",   # teal — bbox mesh nodes
+    "track_out":    "#A0A0A0",   # cool grey — excluded tracks
+    "track_in":     "#4A7FB5",   # steel blue — selected tracks
+    "bbox_edge":    "#264653",   # dark navy — bounding-box rectangle
+    "radius":       "#264653",   # dark navy — radial circle (unified with bbox)
+    "medoid":       "#E76F51",   # coral/vermillion — focal accent
+    "medoid_edge":  "#264653",   # dark navy — marker edge
+    "scale_bar":    "#264653",
 }
 
 
@@ -267,7 +267,8 @@ def plot_bbox_map(
     bbox_node_lats/lons: coordinates of nodes inside the bbox
     tracks            : list of (N,2) arrays [lat, lon] per storm
     storm_indices_near: 0-based indices of storms passing the radial filter
-    medoid_lat/lon    : geographic medoid of bbox nodes
+    medoid_lat/lon    : geographic medoid of bbox mesh nodes (the actual
+                        node minimising total distance to all other bbox nodes)
     max_dist_km       : radial filter distance
     output_dir        : directory for the output PNG
     filename          : output filename
@@ -328,11 +329,8 @@ def plot_bbox_map(
                 continue
             segs_in.append(np.column_stack([trk[:, 1], trk[:, 0]]))
         if segs_in:
-            # Colour by normalised storm index for visual variety
-            n_in = len(segs_in)
-            cmap = plt.cm.Blues
-            colors_in = [cmap(0.3 + 0.6 * j / max(n_in - 1, 1))
-                         for j in range(n_in)]
+            # Uniform steel blue for all selected tracks
+            colors_in = [_CLR["track_in"]] * len(segs_in)
             lc_in = LineCollection(
                 segs_in, colors=colors_in,
                 linewidths=0.5, alpha=0.65, zorder=2)
@@ -420,7 +418,7 @@ def plot_bbox_map(
             plt.Line2D([], [], color=_CLR["medoid"], marker="*",
                        markersize=10, markeredgecolor=_CLR["medoid_edge"],
                        markeredgewidth=0.6, linestyle="none",
-                       label="Geographic medoid"),
+                       label="Bounding-box node medoid"),
         ]
         ax.legend(
             handles=legend_handles, loc="upper left",

@@ -299,7 +299,8 @@ def apply_bbox_filter(
         raise ValueError("No nodes found within the bounding box. "
                          "Check bbox coordinates.")
 
-    # Compute geographic medoid of bbox nodes (an actual node).
+    # Compute geographic medoid of bbox nodes (the actual mesh node that
+    # minimises total haversine distance to all other bbox nodes).
     # Subsample to keep it fast (O(n_sample * n) instead of O(n^2)).
     n_bbox = len(bbox_lats)
     max_sample = 2000
@@ -317,7 +318,7 @@ def apply_bbox_filter(
             best_i = i
     medoid_lat = float(bbox_lats[best_i])
     medoid_lon = float(bbox_lons[best_i])
-    print(f"    Nodes medoid   : ({medoid_lat:.4f}, {medoid_lon:.4f})")
+    print(f"    Bounding-box node medoid : ({medoid_lat:.4f}, {medoid_lon:.4f})")
 
     # Load TC tracks
     track_dir = bbox_cfg["track_dir"]
@@ -330,12 +331,12 @@ def apply_bbox_filter(
     # Filter storms near medoid
     max_dist = bbox_cfg.get("max_track_dist_km", 200.0)
     storm_indices = filter_storms_near_point(tracks, medoid_lat, medoid_lon, max_dist)
-    print(f"    Storms within {max_dist:.0f} km of medoid : "
+    print(f"    Storms within {max_dist:.0f} km of bbox-node medoid : "
           f"{len(storm_indices)} / {n_storms}")
 
     if len(storm_indices) == 0:
         raise ValueError(
-            f"No storms found within {max_dist} km of bbox medoid. "
+            f"No storms found within {max_dist} km of bbox-node medoid. "
             "Increase max_track_dist_km or check bbox coordinates.")
 
     return {
