@@ -1,0 +1,25 @@
+# Data — large files, not version-controlled
+data/raw/
+data/processed/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.eggs/
+*.egg-info/
+dist/
+build/
+
+# C++ build artifacts
+*.pyd
+*.so
+*.dylib
+_build/
+
+# Editors / IDE / OS
+.DS_Store
+.venv/
+*.env
+.idea/
+.claude/
