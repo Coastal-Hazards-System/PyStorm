@@ -1,59 +1,130 @@
 # PyStorm
 
-### *A Modular Python Framework for Probabilistic Modeling of Coastal Storm Hazards*
+### *A Modular Python + C++ Framework for Probabilistic Modeling of Coastal Storm Hazards*
 
 ---
 
-## 🌊 Overview
+## Overview
 
-**PyStorm** is an open-source, modular framework for probabilistic modeling and analysis, designed for engineers, scientists, and researchers working on coastal hazard quantification, stochastic storm simulation, life cycle analysis, and extreme value analysis. It is being devloped a Python-based platform supporting both graphical and script-drive workflows for flexible and computationally efficient execution. Future versions of PyStorm will be modular, extensible, and feature a graphical user interface (GUI) for advanced coastal hazard analysis. 
+**PyStorm** is an open-source framework for probabilistic modeling and analysis,
+designed for engineers, scientists, and researchers working on coastal hazard
+quantification, stochastic storm simulation, life-cycle analysis, and extreme
+value analysis. It pairs **Python** for orchestration, configuration, I/O, and
+post-processing with **C++** engines for the inner numerical kernels that
+dominate runtime — keeping workflows script-driven and reproducible while
+leaving the heavy lifting to compiled code.
+
+The architecture follows **CyHAN Standard v1.1** — a module-first decomposition
+in which each capability is a self-contained vertical with its own C++ engine
+and Python orchestration. See
+[`docs/CyHAN-Standard-v1.1.md`](docs/CyHAN-Standard-v1.1.md). Source comments
+and docstrings (Python and C++) follow the project-wide
+[Comment & Docstring Standard](docs/PyStorm-Comment-Standard-v0.2.md).
 
 ---
-## *(Draft)* Canonical Layout
+
+## Architecture at a glance
+
+Every module is a vertical with the same internal shape:
+
+| Layer                  | Language | Role                                                                                            |
+|------------------------|----------|-------------------------------------------------------------------------------------------------|
+| `scripts/`             | Python   | Thin launchers — parse command-line arguments / read config, then call into the orchestration package. |
+| `backend/python/<mod>` | Python   | Orchestration: data flow, I/O, configuration, diagnostics, plotting.                            |
+| `backend/engines/cpp/` | C++      | Compute kernels (e.g. `kmedoids_core.hpp`) exposed to Python via `pybind11`.                    |
+| `tests/`               | Python   | Smoke + integration tests covering both the pure-Python path and the C++ binding.               |
+
+Python orchestration always provides a **pure-Python fallback** so that workflows
+remain runnable when the compiled extension is unavailable. The C++ engine, when
+built, is loaded transparently — no API change at the Python call site.
+
+---
+
+## Layout (CyHAN v1.1)
+
 ```
-pystorm/
+PyStorm/
 │
-├── backend/
-│   ├── api/                         # Python API layer — authoritative system boundary
-│   │   ├── routes/                  # Endpoint definitions
-│   │   ├── schemas/                 # Input/output validation (pydantic, etc.)
-│   │   ├── auth/                    # Authentication and authorization
-│   │   └── middleware/              # Request lifecycle hooks
-│   │
-│   ├── orch/                        # Python Orchestration — workflow assembly
-│   │   ├── workflows/               # Named workflow definitions (e.g., surge_run.py)
-│   │   ├── jobs/                    # Job lifecycle management
-│   │   ├── dispatch/                # Engine call coordination
-│   │   └── postproc/                # Lightweight post-processing, metadata enrichment
-│   │
-│   └── engines/                     # Python Compute Engines — numerical authority
-│       ├── surge/                   # Storm surge simulation engine
-│       ├── metamodel/               # Metamodel inference and prediction
-│       ├── hazard/                  # Hazard curve construction, AEF computation
-│       ├── sampling/                # Experimental design, k-medoids, LHS
-│       └── weights/                 # DSW / JPM-OS weighting schemes
-│
-├── frontend/
-│   ├── desktop/                     # Qt desktop client (if/when added)
-│   └── web/                         # React web client (if/when added)
-│
-├── cli/                             # CLI entry points (bypasses API, not orchestration)
-│   └── run_pipeline.py
-│
-├── config/                          # Environment and run configuration
-│   ├── defaults.yaml
-│   └── schema.yaml
-│
-├── tests/
-│   ├── engines/                     # Unit tests isolated to compute logic
-│   ├── orch/                        # Integration tests for workflow assembly
-│   └── api/                         # API contract tests
+├── modules/
+│   └── storm_selection/                Representative TC Subset selection
+│       ├── README.md                   Module reference (methods, data flow, API)
+│       ├── backend/
+│       │   ├── engines/cpp/            C++ k-medoids engine (pybind11)
+│       │   │   ├── kmedoids_core.hpp   Header-only PAM with FastPAM1 SWAP
+│       │   │   ├── bindings.cpp        Python binding
+│       │   │   ├── CMakeLists.txt      CMake build (alt: build.py)
+│       │   │   └── build.py            Standalone build helper
+│       │   └── python/storm_selection/ Orchestration package
+│       ├── scripts/                    Launchers (Python)
+│       │   ├── preprocess.py           Raw inputs → tc_data.h5
+│       │   ├── run_storm_selection.py  RTCS selection (fixed | optimal)
+│       │   └── dsw.py                  Post-selection DSW + HC reconstruction
+│       ├── tests/                      Smoke + round-trip tests
+│       └── data/                       Raw inputs & processed outputs (gitignored)
 │
 ├── docs/
-│   ├── CyHAN-Standard-v1.0.md
-│   └── architecture.md
+│   ├── CyHAN-Standard-v1.1.md          Architecture standard
+│   └── PyStorm-Comment-Standard-v0.2.md   Comment & docstring conventions
 │
-├── scripts/                         # Dev/ops utilities, not in execution path
-│
-└── pyproject.toml
+└── archive/                            Pre-refactor snapshot
 ```
+
+Root-level `backend/`, `frontend/`, and shared `api/` directories are anticipated
+future work (CyHAN v1.1 §16.8) and intentionally absent in this revision.
+
+---
+
+## Quickstart — storm_selection
+
+```bash
+cd modules/storm_selection
+
+# Build the C++ k-medoids engine (pure-Python fallback is used if you skip this)
+python backend/engines/cpp/build.py
+
+# Ingest raw inputs → tc_data.h5
+python scripts/preprocess.py
+
+# Run the RTCS selection (fixed-k default; --mode optimal for growth loop)
+python scripts/run_storm_selection.py
+
+# (Optional) Post-selection DSW + hazard-curve reconstruction
+python scripts/dsw.py
+```
+
+See [`modules/storm_selection/README.md`](modules/storm_selection/README.md) for
+module-specific details.
+
+---
+
+## Building the C++ engines
+
+The compiled extensions are not required for correctness, but they accelerate
+the inner loops by ~1–2 orders of magnitude on large problems. Build per
+module:
+
+```bash
+python modules/storm_selection/backend/engines/cpp/build.py
+```
+
+`build.py` tries `setuptools`, then CMake, then a direct compiler invocation.
+Requires `pybind11` (`pip install pybind11`) and a C++17 toolchain
+(Microsoft Visual C++ — MSVC — on Windows, gcc/clang elsewhere).
+
+---
+
+## Acronyms
+
+| Acronym | Expansion                                              |
+|---------|--------------------------------------------------------|
+| API     | Application Programming Interface                      |
+| CLI     | Command-Line Interface                                 |
+| CyHAN   | Coastal Hazards Analysis (the architectural standard)  |
+| DSW     | Discrete Storm Weight                                  |
+| HC      | Hazard Curve                                           |
+| MSVC    | Microsoft Visual C++ (compiler)                        |
+| PAM     | Partitioning Around Medoids (k-medoids algorithm)      |
+| POC     | Point of Contact                                       |
+| RTCS    | Reduced Tropical Cyclone Suite                         |
+| SWAP    | Refinement phase of the PAM algorithm                  |
+| TC      | Tropical Cyclone                                       |
