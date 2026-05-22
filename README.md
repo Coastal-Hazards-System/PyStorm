@@ -1,6 +1,6 @@
 # PyStorm
 
-### *A Modular Python + C++ Framework for Probabilistic Modeling of Coastal Storm Hazards*
+### *A Modular Python/C++ Framework for Probabilistic Modeling of Coastal Storm Hazards*
 
 ---
 
@@ -13,13 +13,6 @@ value analysis. It pairs **Python** for orchestration, configuration, I/O, and
 post-processing with **C++** engines for the inner numerical kernels that
 dominate runtime — keeping workflows script-driven and reproducible while
 leaving the heavy lifting to compiled code.
-
-The architecture follows **CyHAN Standard v1.1** — a module-first decomposition
-in which each capability is a self-contained vertical with its own C++ engine
-and Python orchestration. See
-[`docs/CyHAN-Standard-v1.1.md`](docs/CyHAN-Standard-v1.1.md). Source comments
-and docstrings (Python and C++) follow the project-wide
-[Comment & Docstring Standard](docs/PyStorm-Comment-Standard-v0.2.md).
 
 ---
 
@@ -126,3 +119,12 @@ Requires `pybind11` (`pip install pybind11`) and a C++17 toolchain
 | PAM     | Partitioning Around Medoids (k-medoids algorithm)      |
 | RTCS    | Reduced Tropical Cyclone Suite                         |
 | TC      | Tropical Cyclone                                       |
+
+---
+
+The architecture follows **CyHAN Standard v1.1** — a module-first decomposition
+in which each capability is a self-contained vertical with its own C++ engine
+and Python orchestration. See
+[`docs/CyHAN-Standard-v1.1.md`](docs/CyHAN-Standard-v1.1.md). Source comments
+and docstrings (Python and C++) follow the project-wide
+[Comment & Docstring Standard](docs/PyStorm-Comment-Standard-v0.2.md).
