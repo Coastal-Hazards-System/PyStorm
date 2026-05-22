@@ -17,7 +17,7 @@ def build_joint_matrix(
     alpha: float = 1.0,
     beta:  float = 1.0,
 ) -> tuple[np.ndarray, StandardScaler, StandardScaler]:
-    """Standardise X and Y_r independently then concatenate with weights:
+    """Standardize X and Y_r independently then concatenate with weights:
 
         Z = [ alpha * X~  |  beta * Y_r~ ]
     """

@@ -4,7 +4,7 @@ Author / POC : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usa
 
   Coverage     — fraction of Y-space k-means clusters represented by subset
   Discrepancy  — centered L2 discrepancy of the subset in X-space (full-data scaled)
-  Maximin      — minimum pairwise distance in standardised X-space
+  Maximin      — minimum pairwise distance in standardized X-space
 
 Engine contract: arrays in, scalars/dict out.  No config, no I/O.
 """
@@ -18,7 +18,7 @@ from sklearn.cluster import KMeans
 
 
 def compute_maximin(X_sub_scaled: np.ndarray) -> float:
-    """Minimum pairwise Euclidean distance within the subset in standardised X-space."""
+    """Minimum pairwise Euclidean distance within the subset in standardized X-space."""
     return float(pdist(X_sub_scaled).min()) if len(X_sub_scaled) >= 2 else 0.0
 
 

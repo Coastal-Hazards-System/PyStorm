@@ -165,7 +165,7 @@ across languages.
 **Tier 3** — sub-group label inside a namespace or function:
 
 ```cpp
-// ─── BUILD: maximin initialisation ───────────────────────────────────────
+// ─── BUILD: maximin initialization ───────────────────────────────────────
 ```
 
 ### Rules (both languages)
@@ -227,12 +227,12 @@ Full form (public API, non-obvious arguments):
 
 ```cpp
 /**
- * Full PAM with FastPAM1 swap optimisation.
+ * Full PAM with FastPAM1 swap optimization.
  *
  * @param D       (n*n) row-major float64 distance matrix.
  * @param n       Number of points.
  * @param k       Number of medoids to select.
- * @param seed    RNG seed for BUILD initialisation.
+ * @param seed    RNG seed for BUILD initialization.
  * @param forced  Indices that must appear in the result (may be empty).
  *
  * @return Sorted vector of k selected row indices.

@@ -8,7 +8,7 @@ Renders a single PNG with:
   (c) all store nodes  (light grey)
   (d) nodes within the bounding box  (red)
   (e) all TC tracks  (thin grey)
-  (f) TC tracks within the radial filter  (coloured)
+  (f) TC tracks within the radial filter  (colored)
   (g) radial distance circle around the bbox centroid
 """
 

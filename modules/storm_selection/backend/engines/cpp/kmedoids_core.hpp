@@ -1,11 +1,11 @@
 #pragma once
 /**
  * @file        kmedoids_core.hpp
- * @brief       Header-only k-medoids PAM with FastPAM1 SWAP optimisation.
+ * @brief       Header-only k-medoids PAM with FastPAM1 SWAP optimization.
  *
  * @author      Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
  *
- * BUILD  – maximin (farthest-first) initialisation, with optional forced medoids.
+ * BUILD  – maximin (farthest-first) initialization, with optional forced medoids.
  * SWAP   – FastPAM1: maintains nearest / second-nearest medoid distances so each
  *          candidate swap cost is O(n) instead of O(n·k).
  *
@@ -62,7 +62,7 @@ inline void compute_assignments(
     }
 }
 
-// ─── BUILD: maximin initialisation ──────────────────────────────────────────
+// ─── BUILD: maximin initialization ──────────────────────────────────────────
 
 /**
  * Select k medoids using farthest-first traversal.
@@ -82,7 +82,7 @@ inline std::vector<int> build(
 
     if (!forced.empty()) {
         for (int f : forced) selected.push_back(f);
-        // Initialise min_d from forced medoids.
+        // Initialize min_d from forced medoids.
         for (int j = 0; j < n; ++j) {
             for (int f : forced) {
                 double dist = D_ij(D, n, j, f);
@@ -127,7 +127,7 @@ inline std::vector<int> build(
 // ─── SWAP: FastPAM1 ────────────────────────────────────────────────────────
 
 /**
- * Full PAM with FastPAM1 swap optimisation.
+ * Full PAM with FastPAM1 swap optimization.
  *
  * Returns the final medoid indices (sorted).
  */

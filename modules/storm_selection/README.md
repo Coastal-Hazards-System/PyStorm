@@ -47,14 +47,14 @@ Let
 
 The goal is to choose `k ≪ n` storm indices `S ⊂ {1, …, n}` such that
 
-1. `X[S, :]` is space-filling in standardised parameter space,
+1. `X[S, :]` is space-filling in standardized parameter space,
 2. `Y[S, :]` covers the principal modes of the response,
 3. the JPM hazard curve reconstructed from `Y[S, :]` and the back-computed
    Discrete Storm Weights (DSW) reproduces `HC` to within a target tolerance.
 
-The selection problem is combinatorial and NP-hard in general. The
-`storm_selection` module attacks it with a sequence of well-defined,
-computationally tractable surrogates.
+The exact selection problem is combinatorial and has no efficient
+solution at relevant scales. The `storm_selection` module attacks it
+with a sequence of well-defined, computationally tractable surrogates.
 
 ---
 
@@ -78,14 +78,14 @@ the population-level response variability, not the subset's. Implementation:
 ### 2.2 The Joint Feature Matrix
 
 Both objectives (parameter coverage and response coverage) must enter the
-clustering simultaneously. We standardise `X` and `Y_r` independently and
+clustering simultaneously. We standardize `X` and `Y_r` independently and
 concatenate them with user-controlled weights:
 
 ```
 Z = [ α · z(X) | β · z(Y_r) ] ∈ ℝ^{n × (p + r)}
 ```
 
-where `z(·)` is column-wise zero-mean, unit-variance standardisation
+where `z(·)` is column-wise zero-mean, unit-variance standardization
 (`StandardScaler`), and `(α, β)` are scalar weights controlling the relative
 emphasis on parameters vs. response. The default `(α, β) = (10, 0.1)` biases
 selection toward parameter coverage; alternative working points
@@ -101,7 +101,7 @@ the total within-cluster dissimilarity:
 `S* = argmin_{|S|=k}  Σ_{i=1}^n  min_{j ∈ S}  ‖Z_i − Z_j‖_2`
 
 This is the classic k-medoids objective, solved by Partitioning Around
-Medoids (PAM) with maximin **BUILD** (initialisation) and an exhaustive
+Medoids (PAM) with maximin **BUILD** (initialization) and an exhaustive
 **SWAP** (refinement) phase. Three back-ends dispatch in order:
 
 1. A C++ kernel (`backend/engines/cpp/_kmedoids_cpp`) exposed through a
@@ -131,9 +131,9 @@ Three diagnostics are computed on every candidate subset:
 
 | Metric          | Definition                                                                                            | Direction |
 |-----------------|-------------------------------------------------------------------------------------------------------|-----------|
-| **Coverage**    | Fraction of k-means clusters fit on the full `Y_r` that are represented (assigned to) by `Y_r[S]`     | maximise  |
-| **Discrepancy** | Centred L2 discrepancy of `z(X)[S]` mapped to `[0,1]^p`, measuring deviation from a uniform fill      | minimise  |
-| **Maximin**     | Minimum pairwise Euclidean distance within `z(X)[S]`                                                  | maximise  |
+| **Coverage**    | Fraction of k-means clusters fit on the full `Y_r` that are represented (assigned to) by `Y_r[S]`     | maximize  |
+| **Discrepancy** | Centered L2 discrepancy of `z(X)[S]` mapped to `[0,1]^p`, measuring deviation from a uniform fill      | minimize  |
+| **Maximin**     | Minimum pairwise Euclidean distance within `z(X)[S]`                                                  | maximize  |
 
 Coverage and discrepancy quantify how well the subset fills the response and
 parameter spaces, respectively. Maximin reports the worst-case crowding
@@ -169,8 +169,8 @@ Three aggregation modes are supported via `dsw_method`:
 | Method | Per-node weight `W_i`                | Notes                                            |
 |--------|--------------------------------------|--------------------------------------------------|
 | 1      | `1`                                  | Equal-weight average (classic JPM).              |
-| 2      | per-storm-per-node surge             | Surge-weighted, emphasises high responses.       |
-| 3      | `Var_j(Y_{ji})` (default)            | Variance-weighted, emphasises informative nodes. |
+| 2      | per-storm-per-node surge             | Surge-weighted, emphasizes high responses.       |
+| 3      | `Var_j(Y_{ji})` (default)            | Variance-weighted, emphasizes informative nodes. |
 
 Implementation: `weights/dsw.py`.
 
@@ -285,7 +285,7 @@ Both workflows begin with the same data-prep pipeline through step [2]:
 The paths diverge at step [3]:
 
 - **Fixed-k** runs an optional α/β sweep at step [3], then builds the joint
-  matrix at step [4] with the optimised (or default) α, β.
+  matrix at step [4] with the optimized (or default) α, β.
 - **Optimal-k** has no α/β sweep and goes straight to step [4] with
   `alpha_default`, `beta_default`.
 
@@ -306,13 +306,13 @@ is absent.
                                        │
                                        ▼
 ┌─────────────────────────────────────────────────────────────────────┐
-│  [3]  (Optional)  α/β sweep                  (HC-driven optimiser)  │
+│  [3]  (Optional)  α/β sweep                  (HC-driven optimizer)  │
 │       └─ for each (α, β) ∈ grid:                                    │
 │              build Z, run PAM, evaluate HC metrics,                 │
 │              keep argmin |bias| + rmse                              │
 ├─────────────────────────────────────────────────────────────────────┤
 │  [4]  Build joint matrix Z = [α·z(X) | β·z(Y_r)]   (sampling/joint) │
-│       └─ uses optimised α, β from [3] (or defaults if [3] skipped)  │
+│       └─ uses optimized α, β from [3] (or defaults if [3] skipped)  │
 ├─────────────────────────────────────────────────────────────────────┤
 │  [5]  Select k medoids via PAM — single call    (sampling/kmedoids) │
 │       └─ k = |forced| + k_additional  • honours forced indices      │
@@ -451,7 +451,7 @@ modes never overwrite each other.
 | `selection_metrics.csv`    | fixed | coverage / discrepancy / maximin at the chosen k                  |
 | `growth_history.csv`       | opt.  | One row per `k` step: coverage, discrepancy, global RMSE, bias    |
 | `node_rmse.csv`            | opt.  | Per-node RMSE and bias at `k_selected`                            |
-| `alpha_beta_sweep.csv`     | fixed | Per-(α,β) HC metrics from the optimiser sweep                     |
+| `alpha_beta_sweep.csv`     | fixed | Per-(α,β) HC metrics from the optimizer sweep                     |
 | `qbm_bias.h5`              | both  | Post-correction bias table `[m × N_AER]`                          |
 | `tc_splom_*.png`           | both  | TC parameter scatter-plot matrix                                  |
 | `pca_yspace_*.png`         | both  | Response-space PCA scatter                                        |
@@ -500,7 +500,7 @@ workflow requires it.
 
 A single `random_seed` (default 42) seeds:
 
-- the k-medoids BUILD initialisation,
+- the k-medoids BUILD initialization,
 - k-means fitting in the coverage metric,
 - pseudo-random sampling for diagnostic node selection.
 
@@ -623,7 +623,7 @@ CLI is the operative deployment posture in v1.1 (§7.3 / §7.4).
   Introduction to Cluster Analysis*. Wiley (PAM algorithm).
 - Joe, S., and Kuo, F. Y. (2008). Constructing Sobol' sequences with better
   two-dimensional projections. *SIAM Journal on Scientific Computing*,
-  30(5), 2635 to 2654 (centred L2 discrepancy).
+  30(5), 2635 to 2654 (centered L2 discrepancy).
 - Jolliffe, I. T. (2002). *Principal Component Analysis*. Springer Series
   in Statistics.
 
@@ -636,34 +636,25 @@ CLI is the operative deployment posture in v1.1 (§7.3 / §7.4).
 | ADCIRC   | Advanced Circulation Model (hydrodynamic surge solver)                  |
 | AER      | Annual Exceedance Rate                                                  |
 | BE       | Best-Estimate (hazard curve)                                            |
-| BUILD    | Initialisation phase of the PAM k-medoids algorithm                     |
-| CHL      | Coastal and Hydraulics Laboratory (ERDC)                                |
 | CHS      | Coastal Hazards System                                                  |
 | CHS-LA   | Coastal Hazards System — Louisiana study                                |
 | CLI      | Command-Line Interface                                                  |
-| CyHAN    | Coastal Hazards Analysis (the architectural standard)                   |
+| CyHAN    | C++/Python Hybrid Architecture Network                                  |
 | DSW      | Discrete Storm Weight                                                   |
-| ERDC     | U.S. Army Engineer Research and Development Center                      |
 | HC       | Hazard Curve                                                            |
 | HTTP     | Hypertext Transfer Protocol                                             |
-| ITCS     | Idealized Tropical Cyclone Suite                                        |
+| ITCS     | Initial Tropical Cyclone Suite                                          |
 | JPM      | Joint Probability Method                                                |
-| JPM-OS   | JPM — Optimal Sampling                                                  |
-| NP-hard  | Non-deterministic Polynomial-time hard (computational complexity class) |
 | PAM      | Partitioning Around Medoids (k-medoids algorithm)                       |
 | PCA      | Principal Component Analysis                                            |
-| POC      | Point of Contact                                                        |
 | POD      | Proper Orthogonal Decomposition                                         |
 | QBM      | Quantile Bias Mapping                                                   |
 | RMSE     | Root-Mean-Square Error                                                  |
 | RTCS     | Reduced Tropical Cyclone Suite                                          |
 | SF       | Space-Filling (subset-quality metrics: coverage, discrepancy, maximin)  |
-| SIAM     | Society for Industrial and Applied Mathematics                          |
 | SPLOM    | Scatter-Plot Matrix (pairs plot)                                        |
 | SVD      | Singular Value Decomposition                                            |
-| SWAP     | Refinement phase of the PAM k-medoids algorithm                         |
 | TC       | Tropical Cyclone                                                        |
-| TR       | Technical Report                                                        |
 | TROP     | TC track file format ("tropical") used by ITCS storm files              |
 | UI       | User Interface                                                          |
 | YAML     | YAML Ain't Markup Language (human-readable config format)               |

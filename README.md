@@ -50,7 +50,7 @@ PyStorm/
 │       ├── README.md                   Module reference (methods, data flow, API)
 │       ├── backend/
 │       │   ├── engines/cpp/            C++ k-medoids engine (pybind11)
-│       │   │   ├── kmedoids_core.hpp   Header-only PAM with FastPAM1 SWAP
+│       │   │   ├── kmedoids_core.hpp   Header-only PAM with FastPAM1 refinement
 │       │   │   ├── bindings.cpp        Python binding
 │       │   │   ├── CMakeLists.txt      CMake build (alt: build.py)
 │       │   │   └── build.py            Standalone build helper
@@ -119,12 +119,10 @@ Requires `pybind11` (`pip install pybind11`) and a C++17 toolchain
 |---------|--------------------------------------------------------|
 | API     | Application Programming Interface                      |
 | CLI     | Command-Line Interface                                 |
-| CyHAN   | Coastal Hazards Analysis (the architectural standard)  |
+| CyHAN   | C++/Python Hybrid Architecture Network                 |
 | DSW     | Discrete Storm Weight                                  |
 | HC      | Hazard Curve                                           |
 | MSVC    | Microsoft Visual C++ (compiler)                        |
 | PAM     | Partitioning Around Medoids (k-medoids algorithm)      |
-| POC     | Point of Contact                                       |
 | RTCS    | Reduced Tropical Cyclone Suite                         |
-| SWAP    | Refinement phase of the PAM algorithm                  |
 | TC      | Tropical Cyclone                                       |

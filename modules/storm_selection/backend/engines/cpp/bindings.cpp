@@ -23,7 +23,7 @@ namespace py = pybind11;
  * ----------
  * D      : (n, n) float64 distance matrix (row-major, contiguous).
  * k      : number of medoids.
- * seed   : RNG seed for BUILD initialisation.
+ * seed   : RNG seed for BUILD initialization.
  * forced : int32 array of indices that must appear in the result (may be empty).
  *
  * Returns
@@ -64,7 +64,7 @@ py::array_t<int32_t> kmedoids_pam(
 }
 
 PYBIND11_MODULE(_kmedoids_cpp, m) {
-    m.doc() = "C++ accelerated k-medoids PAM with FastPAM1 optimisation";
+    m.doc() = "C++ accelerated k-medoids PAM with FastPAM1 optimization";
     m.def("kmedoids_pam", &kmedoids_pam,
           py::arg("D"), py::arg("k"), py::arg("seed"), py::arg("forced"),
           "Run PAM k-medoids on precomputed distance matrix D.\n\n"
