@@ -1,0 +1,31 @@
+# CyHAN v2.0 — optional structured manifest for the PST module.
+#
+# Author / POC : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
+
+[module]
+name              = "probabilistic_simulation_technique"
+short_tag         = "pst"
+cyhan_version     = "v2.0"
+launcher          = "run_probabilistic_simulation_technique.py"
+orchestrator      = "backend/python/main_probabilistic_simulation_technique.py"
+python_package    = "probabilistic_simulation_technique"
+cmake_flag        = "BUILD_PST"
+
+[engine]
+binding_module    = "_pst"
+sources           = ["PSTBootstrap.hpp", "pst_bindings.cpp"]
+classes           = []                                # header-only; functions in namespace pst::
+acceleration      = "truncated-noise bootstrap loop"
+
+[orchestrator_entry]
+config_model      = "probabilistic_simulation_technique.config:PSTConfig"
+runner            = "probabilistic_simulation_technique.orchestrator:PSTOrchestrator"
+entry             = "main_probabilistic_simulation_technique:run"
+
+[outputs]
+plot              = "<base>_PST_HC.png"
+ensemble          = "<base>_PST.csv"
+hc_table_be       = "<base>_PST_HC_BE_tbl.csv"
+hc_table_cb       = "<base>_PST_HC_CB_tbl.csv"
+hc_plot_be        = "<base>_PST_HC_BE_plt.csv"
+hc_plot_cb        = "<base>_PST_HC_CB_plt.csv"

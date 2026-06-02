@@ -1,7 +1,10 @@
 # Data — large files, not version-controlled
 # (anchored with **/ so the rule applies to module-nested data/ trees too)
-**/data/raw/
-**/data/processed/
+**/data/inputs/
+**/data/outputs/
+
+# Archive — local-only stash of legacy data + superseded docs (not on GitHub)
+archive/
 
 # Python
 __pycache__/

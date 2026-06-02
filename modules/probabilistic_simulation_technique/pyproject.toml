@@ -1,0 +1,32 @@
+[build-system]
+requires      = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name            = "probabilistic_simulation_technique"
+version         = "0.1.0"
+description     = "Probabilistic Simulation Technique (PST) — bootstrap GPD hazard curves with a C++ inner loop."
+readme          = "README.md"
+requires-python = ">=3.10"
+authors = [
+  {name = "Norberto C. Nadal-Caraballo, PhD", email = "norberto.c.nadal-caraballo@usace.army.mil"},
+]
+license = {text = "Public domain (U.S. Government work, 17 U.S.C. §105)"}
+dependencies = [
+  "numpy>=1.24",
+  "scipy>=1.10",
+  "pandas>=2.0",
+  "matplotlib>=3.7",
+  "pydantic>=2.0",
+]
+
+[tool.setuptools.packages.find]
+where    = ["backend/python"]
+include  = ["probabilistic_simulation_technique*"]
+
+[tool.setuptools.py-modules]
+# CyHAN v2.0 §5.3 / §16.2 orchestrator entry, sibling of the expanded package.
+modules = ["main_probabilistic_simulation_technique"]
+
+[tool.setuptools.package-data]
+"probabilistic_simulation_technique" = ["*.pyd", "*.so", "*.dylib"]

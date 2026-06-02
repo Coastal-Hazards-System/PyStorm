@@ -1,0 +1,30 @@
+[build-system]
+requires      = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name            = "peaks_over_threshold"
+version         = "0.1.0"
+description     = "Peaks-Over-Threshold (POT) event extraction with a C++ threshold-search kernel."
+readme          = "README.md"
+requires-python = ">=3.10"
+authors = [
+  {name = "Norberto C. Nadal-Caraballo, PhD", email = "norberto.c.nadal-caraballo@usace.army.mil"},
+]
+license = {text = "Public domain (U.S. Government work, 17 U.S.C. §105)"}
+dependencies = [
+  "numpy>=1.24",
+  "pandas>=2.0",
+  "matplotlib>=3.7",
+  "pydantic>=2.0",
+]
+
+[tool.setuptools.packages.find]
+where    = ["backend/python"]
+include  = ["peaks_over_threshold*"]
+
+[tool.setuptools.py-modules]
+modules = ["main_peaks_over_threshold"]
+
+[tool.setuptools.package-data]
+"peaks_over_threshold" = ["*.pyd", "*.so", "*.dylib"]

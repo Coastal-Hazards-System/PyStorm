@@ -1,0 +1,27 @@
+# CyHAN v2.0 — structured manifest for the POT module.
+#
+# Author / POC : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
+
+[module]
+name              = "peaks_over_threshold"
+short_tag         = "pot"
+cyhan_version     = "v2.0"
+launcher          = "run_peaks_over_threshold.py"
+orchestrator      = "backend/python/main_peaks_over_threshold.py"
+python_package    = "peaks_over_threshold"
+cmake_flag        = "BUILD_POT"
+
+[engine]
+binding_module    = "_pot"
+sources           = ["POTThresholdSearch.hpp", "pot_bindings.cpp"]
+classes           = []                              # header-only; functions in namespace pot::
+acceleration      = "iterative percentile threshold-search + event segmentation"
+
+[orchestrator_entry]
+config_model      = "peaks_over_threshold.config:POTConfig"
+runner            = "peaks_over_threshold.orchestrator:POTOrchestrator"
+entry             = "main_peaks_over_threshold:run"
+
+[outputs]
+peaks_csv         = "<base>_POT.csv"
+plot              = "<base>_POT.png"

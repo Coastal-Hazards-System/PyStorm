@@ -1,0 +1,171 @@
+"""orchestrator — end-to-end POT extraction workflow runner.
+
+Author / POC : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
+
+Composes the time-series reader, the iterative threshold-search kernel
+(``_pot`` when built, pure Python otherwise), the peaks writer, and the
+diagnostic plotter into a single deterministic run.
+
+Public API
+----------
+  POTResult              dataclass with the run's in-memory outputs
+  POTOrchestrator        accepts POTConfig and exposes ``.run() -> POTResult``
+
+Algorithm
+---------
+Step 1 — Read the input CSV; sort ascending; canonicalize column names.
+Step 2 — Convert datetimes to Unix epoch seconds (float64).
+Step 3 — Iteratively search for a percentile threshold that yields the
+         target event rate after the configured segmentation method.
+Step 4 — Materialize the peaks DataFrame from the chosen indices.
+Step 5 — Save the peaks CSV and render the diagnostic plot.
+"""
+
+from dataclasses import dataclass
+from pathlib     import Path
+
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+
+from .config                import POTConfig
+from .io                    import read_time_series_csv, write_pot_peaks
+from .postproc              import TimeSeriesPlotter
+from .sampling              import IterativeThresholdSearch, ThresholdSearchResult
+
+
+@dataclass
+class POTResult:
+    """In-memory result bundle from one POT extraction."""
+    threshold:        float
+    peaks_df:         pd.DataFrame      # columns: datetime, value
+    converged:        bool
+    iterations:       int
+    events_per_year:  float
+    final_percentile: float
+    used_cpp_kernel:  bool
+
+
+class POTOrchestrator:
+    """End-to-end POT runner.
+
+    Parameters
+    ----------
+    config : POTConfig
+        Validated job request (immutable).
+    """
+
+    def __init__(self, config: POTConfig) -> None:
+        self.config = config
+
+    # ──────────────────────────────────────────────────────────────────────
+    def run(self) -> POTResult:
+        cfg = self.config
+        print(f"[POT] Loading time series: {cfg.input_csv}")
+        df = read_time_series_csv(cfg.input_csv, cfg.datetime_col, cfg.value_col)
+        n  = len(df)
+        if n < 2:
+            raise RuntimeError(
+                f"input has only {n} valid row(s); need at least 2 for POT"
+            )
+
+        # Step 2 — convert to numpy float arrays for the kernel.
+        times_sec = df["datetime"].astype("int64").to_numpy() // 1_000_000_000
+        times_sec = times_sec.astype(np.float64)
+        values    = df["value"].to_numpy(dtype=np.float64)
+
+        # Step 3 — threshold search.
+        searcher = IterativeThresholdSearch(
+            interevent_sec         = cfg.interevent_hours * 3600.0,
+            method                 = cfg.method,
+            target_events_per_year = cfg.target_events_per_year,
+            tolerance              = cfg.tolerance,
+            start_percentile       = cfg.start_percentile,
+            step_size              = cfg.step_size,
+            max_iter               = cfg.max_iter,
+        )
+        used_cpp = searcher.use_cpp
+        print(f"[POT] Threshold-search backend: "
+              f"{'C++ (_pot)' if used_cpp else 'pure Python'}")
+
+        r: ThresholdSearchResult = searcher.run(values, times_sec)
+
+        if not r.converged:
+            print(
+                f"[POT] WARNING: did not converge to target "
+                f"{cfg.target_events_per_year} ± {cfg.tolerance} ev/yr; "
+                f"last evaluated state is at percentile "
+                f"{r.final_percentile:.4f} with {r.events_per_year:.4f} ev/yr"
+            )
+        else:
+            print(
+                f"[POT] Converged in {r.iterations} iterations: "
+                f"threshold={r.threshold:.4f} {cfg.units}, "
+                f"rate={r.events_per_year:.4f} ev/yr "
+                f"(target {cfg.target_events_per_year} ± {cfg.tolerance})"
+            )
+
+        # Step 4 — materialize peaks DataFrame in original time order.
+        peaks_df = df.iloc[r.peak_indices].reset_index(drop=True).copy()
+
+        # Step 5 — save + plot.
+        base_filename = Path(cfg.input_csv).stem
+        out_csv = write_pot_peaks(cfg.output_dir, base_filename, peaks_df)
+        print(f"[POT] Peaks written to: {out_csv}")
+
+        self._render_plot(
+            df            = df,
+            peaks_df      = peaks_df,
+            threshold     = r.threshold,
+            base_filename = base_filename,
+            value_col_label = cfg.value_col,
+            units           = cfg.units,
+            vdatum          = cfg.vdatum,
+            plots_dir       = cfg.plots_dir,
+        )
+
+        return POTResult(
+            threshold        = r.threshold,
+            peaks_df         = peaks_df,
+            converged        = r.converged,
+            iterations       = r.iterations,
+            events_per_year  = r.events_per_year,
+            final_percentile = r.final_percentile,
+            used_cpp_kernel  = used_cpp,
+        )
+
+    # ──────────────────────────────────────────────────────────────────────
+    @staticmethod
+    def _render_plot(
+        df:              pd.DataFrame,
+        peaks_df:        pd.DataFrame,
+        threshold:       float,
+        base_filename:   str,
+        value_col_label: str,
+        units:           str,
+        vdatum:          str,
+        plots_dir:       Path,
+    ) -> None:
+        plots_dir = Path(plots_dir)
+        plots_dir.mkdir(parents=True, exist_ok=True)
+        out_path = plots_dir / f"{base_filename}_POT.png"
+
+        full_units = units + (f", {vdatum}" if vdatum else "")
+
+        fig, ax = plt.subplots(figsize=(10, 5))
+        plotter = TimeSeriesPlotter(
+            ax, datetime_col="datetime", value_col="value",
+            ylabel=value_col_label, units=full_units,
+            title=f"PyStorm: {value_col_label} — Peaks Over Threshold",
+        )
+        df_valid = df.dropna(subset=["datetime", "value"])
+        plotter.plot(df_valid, label=value_col_label, color="blue")
+
+        ax.plot(peaks_df["datetime"], peaks_df["value"], "ro", label="Peaks")
+        ax.axhline(threshold, color="black", linestyle="--",
+                   label=f"Threshold = {threshold:.2f} {units}")
+        plotter.finalize()
+
+        fig.savefig(out_path, dpi=300)
+        plt.close(fig)
+        print(f"[POT] Plot saved: {out_path}")
