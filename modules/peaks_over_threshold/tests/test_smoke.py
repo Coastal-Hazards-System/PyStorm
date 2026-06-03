@@ -133,6 +133,6 @@ def test_orchestrator_end_to_end(tmp_path, synthetic_series):
     )
     result = POTOrchestrator(cfg).run()
 
-    assert (tmp_path / "out"   / f"{input_csv.stem}_POT.csv").is_file()
-    assert (tmp_path / "plots" / f"{input_csv.stem}_POT.png").is_file()
+    assert (tmp_path / "out"   / f"{input_csv.stem}_pot.csv").is_file()
+    assert (tmp_path / "plots" / f"{input_csv.stem}_pot.png").is_file()
     assert result.used_cpp_kernel == CPP_KERNEL_AVAILABLE

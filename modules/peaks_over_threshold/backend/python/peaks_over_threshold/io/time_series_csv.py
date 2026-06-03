@@ -48,12 +48,34 @@ def write_pot_peaks(
     base_filename: str,
     peaks:         pd.DataFrame,
 ) -> Path:
-    """Write the selected POT peaks to ``<base>_POT.csv``.
+    """Write the selected POT peaks to ``<base>_pot.csv``.
 
     Returns the full output path.
     """
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
-    out_path = output_dir / f"{base_filename}_POT.csv"
+    out_path = output_dir / f"{base_filename}_pot.csv"
     peaks[["datetime", "value"]].to_csv(out_path, index=False)
+    return out_path
+
+
+def write_series_csv(
+    df:             pd.DataFrame,
+    out_path:       Path,
+    value_col:      str = "value",
+    datetime_header: str = "Date Time",
+    value_header:    str = "Value",
+) -> Path:
+    """Write a normalized series to CSV with human-friendly headers.
+
+    Reads ``("datetime", <value_col>)`` from ``df`` and emits a two-column CSV
+    headed ``(datetime_header, value_header)`` — e.g. ``("Date Time", "NTR")``.
+    Blank cells are normalized to ``NaN``. Returns the output path.
+    """
+    out_path = Path(out_path)
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    out = df[["datetime", value_col]].rename(
+        columns={"datetime": datetime_header, value_col: value_header}
+    )
+    out.to_csv(out_path, index=False, na_rep="NaN")
     return out_path

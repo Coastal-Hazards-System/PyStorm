@@ -69,9 +69,10 @@ class POTOrchestrator:
                 f"input has only {n} valid row(s); need at least 2 for POT"
             )
 
-        # Step 2 — convert to numpy float arrays for the kernel.
-        times_sec = df["datetime"].astype("int64").to_numpy() // 1_000_000_000
-        times_sec = times_sec.astype(np.float64)
+        # Step 2 — convert to numpy float arrays for the kernel. Use a
+        # resolution-independent epoch-seconds cast: pandas datetime64 may be
+        # ns or us, so a fixed //1e9 on the raw int64 would misscale times.
+        times_sec = df["datetime"].to_numpy("datetime64[s]").astype(np.int64).astype(np.float64)
         values    = df["value"].to_numpy(dtype=np.float64)
 
         # Step 3 — threshold search.
@@ -148,7 +149,7 @@ class POTOrchestrator:
     ) -> None:
         plots_dir = Path(plots_dir)
         plots_dir.mkdir(parents=True, exist_ok=True)
-        out_path = plots_dir / f"{base_filename}_POT.png"
+        out_path = plots_dir / f"{base_filename}_pot.png"
 
         full_units = units + (f", {vdatum}" if vdatum else "")
 

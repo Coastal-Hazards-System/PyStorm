@@ -22,6 +22,23 @@ config_model      = "peaks_over_threshold.config:POTConfig"
 runner            = "peaks_over_threshold.orchestrator:POTOrchestrator"
 entry             = "main_peaks_over_threshold:run"
 
+[stages]
+# Selectable via config["stages"]; canonical execution order. Default ["pot"].
+order             = ["download", "detrend", "ntr", "pot"]
+download          = "fetch NOAA water level + tide prediction CSVs (preprocessing.noaa_download)"
+detrend           = "remove linear sea-level trend from water level (preprocessing.detrend)"
+ntr               = "NTR = detrended water level - interpolated tide (preprocessing.ntr)"
+pot               = "extract peaks over threshold (orchestrator.POTOrchestrator)"
+
 [outputs]
-peaks_csv         = "<base>_POT.csv"
-plot              = "<base>_POT.png"
+# Preprocessing chain (per-gauge); paths set by the launcher. All lower case.
+raw_water_level   = "data/inputs/raw/<station>/water_level_<station>.csv"
+raw_tide          = "data/inputs/raw/<station>/tide_prediction_<station>.csv"
+detrended_csv     = "data/inputs/processed/<station>/dwl_<station>.csv"
+trend_csv         = "data/inputs/processed/<station>/trend_<station>.csv"
+ntr_csv           = "data/inputs/processed/<station>/ntr_<station>.csv"
+# POT extraction — the chain runs POT on BOTH processed series.
+dwl_peaks_csv     = "data/outputs/<station>/dwl_<station>_pot.csv"
+ntr_peaks_csv     = "data/outputs/<station>/ntr_<station>_pot.csv"
+peaks_csv         = "<base>_pot.csv"     # generic form (<base> = input CSV stem)
+plot              = "<base>_pot.png"

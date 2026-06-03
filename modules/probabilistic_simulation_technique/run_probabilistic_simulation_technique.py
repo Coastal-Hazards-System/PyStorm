@@ -97,8 +97,11 @@ def main() -> int:
     }
 
     # Delegate to the orchestrator (§5.3: orchestration logic lives in main_<name>.py).
-    from main_probabilistic_simulation_technique import run
-    run(config)
+    # main_probabilistic_simulation_technique lives in backend/python, added to
+    # sys.path at runtime; resolve it dynamically so there is no static import for
+    # the IDE to flag as unresolved.
+    from importlib import import_module
+    import_module("main_probabilistic_simulation_technique").run(config)
     return 0
 
 

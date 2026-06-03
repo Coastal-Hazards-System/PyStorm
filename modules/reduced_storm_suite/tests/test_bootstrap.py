@@ -8,6 +8,7 @@ _build_preprocess_config can resolve them without touching repo data.
 """
 
 import sys
+from importlib import import_module
 from pathlib import Path
 
 import pytest
@@ -16,6 +17,10 @@ _MODULE_ROOT = Path(__file__).resolve().parents[1]
 _PKG_PATH = _MODULE_ROOT / "backend" / "python"
 if str(_PKG_PATH) not in sys.path:
     sys.path.insert(0, str(_PKG_PATH))
+
+# Orchestrator entry lives in backend/python (added to sys.path above); resolve
+# it dynamically so there is no static import for the IDE to flag as unresolved.
+rss_main = import_module("main_reduced_storm_suite")
 
 
 class _FakePreprocessor:
@@ -65,8 +70,7 @@ def _stage_raw(root: Path):
 
 
 def _ensure(root, h5):
-    import main_reduced_storm_suite as M
-    M._ensure_h5_exists(
+    rss_main._ensure_h5_exists(
         root=root, dataset=_DATASET, raw_files=_RAW_FILES,
         preprocess_metadata={}, track_file_patterns={}, h5_path=str(h5))
 

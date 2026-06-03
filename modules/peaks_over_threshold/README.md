@@ -45,24 +45,30 @@ peaks_over_threshold/
 │       ├── main_peaks_over_threshold.py        ← orchestrator entry (§5.3)
 │       └── peaks_over_threshold/               ← expanded package (§5.3)
 │           ├── __init__.py
-│           ├── config.py            pydantic POTConfig
+│           ├── config.py            pydantic POTConfig + PreprocessConfig
 │           ├── orchestrator.py      POTOrchestrator workflow runner
 │           ├── solver.py            thin _pot binding wrapper
 │           ├── sampling/
 │           │   └── threshold_search.py   IterativeThresholdSearch
 │           ├── segmentation/
 │           │   └── events.py            hydrograph + peak-gap segmenters
+│           ├── preprocessing/                upstream NOAA → NTR chain
+│           │   ├── noaa_download.py        download_noaa_wl_data
+│           │   ├── detrend.py              detrend_time_series
+│           │   ├── ntr.py                  estimate_ntr (NTR)
+│           │   └── orchestrator.py         PreprocessOrchestrator (stage runner)
 │           ├── postproc/
 │           │   └── plots.py             NaN-aware TimeSeriesPlotter
 │           └── io/
-│               └── time_series_csv.py   CSV reader + peaks writer
+│               └── time_series_csv.py   CSV reader + peaks/series writers
 ├── tests/
-│   └── test_smoke.py
+│   ├── test_smoke.py
+│   └── test_preprocessing.py
 ├── data/                                       § 16.7
 │   ├── inputs/
-│   │   ├── raw/                                source CSVs (e.g. NOAA pulls)
-│   │   └── processed/                          cleaned time series (default target)
-│   └── outputs/                                POT peaks + plots/
+│   │   ├── raw/<station>/                     raw NOAA pulls (per gauge)
+│   │   └── processed/<station>/               detrended WL + NTR series
+│   └── outputs/<station>/                     POT peaks + plots/
 ├── research/
 └── docs/
 ```
@@ -73,6 +79,39 @@ The two mandatory entry artifacts per CyHAN v2.0 §5.3:
 |--------------|------------------------------------------------|--------------------|
 | Launcher     | `run_peaks_over_threshold.py`                  | user-facing entry  |
 | Orchestrator | `backend/python/main_peaks_over_threshold.py`  | non-user-facing    |
+
+---
+
+## 1a. Stages (CyHAN v2.0 §5.3)
+
+The launcher's `STAGES` list selects which steps run, in canonical order:
+
+| Stage      | Engine                                   | Produces                                   |
+|------------|------------------------------------------|--------------------------------------------|
+| `download` | `preprocessing.download_noaa_wl_data`    | `raw/<station>/water_level_*.csv`, `tide_prediction_*.csv` |
+| `detrend`  | `preprocessing.detrend_time_series`      | `processed/<station>/dwl_<station>.csv` (+ `trend_<station>.csv`) |
+| `ntr`      | `preprocessing.estimate_ntr`             | `processed/<station>/ntr_<station>.csv`    |
+| `pot`      | `orchestrator.POTOrchestrator`           | `outputs/<station>/dwl_<station>_pot.csv` **and** `ntr_<station>_pot.csv` (+ plots) |
+
+In a chain, the `pot` stage extracts peaks from **both** processed series it
+finds — the detrended water level (`dwl_*`) and the non-tidal residual
+(`ntr_*`). All output and plot filenames are lower case.
+
+* **Primary use — POT only.** Default `STAGES = ["pot"]`: POT runs on the
+  user-provided `INPUT_CSV`. (A bare `POTConfig` or a dict without `stages`
+  behaves identically, preserving the original single-purpose entry.)
+* **Secondary use — NOAA → NTR pipeline.** Add any of `download`, `detrend`,
+  `ntr` to build the POT input from raw gauge data. When `pot` is also present
+  the chain feeds straight into extraction (`download → detrend → ntr → pot`).
+
+`NTR` (non-tidal residual) = detrended water level − astronomical tide, both on
+the same hourly grid (tide is downloaded with `interval=h`); it replaces the v1
+"storm surge" naming throughout outputs and labels. Tide alignment to the WL
+timestamps is exact on matched hours and only interpolates as a fallback for a
+missing tide hour.
+
+Detrending uses a resolution-independent epoch-seconds cast, so it is correct
+under both nanosecond and microsecond pandas datetime resolutions.
 
 ---
 

@@ -2,19 +2,25 @@
 
 Author / POC : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
 
-Defines the configuration surface for a single Peaks-Over-Threshold extraction.
-Validated on construction; downstream code may assume types and ranges are
-honoured.
+Defines the configuration surface for a single Peaks-Over-Threshold extraction
+and for the optional upstream NTR-pipeline stages. Validated on construction;
+downstream code may assume types and ranges are honoured.
 
 Public API
 ----------
-  POTConfig                  top-level POT run request
+  POTConfig                  POT extraction run request
+  PreprocessConfig           download -> detrend -> ntr pipeline request
+  Stage                      Literal of the four selectable stages
 """
 
 from pathlib import Path
-from typing  import Literal, Optional
+from typing  import List, Literal, Optional, Tuple
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
+
+# The four stages a run may select, in canonical execution order.
+Stage = Literal["download", "detrend", "ntr", "pot"]
+STAGE_ORDER: Tuple[str, ...] = ("download", "detrend", "ntr", "pot")
 
 
 class POTConfig(BaseModel):
@@ -59,3 +65,58 @@ class POTConfig(BaseModel):
             if v == "peaks":
                 v = "peak_gap"
         return v
+
+
+class PreprocessConfig(BaseModel):
+    """Optional upstream pipeline that builds the POT input from NOAA data.
+
+    Stages run in canonical order (download -> detrend -> ntr); only those
+    listed in ``stages`` execute. Raw NOAA CSVs land in ``raw_dir`` (one folder
+    per gauge); the detrended water level and the NTR series land in
+    ``processed_dir``. The ``"pot"`` stage, if present, is handled by the
+    module orchestrator using ``POTConfig`` and is not configured here.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="ignore")
+
+    # ── Stage selection ────────────────────────────────────────────────────
+    stages: List[Stage] = Field(default_factory=lambda: ["pot"])
+
+    # ── Station / paths ────────────────────────────────────────────────────
+    station_id:    str
+    raw_dir:       Path
+    processed_dir: Path
+    plots_dir:     Path
+
+    # ── Download (NOAA Tides & Currents) ───────────────────────────────────
+    start_year:     int  = Field(default=1900)
+    end_year:       int  = Field(default=2025)
+    datum:          str  = "MSL"
+    time_zone:      str  = "GMT"
+    download_units: str  = "metric"      # NOAA API units: "metric" or "english"
+    tide_interval:  str  = "h"           # hourly tide predictions (match WL grid)
+
+    # ── Source column names (NOAA defaults) ────────────────────────────────
+    datetime_col:   str = "Date Time"
+    wl_value_col:   str = "Water Level"
+    tide_value_col: str = "Prediction"
+
+    # ── Detrend ────────────────────────────────────────────────────────────
+    detrend_method: Literal["midpoint", "ordinary"] = "midpoint"
+    ntde_start:     int = 2012
+    ntde_end:       int = 2016
+
+    # ── Display ────────────────────────────────────────────────────────────
+    units:  str = "m"
+    vdatum: str = "MSL"
+
+    @field_validator("stages", mode="before")
+    @classmethod
+    def _normalize_stages(cls, v):
+        if isinstance(v, str):
+            v = [v]
+        seen, ordered = set(v), []
+        for s in STAGE_ORDER:          # enforce canonical order, drop dups
+            if s in seen:
+                ordered.append(s)
+        return ordered or ["pot"]

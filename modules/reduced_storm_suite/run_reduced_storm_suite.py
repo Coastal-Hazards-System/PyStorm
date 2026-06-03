@@ -451,7 +451,11 @@ CONFIG["alpha_beta_grid"] = AB_GRID if AB_SWEEP else None
 # only hands it the operator option block above.
 
 if __name__ == "__main__":
-    from main_reduced_storm_suite import launch
+    # The orchestrator entry (main_reduced_storm_suite) lives in backend/python,
+    # added to sys.path above at runtime. Resolve it dynamically so there is no
+    # static import for the IDE to flag as unresolved.
+    from importlib import import_module
+    launch = import_module("main_reduced_storm_suite").launch
     raise SystemExit(launch(
         root                = ROOT,
         dataset             = DATASET,
