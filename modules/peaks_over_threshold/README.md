@@ -244,5 +244,3 @@ pytest tests/
 |---------|--------------------------------------------------------|
 | CyHAN   | C++/Python Hybrid Architecture Network                 |
 | POT     | Peaks Over Threshold                                   |
-| POC     | Point Of Contact                                       |
-| RNG     | Random Number Generator                                |
