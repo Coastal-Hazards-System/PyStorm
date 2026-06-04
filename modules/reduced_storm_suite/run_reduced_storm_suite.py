@@ -9,6 +9,29 @@ code element (path wiring, store bootstrap, bbox assembly, CLI parsing,
 dispatch) lives in ``main_reduced_storm_suite``; the launcher simply calls
 ``main_reduced_storm_suite.launch`` with the option block per §5.3.
 
+================================================================================
+WHAT RSS PRODUCES
+================================================================================
+RSS selects a small, REPRESENTATIVE subset of synthetic tropical-cyclone storms
+(a Reduced Tropical-Cyclone Suite, RTCS) from a large JPM storm set, so the
+subset reproduces the full suite's coastal hazard with far fewer ADCIRC runs.
+It reads the storms' TC parameters (X) and ADCIRC peak-surge fields (Y), builds
+a joint feature space, picks k storms, derives their JPM-OS weights, and
+verifies the reduced suite against benchmark hazard curves.
+
+How it works (one pass)
+  1. Build the joint feature matrix  Z = [ α·X̃ | β·Ỹ_r ]: standardize the TC
+     parameters (X̃) and the PCA-reduced surge response (Ỹ_r), weighted by α / β.
+  2. Select k storms in Z — "kmedoids" (representative) or "maximin"
+     (space-filling); any pre-selected storms are always retained.
+  3. Derive the discrete storm weights (DSW / QBM) so the subset reproduces the
+     population hazard, and score hazard-curve reconstruction vs the benchmark
+     (global and per-mean-return-interval RMSE / bias).
+  4. (optimal mode) sweep k and pick the smallest that meets the HC RMSE
+     tolerance; (AB_SWEEP) search α / β for the best HC reconstruction.
+  Emits selection CSVs, diagnostic plots (SPLOM, PCA y-space, HC, QBM), and the
+  QBM weight store.
+
 Selection modes
 ---------------
   fixed    — single run with k = (pre-selected count) + k_additional. Emits
@@ -42,11 +65,30 @@ load so every downstream consumer sees a uniform missing-data marker.
 PCA further drops always-NaN nodes and zero-fills the rest (configurable
 via ``pca_dry_strategy`` in CONFIG / defaults.py).
 
-Usage
------
-    python run_reduced_storm_suite.py                            # uses MODE / SCOPE constants
-    python run_reduced_storm_suite.py --mode fixed               # CLI override
-    python run_reduced_storm_suite.py --mode optimal --scope regional
+Run (headless / CLI)
+--------------------
+Headless by design — figures (SPLOM, PCA y-space, HC, QBM) are written to disk
+(no window opens), so this runs unchanged over SSH, in a container, or cron.
+
+  1. Install dependencies once:
+         pip install -r requirements.txt
+  2. Edit the USER OPTIONS block below (DATASET, RAW_FILES, CONFIG, …).
+  3. Run from the module directory (uses the DATASET / MODE / SCOPE constants):
+         python run_reduced_storm_suite.py
+     ...override mode/scope on the command line for ad-hoc runs:
+         python run_reduced_storm_suite.py --mode fixed   --scope local
+         python run_reduced_storm_suite.py --mode optimal --scope regional
+     ...batch over one or more REGISTERED dataset keys (no editing needed):
+         python run_reduced_storm_suite.py --dataset chs-na chs-la
+         python run_reduced_storm_suite.py --dataset chs-tx --mode optimal --scope regional
+     ...or from the repository root:
+         python modules/reduced_storm_suite/run_reduced_storm_suite.py
+
+Unlike the POT/PST launchers (which take input-file PATHS), this one batches by
+DATASET KEY — each key must exist in RAW_FILES_BY_DATASET below, because RSS
+needs the dataset's raw filenames + metadata + units, not a single file. If the
+processed tc_data.h5 store is missing it is built automatically from RAW_FILES
+(see Bootstrapping above). ``--help`` lists all options.
 
 Inputs
 ------
@@ -60,8 +102,12 @@ Outputs
                                             two runs overwrite each other.
 """
 
+import os
 import sys
 from pathlib import Path
+
+# Guarantee headless rendering (no display needed) unless the operator overrides.
+os.environ.setdefault("MPLBACKEND", "Agg")
 
 
 # ── Module-root path anchoring (CyHAN v2.0 §A.5) ──────────────────────────
@@ -72,6 +118,27 @@ ROOT = Path(__file__).resolve().parent       # run_<name>.py lives at module roo
 _BACKEND_PY = ROOT / "backend" / "python"
 if str(_BACKEND_PY) not in sys.path:
     sys.path.insert(0, str(_BACKEND_PY))
+
+
+def _ensure_cpp_extension() -> None:
+    """Build the _rss C++ kernel once if it isn't already compiled.
+
+    Must run before the package is imported (kmedoids probes for _rss at import
+    time). A failed build is non-fatal — the pure-Python fallback runs.
+    """
+    pkg = _BACKEND_PY / "reduced_storm_suite"
+    if any(p.suffix in (".pyd", ".so", ".dylib") for p in pkg.glob("_rss*")):
+        return
+    build = ROOT / "backend" / "engines" / "cpp" / "build.py"
+    if not build.is_file():
+        return
+    print("[run] C++ kernel _rss not built — compiling once "
+          "(falls back to pure Python if this fails) ...")
+    import subprocess
+    try:
+        subprocess.run([sys.executable, str(build)], check=True)
+    except Exception as exc:                                   # noqa: BLE001
+        print(f"[run] _rss build failed: {exc}. Using pure-Python fallback.")
 
 
 # ===========================================================================
@@ -87,7 +154,7 @@ if str(_BACKEND_PY) not in sys.path:
 # RAW_FILES_BY_DATASET below — the matching raw filenames are selected
 # automatically. (PREPROCESS_METADATA may still need adjusting if the new
 # dataset uses different MATLAB conventions.)
-DATASET = "chs-la"
+DATASET = "chs-na"
 
 # ── Mode ─────────────────────────────────────────────────────────────────
 # fixed   — single run at k = (# pre-selected) + k_additional; emits the full
@@ -285,7 +352,7 @@ CONFIG = {
     # Final k = len(pre_selected) + k_additional. Pre-selected storms are
     # always retained; the k_additional extras are chosen by k-medoids on
     # the joint X/Y matrix.
-    "k_additional": 200,
+    "k_additional": 500, # 200,
 
     # ── Sub-RTCS (optional second-stage subset) ───────────────────────
     # If k_sub_rtcs > 0, a smaller subset is selected from the initial RTCS.
@@ -293,12 +360,12 @@ CONFIG = {
     #   within          — PAM k-medoids inside the initial RTCS
     #   within_maximin  — greedy farthest-point inside the initial RTCS
     #   additional      — re-run main selection at k = forced + k_sub_rtcs
-    "k_sub_rtcs":     50,
+    "k_sub_rtcs":     0, # 50,
     "sub_rtcs_mode": "within_maximin",
 
     # ── Node subsampling ──────────────────────────────────────────────
     # Y has m ~= 2.4M nodes for CHS-LA. Stride decimates by taking every
-    # Nth node (e.g. 100 → ~24,500 nodes). Lower stride = finer resolution,
+    # Nth node (e.g., 100 → ~24,500 nodes). Lower stride = finer resolution,
     # higher memory and runtime. Set to None (or 1) to use every node.
     "node_stride": 100,
 
@@ -311,9 +378,9 @@ CONFIG = {
     #       Weak storms sit at one extreme (here the most-negative end),
     #       the strongest at the other.
     #   PC2 (y-axis) — the leading SPATIAL CONTRAST among storms of similar
-    #       magnitude (e.g. surge focused in one sub-region vs. another).
+    #       magnitude (e.g., surge focused in one sub-region vs. another).
     #   Apex (the dense vertex, ~PC1 most-negative / PC2 near the cluster
-    #       centre) — the pile of LOW-INUNDATION storms. They wet very few
+    #       center) — the pile of LOW-INUNDATION storms. They wet very few
     #       nodes, so after dry-fill their feature vectors are nearly identical
     #       and collapse onto one point; the fan opens toward stronger, more-
     #       inundating storms. This wedge is intrinsic to zero-inflated basin-
@@ -327,7 +394,7 @@ CONFIG = {
     # How NaN (dry-node) markers in Y are resolved before PCA. For basin-wide
     # regional runs, most nodes are dry for most storms, so the default
     # "drop_always_dry" lets zero-padding dominate PC1 (the classic wedge /
-    # magnitude-axis artefact). Switch modes here to reshape the Y-space:
+    # magnitude-axis artifact). Switch modes here to reshape the Y-space:
     #   "drop_always_dry" — drop 100%-dry nodes, zero-fill the rest (default)
     #   "zero"            — replace every NaN with 0.0 (keeps node count)
     #   "node_mean"       — impute NaN with each node's mean wet value
@@ -418,12 +485,13 @@ CONFIG = {
     # Sweep k from k_min to k_max in steps of k_step; pick the smallest k
     # whose global HC RMSE ≤ rmse_threshold (units: m). If no k meets the
     # tolerance, argmin RMSE is selected and a warning is emitted.
-    # bias_report_rp = return periods (years) at which to log nodal bias.
+    # bias_report_aer = AER hazard levels to log nodal bias at, labelled by MRI
+    #                   year N (so bias_aer1000 is the AER = 1/1000 level).
     "k_min":             20,
     "k_max":            300,
     "k_step":             5,
     "rmse_threshold":  0.10,
-    "bias_report_rp": [10, 100, 1000],
+    "bias_report_aer": [10, 100, 1000],
 }
 
 # ── α/β search ON/OFF ──────────────────────────────────────────────────────
@@ -450,20 +518,74 @@ CONFIG["alpha_beta_grid"] = AB_GRID if AB_SWEEP else None
 # parsing, dispatch) lives in main_reduced_storm_suite.launch. This file
 # only hands it the operator option block above.
 
+def _resolve_dataset(ds: str):
+    """Per-dataset (raw_files, preprocess_metadata) from the registries.
+
+    The CLI batches by dataset KEY (not file path) because RSS needs the
+    dataset's raw filenames + vertical datum, which live in the registries.
+    """
+    try:
+        raw = RAW_FILES_BY_DATASET[ds]
+    except KeyError:
+        raise SystemExit(
+            f"--dataset {ds!r} has no entry in RAW_FILES_BY_DATASET; "
+            f"available: {sorted(RAW_FILES_BY_DATASET)}")
+    try:
+        units = UNITS_BY_DATASET[ds]
+    except KeyError:
+        raise SystemExit(
+            f"--dataset {ds!r} has no entry in UNITS_BY_DATASET; "
+            f"available: {sorted(UNITS_BY_DATASET)}")
+    meta = dict(PREPROCESS_METADATA)
+    meta["Y_units"]  = units      # datum tracks the dataset
+    meta["HC_units"] = units
+    return raw, meta
+
+
 if __name__ == "__main__":
+    import argparse
+
+    _cli = argparse.ArgumentParser(
+        prog="run_reduced_storm_suite.py",
+        description="Run the Reduced Storm Suite headless. With no --dataset it "
+                    "uses the DATASET option above; pass one or more registered "
+                    "dataset keys to batch over study areas.")
+    _cli.add_argument("--dataset", nargs="+", metavar="KEY", default=None,
+                      help=f"Registered dataset key(s) to run (batch). Available: "
+                           f"{sorted(RAW_FILES_BY_DATASET)}. Default: {DATASET!r}.")
+    _cli.add_argument("--mode", choices=["fixed", "optimal"], default=MODE,
+                      help=f"Selection mode (default: {MODE}).")
+    _cli.add_argument("--scope", choices=["local", "regional"], default=SCOPE,
+                      help=f"Geographic scope (default: {SCOPE}).")
+    _args = _cli.parse_args()
+    # This launcher owns CLI parsing; blank argv so launch()'s internal parser
+    # falls back to the mode/scope we pass as defaults below.
+    sys.argv = [sys.argv[0]]
+
+    _datasets = _args.dataset or [DATASET]
+
+    _ensure_cpp_extension()   # build _rss on first run if needed
+
     # The orchestrator entry (main_reduced_storm_suite) lives in backend/python,
     # added to sys.path above at runtime. Resolve it dynamically so there is no
     # static import for the IDE to flag as unresolved.
     from importlib import import_module
     launch = import_module("main_reduced_storm_suite").launch
-    raise SystemExit(launch(
-        root                = ROOT,
-        dataset             = DATASET,
-        default_mode        = MODE,
-        default_scope       = SCOPE,
-        raw_files           = RAW_FILES,
-        preprocess_metadata = PREPROCESS_METADATA,
-        track_file_patterns = TRACK_FILE_PATTERNS,
-        bbox                = BBOX,
-        config              = CONFIG,
-    ))
+
+    _rc = 0
+    for _ds in _datasets:
+        _raw_files, _preprocess_metadata = _resolve_dataset(_ds)
+        if len(_datasets) > 1:
+            print(f"\n{'#' * 64}\n#  dataset: {_ds}\n{'#' * 64}")
+        _rc = launch(
+            root                = ROOT,
+            dataset             = _ds,
+            default_mode        = _args.mode,
+            default_scope       = _args.scope,
+            raw_files           = _raw_files,
+            preprocess_metadata = _preprocess_metadata,
+            track_file_patterns = TRACK_FILE_PATTERNS,
+            bbox                = BBOX,
+            config              = dict(CONFIG),
+        ) or _rc
+    raise SystemExit(_rc)

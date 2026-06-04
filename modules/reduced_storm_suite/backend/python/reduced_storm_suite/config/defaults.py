@@ -108,7 +108,7 @@ RTCS_SELECTION_DEFAULTS: dict = {
     "qbm_mode": "aer",
     "qbm_aer_mode": "631",
     "dsw_method": 3,
-    "bias_report_rp":  [10, 100, 1000],
+    "bias_report_aer": [10, 100, 1000],   # AER levels (labelled by MRI year N; AER = 1/N)
     "min_wet_storms": 2,
 
     # ── Reproducibility ───────────────────────────────────────────────────────

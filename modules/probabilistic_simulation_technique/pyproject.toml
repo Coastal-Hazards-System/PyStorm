@@ -20,13 +20,13 @@ dependencies = [
   "pydantic>=2.0",
 ]
 
+[tool.setuptools]
+# CyHAN v2.0 §5.3 / §16.2 orchestrator entry, sibling of the expanded package.
+py-modules = ["main_probabilistic_simulation_technique"]
+
 [tool.setuptools.packages.find]
 where    = ["backend/python"]
 include  = ["probabilistic_simulation_technique*"]
-
-[tool.setuptools.py-modules]
-# CyHAN v2.0 §5.3 / §16.2 orchestrator entry, sibling of the expanded package.
-modules = ["main_probabilistic_simulation_technique"]
 
 [tool.setuptools.package-data]
 "probabilistic_simulation_technique" = ["*.pyd", "*.so", "*.dylib"]

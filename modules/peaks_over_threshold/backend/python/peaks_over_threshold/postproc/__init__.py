@@ -3,6 +3,6 @@
 Author / POC : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
 """
 
-from .plots import TimeSeriesPlotter
+from .plots import TimeSeriesPlotter, PALETTE
 
-__all__ = ["TimeSeriesPlotter"]
+__all__ = ["TimeSeriesPlotter", "PALETTE"]

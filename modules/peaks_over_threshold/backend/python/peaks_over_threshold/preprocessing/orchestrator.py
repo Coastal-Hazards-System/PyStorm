@@ -15,7 +15,6 @@ Public API
 """
 
 from dataclasses import dataclass
-from datetime    import datetime
 from pathlib     import Path
 from typing      import Optional
 
@@ -24,10 +23,15 @@ import pandas as pd
 
 from ..config   import PreprocessConfig
 from ..io       import read_time_series_csv, write_series_csv
-from ..postproc import TimeSeriesPlotter
-from .detrend   import detrend_time_series
+from ..postproc import TimeSeriesPlotter, PALETTE
+from .detrend   import detrend_time_series, ntde_midpoint_timestamp
 from .ntr       import estimate_ntr
 from .noaa_download import download_noaa_wl_data
+
+
+def _fmt_year(y: float) -> str:
+    """Compact year label: ``1983`` for whole years, ``2012.42`` otherwise."""
+    return f"{int(y)}" if float(y).is_integer() else f"{y:g}"
 
 
 @dataclass
@@ -82,14 +86,17 @@ class PreprocessOrchestrator:
             print(f"[preprocess] detrend — method={cfg.detrend_method}")
             wl_df = read_time_series_csv(res.raw_wl_csv, cfg.datetime_col, cfg.wl_value_col)
             wl_detrended_df, trend_df, slope_yr = detrend_time_series(
-                wl_df, method=cfg.detrend_method, ntde_range=(cfg.ntde_start, cfg.ntde_end),
+                wl_df, method=cfg.detrend_method,
+                ntde_range=(cfg.ntde_start, cfg.ntde_end),
+                slope_per_year=cfg.detrend_slope,
             )
             write_series_csv(wl_detrended_df, res.detrended_csv,
                              datetime_header=cfg.datetime_col, value_header="Water Level")
             write_series_csv(trend_df, res.trend_csv,
                              datetime_header=cfg.datetime_col, value_header="Water Level")
-            print(f"[preprocess] detrend — slope {slope_yr:+.4f} {cfg.units}/yr; "
-                  f"wrote {res.detrended_csv.name}")
+            slope_src = "user override" if cfg.detrend_slope is not None else "fitted"
+            print(f"[preprocess] detrend — slope {slope_yr:+.4f} {cfg.units}/yr "
+                  f"({slope_src}); wrote {res.detrended_csv.name}")
             self._plot_detrend(wl_df, wl_detrended_df, trend_df, full_units, plots, sid,
                                method=cfg.detrend_method,
                                ntde_range=(cfg.ntde_start, cfg.ntde_end))
@@ -116,20 +123,20 @@ class PreprocessOrchestrator:
         fig, ax = plt.subplots(figsize=(10, 5))
         p = TimeSeriesPlotter(ax, "datetime", "value", ylabel="Water Level",
                               units=units, title="PyStorm: Time Series Detrending")
-        p.plot(measured,  label="Measured",     color="red")
-        p.plot(detrended, label="Detrended",    color="blue")
-        p.plot(trend,     label="Linear Trend", color="black", linestyle="--")
-        ax.axhline(0, color="gold", linestyle="--", linewidth=1, label="Reference (0)")
+        p.plot(measured,  label="Measured",     color=PALETTE["measured"])
+        p.plot(detrended, label="Detrended",    color=PALETTE["series"])
+        p.plot(trend,     label="Linear Trend", color=PALETTE["trend"], linestyle="--")
+        ax.axhline(0, color=PALETTE["ref"], linestyle="--", linewidth=1,
+                   label="Reference (0)")
 
         # NTDE midpoint — the pivot the midpoint-method trend rotates about
         # (the linear trend passes through zero here). Matches detrend.py's
         # centering: midpoint of [NTDE_start-01-01, (NTDE_end+1)-01-01).
         if method == "midpoint":
-            start    = datetime(ntde_range[0], 1, 1)
-            end      = datetime(ntde_range[1] + 1, 1, 1)
-            midpoint = start + (end - start) / 2
-            ax.axvline(midpoint, color="green", linestyle=":", linewidth=2,
-                       label=f"NTDE midpoint ({ntde_range[0]}–{ntde_range[1]})")
+            midpoint = ntde_midpoint_timestamp(ntde_range)
+            ax.axvline(midpoint, color=PALETTE["midpoint"], linestyle=":", linewidth=2,
+                       label=f"NTDE midpoint "
+                             f"({_fmt_year(ntde_range[0])}–{_fmt_year(ntde_range[1])})")
 
         p.finalize()
         out = plots_dir / f"dwl_{sid}.png"
@@ -141,7 +148,7 @@ class PreprocessOrchestrator:
         fig, ax = plt.subplots(figsize=(10, 5))
         p = TimeSeriesPlotter(ax, "datetime", "ntr", ylabel="Non-Tidal Residual",
                               units=units, title="PyStorm: Non-Tidal Residual (NTR)")
-        p.plot(ntr_full, label="NTR", color="blue")
+        p.plot(ntr_full, label="NTR", color=PALETTE["series"])
         p.finalize()
         out = plots_dir / f"ntr_{sid}.png"
         fig.savefig(out, dpi=300); plt.close(fig)

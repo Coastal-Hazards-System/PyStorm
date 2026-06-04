@@ -3,107 +3,415 @@
 Author / POC : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
 
 User-facing entry for the Probabilistic Simulation Technique (PST). The
-operator edits values in the USER OPTIONS block below and runs the script;
-no orchestration logic lives here — the launcher delegates immediately to
-``main_probabilistic_simulation_technique.run`` per §5.3.
+operator edits the USER OPTIONS block (at the top of this file) and runs the
+script; no orchestration logic lives here — the launcher hands the option block
+to ``main_probabilistic_simulation_technique.run`` per §5.3, which resolves the
+input(s) and runs PST on each.
 
-Usage
------
-    python run_probabilistic_simulation_technique.py
+================================================================================
+WHAT PST PRODUCES
+================================================================================
+PST turns a Peaks-Over-Threshold (POT) sample of a coastal response (e.g. still
+water level, detrended water level, or non-tidal residual) into a HAZARD CURVE:
+the response magnitude as a function of its annual exceedance rate (AER) — or
+equivalently its mean return interval, MRI = 1 / AER — together with a
+confidence band that quantifies sampling uncertainty. The upper tail is
+modelled with a fitted
+Generalized Pareto Distribution (GPD); the frequent (bulk) range is carried
+empirically; the two are spliced into one continuous curve.
 
-CLI overrides are provided for ad-hoc runs but the file is intended as a
-readable substitute for a long command-line invocation: edit the USER OPTIONS
-block once for your study, then run.
+================================================================================
+METHOD & FORMULATION  (symbols:  μ=GPD location,  ξ=shape,  σ=scale)
+================================================================================
+The input is a column of POT peaks — the magnitudes that exceeded the POT
+extraction threshold u — produced by the peaks_over_threshold module.
 
-Input  : data/inputs/processed/<base>_POT.csv  (column = STORM_COLUMN)
-Outputs: data/outputs/<base>_PST*.csv
-         data/outputs/plots/<base>_PST_HC.png
+(1) Population rate λ_u.
+    With n_pot peaks observed over a record of `record_length` years,
+        λ_u = n_pot / record_length        [events / year].
+    `record_length` is taken from RECORD_LENGTH_YEARS, or auto-derived as
+    n_pot / EVENTS_PER_YEAR (see the Population-statistics option below).
+
+(2) Empirical AER (Weibull plotting positions).
+    Sort the peaks descending (rank i = 1 is the largest). Each peak is assigned
+    an unconditional annual exceedance rate
+        AER_i = ( i / (n_pot + 1) ) · λ_u .
+
+(3) GPD location μ — Quantile Delta Optimization (QDO).
+    PST re-optimizes the threshold the GPD is fitted ABOVE (the location μ),
+    independently of the POT extraction threshold u. Candidate μ values are
+    scanned across a band defined by EMPIRICAL PERCENTILES of the POT values
+    (BAND_FLOOR_PCT … BAND_CEILING_PCT — data quantiles, robust to outliers).
+    For each candidate μ:
+      • Fit a GPD to the exceedances X > μ with the location fixed at μ; clip ξ
+        to its admissible band and, if clipping bit, refit σ at the clipped ξ
+        (so (ξ, σ) is a genuine-constrained fit).
+      • Form the conditional rate above μ,  λ_μ = n_exc / record_length, where
+        n_exc is the number of peaks above μ.
+      • Predict each exceedance's magnitude at its empirical AER via the GPD
+        inverse CDF using λ_μ (the SAME convention the hazard curve uses):
+            x_pred(AER) = μ + (σ/ξ) · [ (AER / λ_μ)^(−ξ) − 1 ]   (ξ ≠ 0).
+      • Score the fit by a frequency-weighted mean-square error,
+            WMSE(μ) = Σ w_i (x_i − x_pred_i)² / Σ w_i ,  w_i = 1 / AER_i ,
+        weighting rarer (tail) events more.
+    μ is then chosen by GPD_SELECTION:
+      "wmse" (DEFAULT) — the WMSE-TOLERANCE SET is every in-band candidate with
+        ≥ MIN_EXCEEDANCES exceedances whose WMSE is within WMSE_TOLERANCE of the
+        in-band minimum; GPD_TIEBREAK picks μ within it. The established method.
+        CAVEAT: with absolute magnitudes WMSE can keep shrinking into the
+        over-fit sparse tail, so on some stations its minimum is a degenerate
+        high-μ fit (ξ at the lower clip); the run then prints a WARNING pointing
+        to "stability". Always check the QDO diagnostics plot.
+      "stability" (opt-in) — ξ should PLATEAU above the true threshold (GPD
+        threshold-stability). ELIGIBLE candidates are in-band, ≥ MIN_EXCEEDANCES,
+        and have ξ NOT pinned at the lower clip (the sparse-tail over-fit
+        signature). The STABILITY PLATEAU = eligible candidates within
+        STABILITY_TOL of the minimum ROBUST ξ-dispersion (scaled MAD over
+        ±STABILITY_WINDOW); GPD_TIEBREAK picks μ within it. Avoids the sparse-
+        tail trap with no per-station tuning.
+
+(4) Tail / bulk split at μ.
+    Peaks above μ feed the GPD tail; peaks at or below μ are kept as empirical
+    points (their Weibull AERs and magnitudes). The exceedance rate at μ is
+    λ_μ = n_exc / record_length.
+
+(5) Monte Carlo / smoothed bootstrap (the hazard-curve uncertainty band).
+    A single GPD fit gives one hazard curve with no uncertainty. The confidence
+    band is generated by a SMOOTHED BOOTSTRAP of the n_exc exceedances above μ —
+    re-fitting the GPD to NUM_SIMULATIONS resamples and taking the spread. Each
+    realization:
+      a. Resamples n_exc exceedances WITH REPLACEMENT (the bootstrap step).
+      b. Perturbs each resampled value by additive noise from a SMOOTHING KERNEL
+         whose bandwidth is the LOCAL ORDER-STATISTIC SPACING. With the
+         exceedances descending-sorted (x_1 ≥ x_2 ≥ … ≥ x_n), the spacing for
+         rank i is the gap to the NEXT exceedance — the adjacent SMALLER value at
+         i+1 (NOT the larger one at i−1):  s_i = x_i − x_{i+1} ≥ 0. For example
+         the LARGEST value x_1 uses s_1 = x_1 − x_2, its gap down to the
+         second-largest (adjacent smaller) value. A value drawn at rank i is
+         displaced within that gap:
+             x'_i = x_i − s_i · z ,    z ~ K on (lo, hi),
+         where the kernel K is BOOTSTRAP_DISTRIBUTION ("gaussian" = truncated
+         normal, "uniform" = uniform) and (lo, hi) = BOOTSTRAP_TRUNCATION. With
+         z ∈ [−1, 1], x'_i ranges over [x_{i+1}, x_i + s_i] — at most one local
+         spacing from x_i. (The smallest exceedance, i = n, has no successor, so
+         s_n = 0 and it is left unmoved.)
+      c. Sorts the realization descending.
+    A GPD is fitted to EACH realization (same ξ-clip / σ-refit as the location
+    search) and evaluated on the dense AER grid, yielding an ensemble of tail
+    curves. The BEST ESTIMATE is the across-realization mean; the CONFIDENCE
+    BAND is the 10th and 90th percentiles. RANDOM_SEED makes the ensemble
+    reproducible; more realizations → smoother, more stable bounds.
+
+(6) Hazard-curve development.
+    The GPD tail (AER < λ_μ) is spliced onto the empirical bulk (AER ≥ λ_μ) to
+    form one continuous curve, then interpolated in log-AER onto a fixed
+    22-point reporting grid spanning mean return intervals 0.1 … 1 000 000 years.
+
+Rate convention (must hold): EVENTS_PER_YEAR here MUST equal the POT module's
+target rate, because the POT stage trims each output to exactly
+EVENTS_PER_YEAR × effective_duration peaks — that is what lets PST recover
+`record_length` from the peak count alone.
+
+Input selection (INPUT_MODE)
+----------------------------
+  "path"    — process one POT CSV at an explicit path (INPUT_CSV).
+  "station" — batch over the peaks_over_threshold module's outputs for
+              STATION_IDS (one or many); PST_TARGETS picks dwl, ntr, or both.
+              Resolves to peaks_over_threshold/data/outputs/<station>/
+              {dwl,ntr}_<station>_pot.csv and runs once per (station × target).
+
+Run (headless / CLI)
+--------------------
+Headless by design — figures are written to disk (no window opens), so this
+runs unchanged over SSH, in a container, or under cron.
+
+  1. Install dependencies once:
+         pip install -r requirements.txt
+  2. Edit the USER OPTIONS block below (input mode, stations or path, params).
+  3. Run from the module directory:
+         python run_probabilistic_simulation_technique.py
+     ...or from the repository root:
+         python modules/probabilistic_simulation_technique/run_probabilistic_simulation_technique.py
+
+  CLI batch over explicit input files (no editing needed) — pass one or more
+  POT CSV paths (absolute or relative); PST runs in path mode on each:
+         python run_probabilistic_simulation_technique.py PATH1.csv PATH2.csv ...
+         python run_probabilistic_simulation_technique.py "C:\\data\\ntr_8518750_pot.csv"
+     Positional paths override INPUT_MODE/STATION_IDS for that run; the other
+     USER OPTIONS (params, output dir) still apply. ``--help`` lists options.
+
+The C++ bootstrap kernel (``_pst``) is compiled automatically on first run; if
+no compiler is available it transparently falls back to pure Python.
+
+Outputs (data files per station in data/outputs/<station>/; path mode in
+data/outputs/; all plots in the shared data/outputs/plots/):
+  <base>_pst.csv             bootstrap ensemble of tail realizations
+  <base>_pst_hc_be_tbl.csv   best-estimate hazard curve on the 22-AER grid
+  <base>_pst_hc_cb_tbl.csv   10th/90th confidence bounds on the 22-AER grid
+  <base>_pst_hc_be_plt.csv   dense best-estimate curve (plotting resolution)
+  <base>_pst_hc_cb_plt.csv   dense confidence band (plotting resolution)
+  <base>_pst_hc.png          hazard-curve figure (empirical + GPD + band)
+  <base>_qdo_threshold.png   QDO μ-selection diagnostics (WMSE, ξ, ξ-stability,
+                             n_exceed)
 """
 
-import argparse
-import sys
 from pathlib import Path
 
+# Module root — every path in the options below is relative to this file.
+ROOT = Path(__file__).resolve().parent
 
-# ── Module-root path anchoring (CyHAN v2.0 §A.5) ──────────────────────────
-ROOT = Path(__file__).resolve().parent       # run_<name>.py lives at module root
-_BACKEND_PY = ROOT / "backend" / "python"
-if str(_BACKEND_PY) not in sys.path:
-    sys.path.insert(0, str(_BACKEND_PY))
+# POT module outputs live alongside this module under modules/.
+POT_OUTPUTS_DIR = ROOT.parent / "peaks_over_threshold" / "data" / "outputs"
 
 
 # ===========================================================================
 # USER OPTIONS  — edit anything in this block, then run the script
 # ===========================================================================
 
-# ── Paths ────────────────────────────────────────────────────────────────
-INPUT_CSV  = ROOT / "data" / "inputs" / "processed" / "storm_surge_8518750_1920_2025_POT.csv"
-OUTPUT_DIR = ROOT / "data" / "outputs"
-PLOTS_DIR  = ROOT / "data" / "outputs" / "plots"
+# ── Input selection ─────────────────────────────────────────────────────────
+# "path"    — run PST on the single POT CSV at INPUT_CSV.
+# "station" — batch over the peaks_over_threshold outputs for STATION_IDS,
+#             choosing series via PST_TARGETS ("dwl", "ntr", or "both"). PST
+#             runs once per (station × target).
+INPUT_MODE = "station"
 
-# ── POT extraction ───────────────────────────────────────────────────────
-STORM_COLUMN        = "value"
-RECORD_LENGTH_YEARS = 106.0       # e.g. 2025 − 1920 + 1
+# Option "path": replace the placeholder with the absolute path to the POT CSV.
+INPUT_CSV = Path(r"C:\path\to\your_pot_file_pot.csv")
 
-# ── Monte Carlo / bootstrap ──────────────────────────────────────────────
+# Option "station": one or more NOAA stations (batch processing).
+STATION_IDS = ["8518750", "8651370", "8724580", "8761724", "8771450"] # e.g. ["8518750", "8651370", "8724580"]
+PST_TARGETS = "both"          # "dwl", "ntr", or "both"
+
+
+# ── Input column ────────────────────────────────────────────────────────────
+STORM_COLUMN = "value"        # POT peaks column written by the POT module
+
+# ── Population statistics ───────────────────────────────────────────────────
+# Event rate used by PST:  λ_u = n_pot / record_length.
+# EVENTS_PER_YEAR must MATCH the POT target rate (TARGET_EVENTS_PER_YEAR): POT
+# trims each output to exactly EVENTS_PER_YEAR × effective_duration peaks, so:
+#   RECORD_LENGTH_YEARS = None  → AUTO: record_length = n_pot / EVENTS_PER_YEAR
+#                                 (recovers the effective duration; λ_u = rate).
+#   RECORD_LENGTH_YEARS = float → use this value as-is (override).
+EVENTS_PER_YEAR     = 10.0
+RECORD_LENGTH_YEARS = None
+
+# ── GPD location (μ) selection ──────────────────────────────────────────────
+# Selection band — μ is scanned/selected between these EMPIRICAL PERCENTILES of
+# the POT values (data quantiles, robust to outliers). The count floor
+# (MIN_EXCEEDANCES) is the real upper cap and for typical n_pot binds before the
+# ceiling, which acts as an interpretable guardrail.
+BAND_FLOOR_PCT   = 50.0       # do not place μ below this data percentile
+BAND_CEILING_PCT = 95.0       # nor above this one (guardrail; floor usually binds)
+
+# A candidate μ must keep at least this many exceedances to be selectable —
+# prevents the QDO search from over-fitting the sparse tail.
+MIN_EXCEEDANCES = 20
+
+# Accept set = candidates whose WMSE is within this RELATIVE tolerance of the
+# in-band minimum WMSE (0.05 = 5%). The tie-break chooses among them; widen it
+# to let stability arbitrate over more near-optimal fits.
+WMSE_TOLERANCE = 0.05
+
+# GPD-location selection method (see step 3 of the method header):
+#   "wmse"      (DEFAULT) — choose μ from the WMSE-tolerance set: in-band
+#                 candidates whose WMSE is within WMSE_TOLERANCE of the in-band
+#                 minimum, then GPD_TIEBREAK. Simple and the established method.
+#                 Caveat: the absolute-magnitude WMSE can minimize in the
+#                 over-fit sparse tail on some stations (ξ at the lower clip);
+#                 when that happens the run prints a WARNING suggesting
+#                 "stability". Inspect the QDO diagnostics plot.
+#   "stability" (opt-in)  — choose μ on the flat-ξ threshold-stability plateau
+#                 (robust ξ-dispersion), lower-clip guarded. Avoids the sparse-
+#                 tail trap with no per-station tuning; use it when "wmse" warns.
+#   "mrl"       (opt-in)  — automated mean-residual-life (Langousis et al. 2016,
+#                 WRR, eqs 4-6): the lowest in-band threshold at which the mean-
+#                 excess curve becomes linear (non-parametric; fits a line to
+#                 e(u), not the GPD). Tends to pick a lower μ / more data.
+#   "gof"       (opt-in)  — Choulakian-Stephens "failure-to-reject" (Langousis
+#                 §2.3): the lowest in-band threshold at which the GPD fit is NOT
+#                 rejected by the Anderson-Darling (A²) / Cramér-von Mises (W²)
+#                 EDF test at GOF_SIGNIFICANCE.
+GPD_SELECTION    = "wmse"
+
+# GPD fit estimator (used by the selection AND the hazard ensemble):
+#   "mle" (default) — maximum likelihood.
+#   "mom"           — method of moments (closed form ξ=½(1−m²/v), σ=m(1−ξ));
+#                     more robust for small / heavily-quantized samples.
+GPD_FIT_METHOD   = "mle"
+
+# GoF-method knobs (only used when GPD_SELECTION == "gof"):
+#   GOF_STATISTIC    — "ad" (Anderson-Darling, tail-weighted; default) or "cvm"
+#                      (Cramér-von Mises).
+#   GOF_SIGNIFICANCE — significance level α of the failure-to-reject test.
+GOF_STATISTIC    = "ad"
+GOF_SIGNIFICANCE = 0.05
+
+# Arbiter WITHIN the chosen candidate set (WMSE-tolerance set or plateau):
+#   "stability" → most stable point (min robust ξ-dispersion; ties → lowest μ)
+#   "lowest_mu" → lowest μ in the set (most data)
+GPD_TIEBREAK     = "stability"
+# ξ-dispersion knobs (used by the "stability" method, and by the "stability"
+# tie-break under either method):
+#   STABILITY_WINDOW — ± candidates over which the ROBUST ξ-dispersion (scaled
+#                      MAD) is measured (the smoothing scale).
+#   STABILITY_TOL    — ξ-dispersion tolerance defining the plateau (ξ is
+#                      dimensionless, so this is the same for all stations).
+STABILITY_WINDOW = 3
+STABILITY_TOL    = 0.02
+
+# ── Monte Carlo / smoothed bootstrap  (the hazard-curve uncertainty band) ───
+# The confidence band is a SMOOTHED BOOTSTRAP of the exceedances above μ (see
+# step 5 of the method header): each realization resamples the exceedances with
+# replacement, then perturbs each value with additive noise drawn from a
+# smoothing kernel whose bandwidth is the local order-statistic spacing.
+
+# Number of bootstrap realizations (independent GPD fits). More → smoother, more
+# stable 10th/90th-percentile bounds; cost scales ~linearly. ~1000 is a good
+# working default; raise (e.g. 5000-10000) for final deliverables.
 NUM_SIMULATIONS = 1000
+
+# RNG seed — fixes the whole ensemble so a run is reproducible. Set to None for
+# a fresh (non-reproducible) draw each time.
 RANDOM_SEED     = 628
 
-BOOTSTRAP_DISTRIBUTION = "gaussian"    # "gaussian" or "uniform"
+# Smoothing-kernel family for the additive perturbation:
+#   "gaussian" → truncated normal on BOOTSTRAP_TRUNCATION
+#   "uniform"  → uniform on BOOTSTRAP_TRUNCATION
+BOOTSTRAP_DISTRIBUTION = "gaussian"
+
+# Kernel support (lo, hi), in units of the LOCAL ORDER-STATISTIC SPACING. (-1, 1)
+# bounds each perturbation to one neighbour gap, preserving rank order. Widen for
+# more smoothing, narrow for less.
 BOOTSTRAP_TRUNCATION   = (-1.0, 1.0)
 
-# ── Plotting ─────────────────────────────────────────────────────────────
-Y_AXIS_LABEL = "Storm Surge Level (SSL, m)"
+# ── Plotting ────────────────────────────────────────────────────────────────
+# Y-axis label. In "path" mode Y_AXIS_LABEL is used; in "station" mode each
+# series gets its own label from TARGET_YLABELS.
+Y_AXIS_LABEL  = "Still Water Level (SWL, m)" # "Storm Surge Level (SSL, m)"
+TARGET_YLABELS = {
+    "dwl": "Detrended Water Level (m)",
+    "ntr": "Non-Tidal Residual (m)",
+}
+
+# Hazard-curve plot series — toggle each on/off (all on by default).
+PLOT_SERIES = {
+    "empirical_below": True,   # empirical WPP below the GPD location μ
+    "empirical_above": True,   # empirical WPP above μ (distinct color)
+    "gpd_mean":        True,   # GPD best-estimate (mean) curve
+    "gpd_cl":          True,   # GPD 10-90% confidence-limit band
+    "gpd_threshold":   True,   # GPD location μ cross (horizontal + vertical line)
+}
+
+# Render the QDO GPD-location (μ) selection diagnostics plot for visual QA.
+PLOT_THRESHOLD_DIAGNOSTICS = True
+
+# ── Output ──────────────────────────────────────────────────────────────────
+# Data files: station mode writes per station to OUTPUT_DIR/<station>/; path
+# mode writes to OUTPUT_DIR directly. Plots always go to the shared PLOTS_DIR.
+OUTPUT_DIR = ROOT / "data" / "outputs"
+PLOTS_DIR  = ROOT / "data" / "outputs" / "plots"
 
 # ===========================================================================
 # END USER OPTIONS  — nothing below should need editing for routine use
 # ===========================================================================
 
 
-def _parse_args() -> argparse.Namespace:
+# ── Launcher plumbing (CyHAN v2.0 §A.5 path anchoring; no user options) ─────
+import os
+import sys
+
+# Guarantee headless rendering (no display needed) unless the operator overrides.
+os.environ.setdefault("MPLBACKEND", "Agg")
+
+_BACKEND_PY = ROOT / "backend" / "python"
+if str(_BACKEND_PY) not in sys.path:
+    sys.path.insert(0, str(_BACKEND_PY))
+
+
+def _ensure_cpp_extension() -> None:
+    """Build the _pst C++ kernel once if it isn't already compiled.
+
+    Must run before the package is imported (its solver probes for _pst at
+    import time). A failed build is non-fatal — the pure-Python fallback runs.
+    """
+    pkg = _BACKEND_PY / "probabilistic_simulation_technique"
+    if any(p.suffix in (".pyd", ".so", ".dylib") for p in pkg.glob("_pst*")):
+        return
+    build = ROOT / "backend" / "engines" / "build.py"
+    if not build.is_file():
+        return
+    print("[run] C++ kernel _pst not built — compiling once "
+          "(falls back to pure Python if this fails) ...")
+    import subprocess
+    try:
+        subprocess.run([sys.executable, str(build)], check=True)
+    except Exception as exc:                                   # noqa: BLE001
+        print(f"[run] _pst build failed: {exc}. Using pure-Python fallback.")
+
+
+CONFIG = {
+    # input selection
+    "input_mode":      INPUT_MODE,
+    "input_csv":       INPUT_CSV,
+    "pot_outputs_dir": POT_OUTPUTS_DIR,
+    "station_ids":     STATION_IDS,
+    "targets":         PST_TARGETS,
+
+    # PST parameters
+    "storm_column":        STORM_COLUMN,
+    "record_length_years": RECORD_LENGTH_YEARS,
+    "events_per_year":     EVENTS_PER_YEAR,
+    "threshold_min_percentile": BAND_FLOOR_PCT,
+    "threshold_max_percentile": BAND_CEILING_PCT,
+    "wmse_tolerance":      WMSE_TOLERANCE,
+    "min_exceedances":     MIN_EXCEEDANCES,
+    "gpd_selection":       GPD_SELECTION,
+    "gpd_fit_method":      GPD_FIT_METHOD,
+    "gof_statistic":       GOF_STATISTIC,
+    "gof_significance":    GOF_SIGNIFICANCE,
+    "gpd_tiebreak":        GPD_TIEBREAK,
+    "stability_window":    STABILITY_WINDOW,
+    "stability_tol":       STABILITY_TOL,
+    "num_simulations":     NUM_SIMULATIONS,
+    "random_seed":         RANDOM_SEED,
+    "y_axis_label":        Y_AXIS_LABEL,
+    "target_ylabels":      TARGET_YLABELS,
+    "plot_series":         PLOT_SERIES,
+    "plot_threshold_diagnostics": PLOT_THRESHOLD_DIAGNOSTICS,
+    "output_dir":          OUTPUT_DIR,
+    "plots_dir":           PLOTS_DIR,
+    "bootstrap": {
+        "distribution": BOOTSTRAP_DISTRIBUTION,
+        "truncation":   BOOTSTRAP_TRUNCATION,
+    },
+}
+
+
+def _apply_cli(config: dict) -> dict:
+    """Apply CLI overrides for headless/batch runs (no file edits needed).
+
+    Positional arguments are one or more input POT CSV paths; when given, PST
+    runs in path mode on each (batch), overriding INPUT_MODE/STATION_IDS.
+    """
+    import argparse
     p = argparse.ArgumentParser(
-        description="Run the Probabilistic Simulation Technique (PST).",
-    )
-    p.add_argument("--input",           type=Path, help="Override input POT CSV path")
-    p.add_argument("--output-dir",      type=Path, help="Override output directory")
-    p.add_argument("--plots-dir",       type=Path, help="Override plots directory")
-    p.add_argument("--storm-column",    type=str,  help="POT column name")
-    p.add_argument("--record-length",   type=float, dest="record_length_years",
-                   help="Record length in years")
-    p.add_argument("--num-simulations", type=int,
-                   help="Number of bootstrap realizations")
-    p.add_argument("--seed",            type=int, dest="random_seed",
-                   help="RNG seed")
-    return p.parse_args()
-
-
-def main() -> int:
-    args = _parse_args()
-
-    # Compose operator-edited defaults with CLI overrides.
-    config = {
-        "input_csv":           args.input               or INPUT_CSV,
-        "output_dir":          args.output_dir          or OUTPUT_DIR,
-        "plots_dir":           args.plots_dir           or PLOTS_DIR,
-        "storm_column":        args.storm_column        or STORM_COLUMN,
-        "record_length_years": args.record_length_years if args.record_length_years is not None else RECORD_LENGTH_YEARS,
-        "num_simulations":     args.num_simulations     if args.num_simulations     is not None else NUM_SIMULATIONS,
-        "random_seed":         args.random_seed         if args.random_seed         is not None else RANDOM_SEED,
-        "y_axis_label":        Y_AXIS_LABEL,
-        "bootstrap": {
-            "distribution": BOOTSTRAP_DISTRIBUTION,
-            "truncation":   BOOTSTRAP_TRUNCATION,
-        },
-    }
-
-    # Delegate to the orchestrator (§5.3: orchestration logic lives in main_<name>.py).
-    # main_probabilistic_simulation_technique lives in backend/python, added to
-    # sys.path at runtime; resolve it dynamically so there is no static import for
-    # the IDE to flag as unresolved.
-    from importlib import import_module
-    import_module("main_probabilistic_simulation_technique").run(config)
-    return 0
+        description="Run PST headless. With no arguments it uses the USER "
+                    "OPTIONS above; pass input CSV paths to batch in path mode.")
+    p.add_argument("inputs", nargs="*", type=Path,
+                   help="One or more POT CSV paths (absolute or relative). "
+                        "Each is processed in path mode (batch).")
+    args = p.parse_args()
+    if args.inputs:
+        config = dict(config)
+        config["input_mode"] = "path"
+        config["input_csvs"] = [Path(x).expanduser().resolve() for x in args.inputs]
+    return config
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    _ensure_cpp_extension()   # build _pst on first run if needed
+    # Orchestrator entry lives in backend/python (added to sys.path above);
+    # resolve it dynamically so there is no static import for the IDE to flag.
+    from importlib import import_module
+    import_module("main_probabilistic_simulation_technique").run(_apply_cli(CONFIG))

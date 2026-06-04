@@ -22,13 +22,13 @@ dependencies = [
   "scikit-learn>=1.3",
 ]
 
+[tool.setuptools]
+# CyHAN v2.0 §5.3 / §16.2 orchestrator entry, sibling of the expanded package.
+py-modules = ["main_reduced_storm_suite"]
+
 [tool.setuptools.packages.find]
 where    = ["backend/python"]
 include  = ["reduced_storm_suite*"]
-
-[tool.setuptools.py-modules]
-# CyHAN v2.0 §5.3 / §16.2 orchestrator entry, sibling of the expanded package.
-modules = ["main_reduced_storm_suite"]
 
 [tool.setuptools.package-data]
 "reduced_storm_suite" = ["*.pyd", "*.so", "*.dylib"]

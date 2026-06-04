@@ -148,7 +148,7 @@ def run_growth_evaluation(cfg: Optional[dict] = None):
 
     tbl_aer        = cfg["TBL_AER"]
     dry_thr        = cfg["dry_threshold"]
-    report_rp      = cfg["bias_report_rp"]
+    report_aer     = cfg["bias_report_aer"]
     min_wet_storms = cfg.get("min_wet_storms", 2)
     dsw_method     = cfg.get("dsw_method", 1)
 
@@ -169,10 +169,10 @@ def run_growth_evaluation(cfg: Optional[dict] = None):
         X, Y_r, cfg["alpha_default"], cfg["beta_default"])
     X_scaled = scaler_X.transform(X)
 
-    rp_hdr = "  ".join(f"bias_rp{rp:>4d}" for rp in report_rp)
+    aer_hdr = "  ".join(f"bias_aer{n:>4d}" for n in report_aer)
     print(f"\n[4] Growth sweep  (full range, no early stop) ...")
     print(f"    {'k':>4s} | {'cov':>5s} | {'disc':>6s} | "
-          f"{'rmse':>6s} | {rp_hdr}")
+          f"{'rmse':>6s} | {aer_hdr}")
 
     history: list = []
     sel_method = cfg.get("selection_method", "kmedoids")
@@ -186,16 +186,16 @@ def run_growth_evaluation(cfg: Optional[dict] = None):
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", RuntimeWarning)
             _, hc_m = evaluate_hc_reconstruction(
-                Y[indices, :], HC_bench, tbl_aer, dry_thr, report_rp,
+                Y[indices, :], HC_bench, tbl_aer, dry_thr, report_aer,
                 dsw_method=dsw_method, min_wet_storms=min_wet_storms)
 
         history.append({"k": k, **sf, **hc_m})
 
-        rp_vals = "  ".join(
-            f"{hc_m[f'bias_rp{rp}']:>+10.4f}" for rp in report_rp)
+        aer_vals = "  ".join(
+            f"{hc_m[f'bias_aer{n}']:>+10.4f}" for n in report_aer)
         print(f"    {k:>4d} | {sf['coverage']:>5.3f} | "
               f"{sf['discrepancy']:>6.4f} | {hc_m['mean_rmse']:>6.4f} | "
-              f"{rp_vals}")
+              f"{aer_vals}")
 
         if k >= k_max:
             break

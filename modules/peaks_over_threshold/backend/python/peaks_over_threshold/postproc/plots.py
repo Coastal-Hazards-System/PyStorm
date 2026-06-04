@@ -5,11 +5,41 @@ Author / POC : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usa
 Draws the original time series, the selected peaks, and the chosen threshold.
 Long gaps in the input (default > 48 h) are split into separate line segments
 so matplotlib does not draw horizontal "bridges" across them.
+
+Colors come from the canonical Wave Maker design palette (``pystorm_palette``),
+shared with the PST module for a consistent, publication-grade look.
 """
 
 from typing import Optional
 
 import pandas as pd
+
+from .pystorm_palette import WAVE_MAKER, EMPHASIS, EMPH_DARK, INK, MUTED, GRID, C
+
+# Semantic roles for POT figures, mapped to the canonical palette tokens per
+# the design handoff's figure-type conventions.
+PALETTE = {
+    "series":    WAVE_MAKER,       # primary signal / detrended / NTR series
+    "peaks":     EMPHASIS,         # selected peaks (coral)
+    "threshold": INK,             # POT threshold dashed line (REF_DASH)
+    "measured":  INK,             # measured backdrop series (behind detrended)
+    "trend":     C["deep_ocean"], # linear-trend line
+    "ref":       MUTED,           # reference (0) line
+    "midpoint":  EMPH_DARK,       # NTDE midpoint pivot (emphasis dark)
+    "grid":      GRID,
+    "spine":     INK,
+}
+
+
+def _style_ax(ax) -> None:
+    """Apply the shared clean axes styling (despined, light grid)."""
+    for side in ("top", "right"):
+        ax.spines[side].set_visible(False)
+    for side in ("left", "bottom"):
+        ax.spines[side].set_color(PALETTE["spine"])
+    ax.grid(True, color=PALETTE["grid"], linewidth=0.8)
+    ax.set_axisbelow(True)
+    ax.tick_params(colors="#333333", labelsize=10)
 
 
 class TimeSeriesPlotter:
@@ -77,11 +107,13 @@ class TimeSeriesPlotter:
 
     # ──────────────────────────────────────────────────────────────────────
     def finalize(self, xlabel: str = "Date") -> None:
-        self.ax.set_xlabel(xlabel)
-        self.ax.set_ylabel(self.ylabel)
-        self.ax.set_title(self.title)
-        self.ax.grid(True, linestyle="--", linewidth=0.5)
-        self.ax.legend(loc="upper left")
+        self.ax.set_xlabel(xlabel, fontsize=12)
+        self.ax.set_ylabel(self.ylabel, fontsize=12)
+        self.ax.set_title(self.title, fontsize=13, fontweight="bold")
+        _style_ax(self.ax)
+        leg = self.ax.legend(loc="upper left", frameon=True, framealpha=0.95,
+                             edgecolor=PALETTE["grid"], fontsize=9)
+        leg.get_frame().set_linewidth(0.8)
         if self.ax.lines:
             xdata = self.ax.lines[0].get_xdata()
             if pd.api.types.is_datetime64_any_dtype(xdata):

@@ -10,7 +10,7 @@ this package is its expanded, multi-file realization. Submodules:
   orchestrator  PSTOrchestrator workflow runner
   solver        thin _pst binding wrapper (CyHAN v2.0 §4.1 binding role)
   sampling      bootstrap kernel + GPD-threshold search
-  hazard        ensemble fit + tail splice + AEF-table interpolation
+  hazard        ensemble fit + tail splice + AER-table interpolation
   postproc      hazard-curve plotting
   io            POT CSV reader + PST result writers
 """

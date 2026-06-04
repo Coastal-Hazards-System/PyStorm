@@ -80,7 +80,9 @@ def test_peak_gap_sequential_drop():
 # ---------------------------------------------------------------------------
 # Threshold search
 # ---------------------------------------------------------------------------
-def test_threshold_search_converges(synthetic_series):
+def test_threshold_search_one_sided(synthetic_series):
+    # One-sided search: returns the tightest threshold whose rate is >= target
+    # (never below). A fine step lands inside [target, target+tol] -> converged.
     times_sec, values = synthetic_series
     searcher = IterativeThresholdSearch(
         interevent_sec         = 48 * 3600.0,
@@ -88,11 +90,12 @@ def test_threshold_search_converges(synthetic_series):
         target_events_per_year = 10.0,
         tolerance              = 0.5,
         start_percentile       = 75.0,
-        step_size              = 0.05,
+        step_size              = 0.01,
     )
     result = searcher.run(values, times_sec)
-    assert result.converged
-    assert abs(result.events_per_year - 10.0) < 0.5
+    assert result.events_per_year >= 10.0                 # one-sided guarantee
+    assert result.converged                               # within [10, 10.5]
+    assert result.events_per_year <= 10.0 + 0.5
     # Peak indices must lie within the input range.
     assert result.peak_indices.min() >= 0
     assert result.peak_indices.max() < values.size

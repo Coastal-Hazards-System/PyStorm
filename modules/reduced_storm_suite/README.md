@@ -190,8 +190,9 @@ can be compared cell-by-cell with the benchmark.
 **Residual metrics**: nodal bias, uncertainty (std), and Root-Mean-Square
 Error (RMSE); the mean across nodes is reported as `mean_bias`,
 `mean_uncertainty`, `mean_rmse`.
-Per-return-period biases (`bias_rp10`, `bias_rp100`, `bias_rp1000`) are
-also reported to highlight tail performance.
+Per-AER-level biases (`bias_aer10`, `bias_aer100`, `bias_aer1000` — the AER
+hazard levels at MRI = 10, 100, 1000 yr, i.e. AER = 1/N) are also reported to
+highlight tail performance.
 
 ### 2.7 Quantile Bias Mapping (QBM) Post-Correction
 
@@ -364,7 +365,7 @@ evaluating PAM + DSW + HC + RMSE at every `k`, then picks the smallest
 │           SF metrics  (coverage, discrepancy, maximin)              │
 │           DSW back-compute               (weights/dsw)              │
 │           HC reconstruction via JPM      (weights/dsw)              │
-│           record (k, coverage, discrepancy, RMSE, bias, bias_rpN)   │
+│           record (k, coverage, discrepancy, RMSE, bias, bias_aerN)  │
 │       └─ runs to completion — no early stopping                     │
 ├─────────────────────────────────────────────────────────────────────┤
 │  [6]  Pick k_selected:                                              │
@@ -403,7 +404,7 @@ for k in range(k_min, k_max + 1, k_step):
     HC_recon    ← JPM(Y[indices], DSW_global)        (weights/dsw)
     node_RMSE   ← sqrt(mean((HC_recon − HC_bench)^2, axis=AER))
     global_RMSE ← nanmean(node_RMSE)
-    record(k, **sf_metrics, global_RMSE, mean_bias, bias_rpN)
+    record(k, **sf_metrics, global_RMSE, mean_bias, bias_aerN)
 
 # Selection
 if any k has global_RMSE ≤ rmse_threshold:

@@ -4,6 +4,6 @@ Author / POC : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usa
 """
 
 from .bootstrap     import BootstrapGenerator
-from .gpd_threshold import select_gpd_threshold_qdm
+from .gpd_threshold import select_gpd_threshold_qdo, QDOResult
 
-__all__ = ["BootstrapGenerator", "select_gpd_threshold_qdm"]
+__all__ = ["BootstrapGenerator", "select_gpd_threshold_qdo", "QDOResult"]

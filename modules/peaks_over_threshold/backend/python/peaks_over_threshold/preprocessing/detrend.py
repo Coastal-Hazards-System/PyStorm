@@ -19,8 +19,7 @@ gap-aware plotting.
 
 from __future__ import annotations
 
-from datetime import datetime
-from typing   import Tuple
+from typing   import Optional, Tuple
 
 import numpy as np
 import pandas as pd
@@ -28,10 +27,36 @@ import pandas as pd
 SECONDS_PER_YEAR = 365.2425 * 24 * 3600.0
 
 
+def decimal_year_to_timestamp(year: float) -> pd.Timestamp:
+    """Convert a (possibly fractional) calendar year to a Timestamp.
+
+    Whole years map to Jan 1; a fraction advances linearly through that
+    calendar year (leap-year aware), so 2012.5 lands at mid-2012.
+    """
+    y    = int(np.floor(float(year)))
+    frac = float(year) - y
+    start = pd.Timestamp(y, 1, 1)
+    if frac == 0.0:
+        return start
+    return start + (pd.Timestamp(y + 1, 1, 1) - start) * frac
+
+
+def ntde_midpoint_timestamp(ntde_range: Tuple[float, float]) -> pd.Timestamp:
+    """Midpoint Timestamp of the NTDE, treating the end year as inclusive.
+
+    The epoch spans ``[start, end + 1)`` in (decimal) years — e.g. 1983–2001
+    covers [1983, 2002), midpoint mid-1992 — matching NOAA datum conventions.
+    """
+    start = decimal_year_to_timestamp(ntde_range[0])
+    end   = decimal_year_to_timestamp(ntde_range[1] + 1)
+    return start + (end - start) / 2
+
+
 def detrend_time_series(
-    df:         pd.DataFrame,
-    method:     str = "midpoint",
-    ntde_range: Tuple[int, int] = (2012, 2016),
+    df:             pd.DataFrame,
+    method:         str = "midpoint",
+    ntde_range:     Tuple[float, float] = (2012, 2016),
+    slope_per_year: Optional[float] = None,
 ) -> Tuple[pd.DataFrame, pd.DataFrame, float]:
     """Detrend a normalized water-level series.
 
@@ -42,9 +67,15 @@ def detrend_time_series(
         NaN ``value`` rows are allowed and preserved in the output.
     method : {"midpoint", "ordinary"}
         Time-centering strategy (see module docstring).
-    ntde_range : (int, int)
-        Inclusive NTDE start/end years. Only used when ``method="midpoint"``.
-        The midpoint is taken over ``[start-01-01, (end+1)-01-01)``.
+    ntde_range : (float, float)
+        Inclusive NTDE start/end years (may be fractional, e.g. 2012.42). Only
+        used when ``method="midpoint"``. The midpoint is taken over
+        ``[start, (end + 1))`` in decimal years.
+    slope_per_year : float, optional
+        If given, use this slope (value-units per year, e.g. +0.0048 m/yr)
+        directly instead of fitting one from the record. The trend line still
+        pivots about the chosen time centre. ``None`` (default) fits by least
+        squares.
 
     Returns
     -------
@@ -53,7 +84,8 @@ def detrend_time_series(
     trend_df : DataFrame      columns ("datetime", "value")
         The fitted linear trend, evaluated at each timestamp.
     slope_per_year : float
-        Trend slope in value-units per year (e.g. m/yr).
+        Trend slope in value-units per year (e.g. m/yr) — the fitted value, or
+        the supplied override.
     """
     method = str(method).lower().strip()
     if method not in ("midpoint", "ordinary"):
@@ -77,18 +109,18 @@ def detrend_time_series(
     y     = clean["value"].to_numpy(dtype=np.float64)
 
     if method == "midpoint":
-        start  = datetime(ntde_range[0], 1, 1)
-        end    = datetime(ntde_range[1] + 1, 1, 1)
-        mid_ts = pd.Timestamp(start + (end - start) / 2).timestamp()
+        mid_ts = ntde_midpoint_timestamp(ntde_range).timestamp()
         x = t_sec - mid_ts
     else:  # ordinary
         x = t_sec - float(np.mean(t_sec))
 
-    denom = float(np.dot(x, x))
-    if denom == 0.0:
-        raise ValueError("timestamps are constant — cannot compute a trend")
-
-    slope     = float(np.dot(x, y) / denom)   # value-units per second
+    if slope_per_year is not None:
+        slope = float(slope_per_year) / SECONDS_PER_YEAR   # override (units/sec)
+    else:
+        denom = float(np.dot(x, x))
+        if denom == 0.0:
+            raise ValueError("timestamps are constant — cannot compute a trend")
+        slope = float(np.dot(x, y) / denom)   # fitted value-units per second
     trend     = slope * x
     detrended = y - trend
 

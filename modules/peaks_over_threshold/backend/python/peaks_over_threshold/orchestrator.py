@@ -30,7 +30,7 @@ import pandas as pd
 
 from .config                import POTConfig
 from .io                    import read_time_series_csv, write_pot_peaks
-from .postproc              import TimeSeriesPlotter
+from .postproc              import TimeSeriesPlotter, PALETTE
 from .sampling              import IterativeThresholdSearch, ThresholdSearchResult
 
 
@@ -44,6 +44,7 @@ class POTResult:
     events_per_year:  float
     final_percentile: float
     used_cpp_kernel:  bool
+    effective_duration_years: float = 0.0   # valid-hours / (365.25 * 24)
 
 
 class POTOrchestrator:
@@ -63,11 +64,23 @@ class POTOrchestrator:
         cfg = self.config
         print(f"[POT] Loading time series: {cfg.input_csv}")
         df = read_time_series_csv(cfg.input_csv, cfg.datetime_col, cfg.value_col)
+        # Drop NaN-value rows: missing observations are excluded from both the
+        # search and the effective-duration count.
+        df = df.dropna(subset=["value"]).reset_index(drop=True)
         n  = len(df)
         if n < 2:
             raise RuntimeError(
                 f"input has only {n} valid row(s); need at least 2 for POT"
             )
+
+        # Effective duration = valid hourly steps / hours-per-year. POT targets
+        # the rate against THIS (not the calendar span), and trims to exactly
+        # round(target * eff_dur) peaks so PST can recover eff_dur = n_pot / rate.
+        eff_dur = n / (365.25 * 24.0)
+        n_keep  = int(round(cfg.target_events_per_year * eff_dur))
+        print(f"[POT] effective duration = {eff_dur:.2f} yr "
+              f"({n:,} non-NaN hourly steps); target {cfg.target_events_per_year} "
+              f"ev/yr -> keep {n_keep} peaks")
 
         # Step 2 — convert to numpy float arrays for the kernel. Use a
         # resolution-independent epoch-seconds cast: pandas datetime64 may be
@@ -75,7 +88,7 @@ class POTOrchestrator:
         times_sec = df["datetime"].to_numpy("datetime64[s]").astype(np.int64).astype(np.float64)
         values    = df["value"].to_numpy(dtype=np.float64)
 
-        # Step 3 — threshold search.
+        # Step 3 — threshold search (one-sided, rate measured against eff_dur).
         searcher = IterativeThresholdSearch(
             interevent_sec         = cfg.interevent_hours * 3600.0,
             method                 = cfg.method,
@@ -84,6 +97,7 @@ class POTOrchestrator:
             start_percentile       = cfg.start_percentile,
             step_size              = cfg.step_size,
             max_iter               = cfg.max_iter,
+            record_length_years    = eff_dur,
         )
         used_cpp = searcher.use_cpp
         print(f"[POT] Threshold-search backend: "
@@ -93,21 +107,29 @@ class POTOrchestrator:
 
         if not r.converged:
             print(
-                f"[POT] WARNING: did not converge to target "
-                f"{cfg.target_events_per_year} ± {cfg.tolerance} ev/yr; "
-                f"last evaluated state is at percentile "
-                f"{r.final_percentile:.4f} with {r.events_per_year:.4f} ev/yr"
+                f"[POT] WARNING: search did not land in [{cfg.target_events_per_year}, "
+                f"{cfg.target_events_per_year + cfg.tolerance}] ev/yr; tightest "
+                f"state is {r.events_per_year:.4f} ev/yr at percentile "
+                f"{r.final_percentile:.4f}"
             )
         else:
             print(
-                f"[POT] Converged in {r.iterations} iterations: "
-                f"threshold={r.threshold:.4f} {cfg.units}, "
-                f"rate={r.events_per_year:.4f} ev/yr "
-                f"(target {cfg.target_events_per_year} ± {cfg.tolerance})"
+                f"[POT] Threshold {r.threshold:.4f} {cfg.units} at percentile "
+                f"{r.final_percentile:.4f}: {r.events_per_year:.4f} ev/yr "
+                f"(>= target {cfg.target_events_per_year}, within +{cfg.tolerance})"
             )
 
-        # Step 4 — materialize peaks DataFrame in original time order.
-        peaks_df = df.iloc[r.peak_indices].reset_index(drop=True).copy()
+        # Step 4 — rank-trim the (one-sided) peaks to exactly n_keep largest, so
+        # the written count is deterministic: n_pot = round(target * eff_dur).
+        peak_idx = np.asarray(r.peak_indices, dtype=np.int64)
+        if n_keep >= 1 and peak_idx.size > n_keep:
+            top = np.argsort(values[peak_idx], kind="stable")[::-1][:n_keep]
+            peak_idx = np.sort(peak_idx[top])     # restore chronological order
+        print(f"[POT] Retained {peak_idx.size} peaks "
+              f"(effective rate = {peak_idx.size / eff_dur:.4f} ev/yr)")
+
+        # Materialize peaks DataFrame in time order.
+        peaks_df = df.iloc[peak_idx].reset_index(drop=True).copy()
 
         # Step 5 — save + plot.
         base_filename = Path(cfg.input_csv).stem
@@ -133,6 +155,7 @@ class POTOrchestrator:
             events_per_year  = r.events_per_year,
             final_percentile = r.final_percentile,
             used_cpp_kernel  = used_cpp,
+            effective_duration_years = eff_dur,
         )
 
     # ──────────────────────────────────────────────────────────────────────
@@ -160,10 +183,12 @@ class POTOrchestrator:
             title=f"PyStorm: {value_col_label} — Peaks Over Threshold",
         )
         df_valid = df.dropna(subset=["datetime", "value"])
-        plotter.plot(df_valid, label=value_col_label, color="blue")
+        plotter.plot(df_valid, label=value_col_label, color=PALETTE["series"])
 
-        ax.plot(peaks_df["datetime"], peaks_df["value"], "ro", label="Peaks")
-        ax.axhline(threshold, color="black", linestyle="--",
+        ax.plot(peaks_df["datetime"], peaks_df["value"], "o",
+                color=PALETTE["peaks"], markersize=4, markeredgecolor="white",
+                markeredgewidth=0.4, zorder=5, label="Peaks")
+        ax.axhline(threshold, color=PALETTE["threshold"], linestyle="--", linewidth=1.4,
                    label=f"Threshold = {threshold:.2f} {units}")
         plotter.finalize()
 

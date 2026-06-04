@@ -51,7 +51,8 @@ py::dict find_threshold_for_target(
     double tolerance,
     double start_percentile,
     double step_size,
-    int    max_iter)
+    int    max_iter,
+    double record_length_years)
 {
     py::buffer_info vb = values.request();
     py::buffer_info tb = times_sec.request();
@@ -75,7 +76,7 @@ py::dict find_threshold_for_target(
     pot::ThresholdSearchResult r = pot::find_threshold_for_target(
         v, t, n,
         interevent_sec, sm, target_events_per_year, tolerance,
-        start_percentile, step_size, max_iter);
+        start_percentile, step_size, max_iter, record_length_years);
 
     // Copy peak indices to int64 numpy.
     py::array_t<std::int64_t> idx_arr(static_cast<py::ssize_t>(r.peak_indices.size()));
@@ -112,7 +113,10 @@ PYBIND11_MODULE(_pot, m) {
           py::arg("start_percentile"),
           py::arg("step_size"),
           py::arg("max_iter"),
+          py::arg("record_length_years") = 0.0,
           "Iteratively search a percentile threshold that produces the target "
-          "event rate after segmentation. Returns a dict with the chosen "
-          "threshold, the peak indices, and diagnostic fields.");
+          "event rate after segmentation. One-sided: returns the highest "
+          "threshold whose rate is still >= target. record_length_years > 0 "
+          "overrides the time-span duration (effective duration). Returns a "
+          "dict with the chosen threshold, peak indices, and diagnostics.");
 }

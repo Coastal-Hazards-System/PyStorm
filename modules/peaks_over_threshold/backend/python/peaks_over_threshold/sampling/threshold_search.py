@@ -54,6 +54,7 @@ class IterativeThresholdSearch:
         step_size:              float = 0.01,
         max_iter:               Optional[int] = None,
         use_cpp:                bool = True,
+        record_length_years:    Optional[float] = None,
     ) -> None:
         if method not in ("hydrograph", "peak_gap"):
             raise ValueError(
@@ -66,6 +67,8 @@ class IterativeThresholdSearch:
         self.start_percentile       = float(start_percentile)
         self.step_size              = float(step_size)
         self.max_iter               = max_iter
+        # > 0 overrides the time-span duration with an effective duration.
+        self.record_length_years    = record_length_years
         self.use_cpp                = use_cpp and CPP_KERNEL_AVAILABLE
 
     # ──────────────────────────────────────────────────────────────────────
@@ -94,6 +97,7 @@ class IterativeThresholdSearch:
                 start_percentile       = self.start_percentile,
                 step_size              = self.step_size,
                 max_iter               = max_iter,
+                record_length_years    = float(self.record_length_years or 0.0),
             )
             return ThresholdSearchResult(
                 threshold        = float(r["threshold"]),
@@ -113,25 +117,27 @@ class IterativeThresholdSearch:
         t:        np.ndarray,
         max_iter: int,
     ) -> ThresholdSearchResult:
-        duration_years = float(t[-1] - t[0]) / _SECONDS_PER_YEAR
-        if duration_years <= 0.0:
-            raise ValueError("time span must be positive")
+        if self.record_length_years and self.record_length_years > 0.0:
+            duration_years = float(self.record_length_years)   # effective duration
+        else:
+            duration_years = float(t[-1] - t[0]) / _SECONDS_PER_YEAR
+            if duration_years <= 0.0:
+                raise ValueError("time span must be positive")
 
         sorted_desc = np.sort(v)[::-1]
         n           = v.size
         segmenter   = (segment_hydrograph if self.method == "hydrograph"
                        else segment_peak_gap)
 
-        last_result = ThresholdSearchResult(
-            threshold        = float("nan"),
-            peak_indices     = np.empty(0, dtype=np.int64),
-            converged        = False,
-            iterations       = 0,
-            events_per_year  = 0.0,
-            final_percentile = self.start_percentile,
-            used_cpp_kernel  = False,
-        )
-
+        # One-sided search: keep the HIGHEST-threshold state whose rate is still
+        # >= target (mirrors the C++ kernel) — the most selective cut that still
+        # yields the needed count, isolating the genuine extremes; the
+        # orchestrator rank-trims the overshoot. We scan the full range and never
+        # break early: the rate-vs-threshold curve can hump (dense low-threshold
+        # exceedances merge into few events), so a low-threshold rate may dip
+        # below target before the storm-level band.
+        ge   = None     # (threshold, peaks, ev, percentile, iters)
+        last = None
         percentile = self.start_percentile
         for it in range(max_iter):
             if percentile >= 100.0:
@@ -141,30 +147,39 @@ class IterativeThresholdSearch:
             k    = max(0, min(k, n - 1))
             threshold = float(sorted_desc[k])
 
-            exceed_mask  = v > threshold
-            exceed_idx   = np.flatnonzero(exceed_mask)
+            exceed_idx = np.flatnonzero(v > threshold)
             if exceed_idx.size == 0:
                 percentile += self.step_size
                 continue
-
             peak_idx = segmenter(v, t, exceed_idx, self.interevent_sec)
             if peak_idx.size == 0:
                 percentile += self.step_size
                 continue
 
             ev_per_yr = peak_idx.size / duration_years
-
-            last_result = ThresholdSearchResult(
-                threshold        = threshold,
-                peak_indices     = peak_idx,
-                converged        = abs(ev_per_yr - self.target_events_per_year) < self.tolerance,
-                iterations       = it + 1,
-                events_per_year  = ev_per_yr,
-                final_percentile = percentile,
-                used_cpp_kernel  = False,
-            )
-            if last_result.converged:
-                return last_result
+            last = (threshold, peak_idx, ev_per_yr, percentile, it + 1)
+            if ev_per_yr >= self.target_events_per_year:
+                ge = last          # highest-threshold state with rate >= target
             percentile += self.step_size
 
-        return last_result
+        if ge is not None:
+            threshold, peak_idx, ev_per_yr, pct, iters = ge
+            converged = ev_per_yr <= self.target_events_per_year + self.tolerance
+        elif last is not None:
+            threshold, peak_idx, ev_per_yr, pct, iters = last
+            converged = False
+        else:
+            return ThresholdSearchResult(
+                threshold=float("nan"), peak_indices=np.empty(0, dtype=np.int64),
+                converged=False, iterations=0, events_per_year=0.0,
+                final_percentile=self.start_percentile, used_cpp_kernel=False)
+
+        return ThresholdSearchResult(
+            threshold        = threshold,
+            peak_indices     = peak_idx,
+            converged        = converged,
+            iterations       = iters,
+            events_per_year  = ev_per_yr,
+            final_percentile = pct,
+            used_cpp_kernel  = False,
+        )

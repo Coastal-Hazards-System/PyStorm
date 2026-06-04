@@ -13,13 +13,13 @@ epistemic uncertainty in extreme-value hazard curves derived from a
 Peaks-Over-Threshold (POT) sample. Given a univariate record of peaks (e.g.
 storm-surge maxima), PST:
 
-1. Selects a Generalized Pareto Distribution (GPD) threshold by minimizing a
-   Quantile-Delta-Method (QDM) weighted-mean-square error (WMSE) over a
-   candidate band.
+1. Selects the Generalized Pareto Distribution (GPD) location μ by minimizing a
+   Quantile Delta Optimization (QDO) weighted-mean-square error (WMSE) over a
+   candidate band, and emits a diagnostics plot to visually assess the choice.
 2. Bootstraps the descending-sorted exceedances using truncated Gaussian (or
    Uniform) perturbations.
 3. Fits a GPD to each realization and evaluates its inverse-CDF on a dense
-   plotting grid of Annual Exceedance Frequencies (AEFs).
+   plotting grid of Annual Exceedance Rates (AERs).
 4. Splices the GPD upper tail onto the empirical-Weibull lower tail.
 5. Interpolates the merged curve onto a standard 22-AER reporting grid and
    writes both the ensemble and the hazard-curve tables.
@@ -56,7 +56,7 @@ probabilistic_simulation_technique/
 │           ├── solver.py            thin _pst binding wrapper
 │           ├── sampling/
 │           │   ├── bootstrap.py     BootstrapGenerator (C++ or fallback)
-│           │   └── gpd_threshold.py QDM-WMSE threshold search
+│           │   └── gpd_threshold.py QDO-WMSE threshold search
 │           ├── hazard/
 │           │   └── curve.py         ensemble fit + tail splice + table interp
 │           ├── postproc/
@@ -91,21 +91,27 @@ entry point").
 
 ## 2. Methods
 
-### 2.1 GPD Threshold Selection (QDM-WMSE)
+### 2.1 GPD Location μ Selection (QDO-WMSE)
+
+The POT sample is already extracted above the POT threshold `u`, with rate
+`λ_u = λ = n / record_length_years`. PST then re-optimizes a **separate** GPD
+location parameter `μ ≥ u` for the distribution fit — `u` defines the sample
+(and `λ_u`); `μ` defines where the GPD tail begins.
 
 Let `values_pot` be the sample sorted descending and
-`weibull_aef[i] = (i + 1) / (n + 1) · λ` the empirical Weibull
-plotting-position AEFs (scaled by the population intensity
-`λ = n / record_length_years`). For each candidate threshold `θ` in the
-percentile band `[θ_min, θ_max]` (default `20–80%` of the value range):
+`weibull_aer[i] = (i + 1) / (n + 1) · λ_u` the empirical Weibull
+plotting-position AERs. For each candidate location `μ` in the
+percentile band `[μ_min, μ_max]` (default `20–80%` of the value range):
 
-1. Take the exceedances `pot > θ` and the associated `aef`.
-2. Fit a GPD with `floc = θ` to the exceedances.
+1. Take the exceedances `pot > μ` and the associated `aer`.
+2. Fit a GPD with `floc = μ` to the exceedances.
 3. Predict at the empirical positions and compute
-   `WMSE = Σ wᵢ (potᵢ − predᵢ)² / Σ wᵢ`, with `wᵢ = 1/aefᵢ` for `aefᵢ < 1`.
+   `WMSE = Σ wᵢ (potᵢ − predᵢ)² / Σ wᵢ`, with `wᵢ = 1/aerᵢ` for `aerᵢ < 1`.
 
-The lowest-θ candidate whose normalized WMSE is within 5% of the minimum is
-selected, preferring data-rich fits when the WMSE surface is flat.
+The lowest-μ candidate whose WMSE is within 5% (relative) of the in-band
+minimum WMSE is selected — preferring data-rich (lower-μ) fits only when the
+WMSE is genuinely near-minimal. Anchoring on the minimum (rather than a range
+normalized by the degenerate high-μ spikes) keeps the tolerance tight.
 Implementation: `sampling/gpd_threshold.py`.
 
 ### 2.2 Truncated-Noise Bootstrap
@@ -127,46 +133,55 @@ automatically when `_pst` is unavailable.
 
 ### 2.3 GPD Ensemble Fit and Hazard-Curve Assembly
 
-For each bootstrap column the GPD is refit (`floc = θ`) and its shape `c` is
+For each bootstrap column the GPD is refit (`floc = μ`) and its shape `c` is
 clipped to the Luceño-style band `[c_lo, c_hi]` (defaults `[-0.5, +0.33]`)
-before the ICDF is evaluated on the plot AEF grid restricted to
-`aef < λ_θ = (# exceedances) / record_length_years`. The realization stack is
+before the ICDF is evaluated on the plot AER grid restricted to
+`aer < λ_μ = (# exceedances) / record_length_years`. The realization stack is
 collapsed to a best-estimate mean and the 10/90% percentile bounds.
 
-The empirical bulk (`pot ≤ θ`) at its Weibull AEFs is concatenated below the
+The empirical bulk (`pot ≤ μ`) at its Weibull AERs is concatenated below the
 GPD tail; bulk uncertainty is taken as zero per the v1 convention. The merged
 curve is then log-interpolated onto the 22-AER reporting grid
-(`make_aef_grids()` in `hazard/curve.py`).
+(`make_aer_grids()` in `hazard/curve.py`).
 
 ---
 
 ## 3. Workflow
 
+**Input selection (launcher `INPUT_MODE`, resolved in `main`):**
+
+- `"path"` — one POT CSV at an explicit `INPUT_CSV`.
+- `"station"` — batch over the **peaks_over_threshold** module's outputs for
+  `STATION_IDS` (one or many), chosen by `PST_TARGETS` (`"dwl"`, `"ntr"`, or
+  `"both"`), resolving to `peaks_over_threshold/data/outputs/<station>/<target>_<station>_pot.csv`.
+  PST runs once per (station × target); e.g. 3 stations × `"both"` = 6 output sets.
+
 ```
 ┌──────────────────────────────────────────────────────────────────────┐
-│  data/inputs/processed/<base>_POT.csv         (column = STORM_COLUMN) │
+│  POT CSV  (path mode: INPUT_CSV │ station mode: <target>_<station>_pot)│
+│           column = STORM_COLUMN ("value")                             │
 └──────────────────────────────────────────────────────────────────────┘
                                   │
                                   ▼
 ┌──────────────────────────────────────────────────────────────────────┐
 │  [1]  read_pot_csv  →  values, λ = n / record_length_years            │
 ├──────────────────────────────────────────────────────────────────────┤
-│  [2]  Sort descending; Weibull AEFs                                   │
+│  [2]  Sort descending; Weibull AERs                                   │
 ├──────────────────────────────────────────────────────────────────────┤
-│  [3]  select_gpd_threshold_qdm  →  θ                                  │
+│  [3]  select_gpd_threshold_qdo  →  μ                                  │
 ├──────────────────────────────────────────────────────────────────────┤
-│  [4]  Split exceedances / bulk; λ_θ = |exceed| / record_length_years  │
+│  [4]  Split exceedances / bulk; λ_μ = |exceed| / record_length_years  │
 ├──────────────────────────────────────────────────────────────────────┤
 │  [5]  BootstrapGenerator (_pst or Python fallback)                    │
 │       → boot_matrix [n_pot × n_sims]                                  │
 ├──────────────────────────────────────────────────────────────────────┤
-│  [6]  fit_gpd_ensemble → BE, CB10, CB90 on plot AEF grid              │
+│  [6]  fit_gpd_ensemble → BE, CB10, CB90 on plot AER grid              │
 ├──────────────────────────────────────────────────────────────────────┤
 │  [7]  assemble_hazard_curve + interpolate_to_table                    │
 ├──────────────────────────────────────────────────────────────────────┤
 │  [8]  write_pst_outputs + HazardCurvePlotter                          │
-│       → data/outputs/<base>_PST*.csv                                  │
-│       → data/outputs/plots/<base>_PST_HC.png                          │
+│       → data/outputs/<base>_pst*.csv                                  │
+│       → data/outputs/plots/<base>_pst_hc.png                          │
 └──────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -176,12 +191,13 @@ curve is then log-interpolated onto the 22-AER reporting grid
 
 | File                       | Contents                                                          |
 |----------------------------|-------------------------------------------------------------------|
-| `<base>_PST.csv`           | Bootstrap GPD ensemble, plot AEF grid columns                     |
-| `<base>_PST_HC_BE_tbl.csv` | Best estimate on the 22-AER reporting grid                        |
-| `<base>_PST_HC_CB_tbl.csv` | 10/90% confidence bounds on the 22-AER grid                       |
-| `<base>_PST_HC_BE_plt.csv` | BE on the dense plotting grid (merged GPD + empirical)            |
-| `<base>_PST_HC_CB_plt.csv` | CB10/CB90 on the dense plotting grid                              |
-| `<base>_PST_HC.png`        | Hazard-curve plot (empirical scatter + GPD curve + CB band)       |
+| `<base>_pst.csv`           | Bootstrap GPD ensemble, plot AER grid columns                     |
+| `<base>_pst_hc_be_tbl.csv` | Best estimate on the 22-AER reporting grid                        |
+| `<base>_pst_hc_cb_tbl.csv` | 10/90% confidence bounds on the 22-AER grid                       |
+| `<base>_pst_hc_be_plt.csv` | BE on the dense plotting grid (merged GPD + empirical)            |
+| `<base>_pst_hc_cb_plt.csv` | CB10/CB90 on the dense plotting grid                              |
+| `<base>_pst_hc.png`        | Hazard-curve plot (empirical < μ / > μ, GPD mean + CL band, μ cross) |
+| `<base>_qdo_threshold.png` | QDO μ-selection diagnostics: WMSE(μ), GPD shape ξ(μ), # exceedances(μ) |
 
 ---
 
@@ -198,14 +214,11 @@ pip install -e .
 
 # Edit USER OPTIONS in run_probabilistic_simulation_technique.py, then run:
 python run_probabilistic_simulation_technique.py
-
-# Or override on the CLI for ad-hoc runs:
-python run_probabilistic_simulation_technique.py \
-    --input data/inputs/processed/storm_surge_8518750_1920_2025_POT.csv \
-    --record-length 106 \
-    --num-simulations 1000 \
-    --seed 628
 ```
+
+All settings live in the launcher's USER OPTIONS block. For the default
+`INPUT_MODE = "station"`, set `STATION_IDS` (one or many) and `PST_TARGETS`
+("dwl" / "ntr" / "both"); for `INPUT_MODE = "path"`, set `INPUT_CSV`.
 
 Smoke tests:
 
@@ -237,7 +250,7 @@ pytest tests/
 
 | Acronym  | Expansion                                                |
 |----------|----------------------------------------------------------|
-| AEF      | Annual Exceedance Frequency                              |
+| AER      | Annual Exceedance Rate                              |
 | BE       | Best Estimate                                            |
 | CB       | Confidence Bound                                         |
 | CDF      | Cumulative Distribution Function                         |
@@ -248,7 +261,7 @@ pytest tests/
 | POC      | Point Of Contact                                         |
 | POT      | Peaks Over Threshold                                     |
 | PST      | Probabilistic Simulation Technique                       |
-| QDM      | Quantile Delta Method                                    |
+| QDO      | Quantile Delta Optimization                                    |
 | RNG      | Random Number Generator                                  |
 | WMSE     | Weighted Mean Square Error                               |
 | WPP      | Weibull Plotting Position                                |

@@ -1,9 +1,11 @@
-"""bootstrap — truncated-noise bootstrap of descending-sorted POT exceedances.
+"""bootstrap — smoothed bootstrap of descending-sorted POT exceedances.
 
 Author / POC : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
 
-Generates an (n_pot x n_sims) matrix of perturbed POT realizations. Each column
-is one bootstrap resample, sorted in descending order. The C++ kernel
+Generates an (n_pot x n_sims) matrix of smoothed-bootstrap POT realizations.
+Each column is one resample (with replacement) of the exceedances, perturbed by
+additive noise from a smoothing kernel whose bandwidth is the local
+order-statistic spacing, then sorted descending. The C++ kernel
 (``solver.bootstrap_truncated_cpp``) is preferred; a numpy-only fallback is
 used when the extension is not available.
 
@@ -14,11 +16,16 @@ Public API
 
 Algorithm
 ---------
-Step 1 — Verify pot_values is sorted descending. Pre-compute the descending
-         spacing delta = diff(pot) ++ [0].
-Step 2 — For each simulation j: draw n_pot bootstrap indices and n_pot truncated
-         noise variates; form column = pot[idx] + delta[idx] * noise; sort
-         the column descending; write to output column j.
+Step 1 — Verify pot_values is sorted descending (x_1 >= x_2 >= ... >= x_n).
+         Pre-compute the order-statistic spacing to the NEXT (i+1, adjacent
+         smaller) value:  s = diff(pot) ++ [0], i.e. s[i] = pot[i+1] - pot[i]
+         (<= 0); the smallest value (no successor) is padded with 0.
+Step 2 — For each realization j: resample n_pot indices WITH REPLACEMENT and
+         draw n_pot kernel variates z; form column = pot[idx] + s[idx] * z
+         (each drawn value is displaced toward its NEXT-smaller neighbour by a
+         fraction of its own spacing); sort the column descending; write to
+         output column j. The kernel bandwidth is the local order-statistic
+         spacing and |z| is bounded by the kernel support.
 
 The C++ and Python implementations are algorithmically identical and produce
 numerically equivalent ensembles (not bit-identical RNG sequences, since they
@@ -42,9 +49,11 @@ class BootstrapGenerator:
     Parameters
     ----------
     distribution : {"gaussian", "uniform"}
-        Noise family applied to the descending-spacing perturbation.
+        Smoothing-kernel family for the additive perturbation ("gaussian" =
+        truncated normal, "uniform" = uniform).
     truncation : (float, float)
-        Lower/upper bounds for the noise; must satisfy lo < hi.
+        Kernel support (lo, hi), in units of the local order-statistic spacing;
+        must satisfy lo < hi. Bounds each perturbation to its neighbour gap.
     seed : int or None
         RNG seed. ``None`` selects a non-reproducible seed from the OS.
     use_cpp : bool
@@ -105,7 +114,8 @@ class BootstrapGenerator:
     # ──────────────────────────────────────────────────────────────────────
     def _generate_python(self, pot: np.ndarray, n_sims: int) -> np.ndarray:
         n_pot = pot.size
-        delta = np.append(np.diff(pot), 0.0)  # last element has no successor
+        # Spacing to the NEXT (i+1, adjacent smaller) value; last has none -> 0.
+        delta = np.append(np.diff(pot), 0.0)
 
         lo, hi = self.truncation
         if self.distribution == "gaussian":

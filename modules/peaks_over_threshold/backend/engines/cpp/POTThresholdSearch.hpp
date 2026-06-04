@@ -141,7 +141,8 @@ inline ThresholdSearchResult find_threshold_for_target(
     double          tolerance,
     double          start_percentile,
     double          step_size,
-    int             max_iter)
+    int             max_iter,
+    double          record_length_years = 0.0)   // <= 0 -> derive from time span
 {
     if (n < 2)
         throw std::runtime_error("pot::find_threshold_for_target: need n >= 2");
@@ -161,70 +162,95 @@ inline ThresholdSearchResult find_threshold_for_target(
         if (times_sec[i] < times_sec[i - 1])
             throw std::runtime_error("times_sec must be sorted ascending");
 
-    const double duration_sec =
-        times_sec[n - 1] - times_sec[0];
-    const double duration_years = duration_sec / (365.25 * 86400.0);
-    if (duration_years <= 0.0)
-        throw std::runtime_error(
-            "time span must be positive (last time > first time)");
+    double duration_years;
+    if (record_length_years > 0.0) {
+        duration_years = record_length_years;   // caller-supplied effective duration
+    } else {
+        const double duration_sec = times_sec[n - 1] - times_sec[0];
+        duration_years = duration_sec / (365.25 * 86400.0);
+        if (duration_years <= 0.0)
+            throw std::runtime_error(
+                "time span must be positive (last time > first time)");
+    }
 
     // Pre-sort values descending to evaluate percentiles in O(1) per iteration.
     std::vector<double> sorted_desc(values, values + n);
     std::sort(sorted_desc.begin(), sorted_desc.end(), std::greater<double>());
 
-    ThresholdSearchResult result{};
-    double percentile = start_percentile;
+    auto exceed_for = [&](double thr) {
+        std::vector<std::size_t> e;
+        e.reserve(n / 4);
+        for (std::size_t i = 0; i < n; ++i)
+            if (values[i] > thr) e.push_back(i);
+        return e;
+    };
+    auto segment = [&](const std::vector<std::size_t>& exceed) {
+        return (method == SegmentationMethod::Hydrograph)
+            ? detail::segment_hydrograph(values, times_sec, exceed, interevent_sec)
+            : detail::segment_peak_gap (values, times_sec, exceed, interevent_sec);
+    };
 
+    // One-sided search: scan the threshold upward and keep the HIGHEST-threshold
+    // state whose rate is still >= target — the most selective cut that still
+    // yields at least the needed event count, isolating the genuine extremes.
+    // The caller rank-trims the small overshoot down to the exact count. We
+    // never break early: the rate-vs-threshold curve can hump (dense
+    // low-threshold exceedances merge into few events), so a low-threshold rate
+    // can briefly fall below target before the storm-level band; scanning the
+    // full range keeps the high (descending-edge) threshold. `tolerance` flags
+    // whether that tightest rate sits within [target, target + tol].
+    bool   have_ge = false, have_last = false;
+    double ge_thr = 0.0, ge_ev = 0.0, ge_pct = 0.0; int ge_iter = 0;
+    double last_thr = 0.0, last_ev = 0.0, last_pct = 0.0; int last_iter = 0;
+
+    double percentile = start_percentile;
     for (int iter = 0; iter < max_iter; ++iter, percentile += step_size) {
         if (percentile >= 100.0) break;
 
-        // Percentile threshold = the value such that p% of samples are <= threshold.
-        // Equivalent: the (1 - p/100)-th element of the descending sort.
         const double frac = 1.0 - percentile / 100.0;
         std::size_t   k   = static_cast<std::size_t>(
                                 std::floor(frac * static_cast<double>(n - 1)));
         if (k >= n) k = n - 1;
         const double threshold = sorted_desc[k];
 
-        // Collect exceedance indices in input (time) order.
-        std::vector<std::size_t> exceed_idx;
-        exceed_idx.reserve(n / 4);
-        for (std::size_t i = 0; i < n; ++i)
-            if (values[i] > threshold) exceed_idx.push_back(i);
-
-        if (exceed_idx.empty()) continue;
-
-        std::vector<std::size_t> peaks =
-            (method == SegmentationMethod::Hydrograph)
-                ? detail::segment_hydrograph(values, times_sec, exceed_idx,
-                                             interevent_sec)
-                : detail::segment_peak_gap (values, times_sec, exceed_idx,
-                                             interevent_sec);
-
+        std::vector<std::size_t> exceed = exceed_for(threshold);
+        if (exceed.empty()) continue;
+        std::vector<std::size_t> peaks = segment(exceed);
         if (peaks.empty()) continue;
 
         const double ev_per_yr =
             static_cast<double>(peaks.size()) / duration_years;
+        last_thr = threshold; last_ev = ev_per_yr;
+        last_pct = percentile; last_iter = iter + 1; have_last = true;
 
-        if (std::fabs(ev_per_yr - target_events_per_year) < tolerance) {
-            result.threshold        = threshold;
-            result.peak_indices     = std::move(peaks);
-            result.converged        = true;
-            result.iterations       = iter + 1;
-            result.events_per_year  = ev_per_yr;
-            result.final_percentile = percentile;
-            return result;
+        if (ev_per_yr >= target_events_per_year) {
+            // Highest-threshold state with rate >= target wins (percentile
+            // increases each iter, so the last match is the highest threshold).
+            ge_thr = threshold; ge_ev = ev_per_yr;
+            ge_pct = percentile; ge_iter = iter + 1; have_ge = true;
         }
-
-        // Track the last evaluated state in case we exhaust iterations.
-        result.threshold        = threshold;
-        result.peak_indices     = std::move(peaks);
-        result.iterations       = iter + 1;
-        result.events_per_year  = ev_per_yr;
-        result.final_percentile = percentile;
     }
 
-    result.converged = false;
+    ThresholdSearchResult result{};
+    double chosen_thr;
+    if (have_ge) {
+        chosen_thr              = ge_thr;
+        result.events_per_year  = ge_ev;
+        result.final_percentile = ge_pct;
+        result.iterations       = ge_iter;
+        result.converged        = (ge_ev <= target_events_per_year + tolerance);
+    } else if (have_last) {
+        chosen_thr              = last_thr;   // never reached target; best available
+        result.events_per_year  = last_ev;
+        result.final_percentile = last_pct;
+        result.iterations       = last_iter;
+        result.converged        = false;
+    } else {
+        return result;                        // no usable threshold found
+    }
+
+    result.threshold    = chosen_thr;
+    result.peak_indices = segment(exceed_for(chosen_thr));
     return result;
 }
 

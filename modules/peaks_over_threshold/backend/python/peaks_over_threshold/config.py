@@ -103,8 +103,12 @@ class PreprocessConfig(BaseModel):
 
     # ── Detrend ────────────────────────────────────────────────────────────
     detrend_method: Literal["midpoint", "ordinary"] = "midpoint"
-    ntde_start:     int = 2012
-    ntde_end:       int = 2016
+    # NTDE bounds may be fractional calendar years (e.g. 2012.42).
+    ntde_start:     float = 2012
+    ntde_end:       float = 2016
+    # Override the fitted sea-level slope (value-units/yr, e.g. +0.0048 m/yr).
+    # None → fit the slope from the record by least squares (default).
+    detrend_slope:  Optional[float] = None
 
     # ── Display ────────────────────────────────────────────────────────────
     units:  str = "m"

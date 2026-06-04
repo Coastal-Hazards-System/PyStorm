@@ -20,12 +20,12 @@ dependencies = [
   "requests>=2.28",
 ]
 
+[tool.setuptools]
+py-modules = ["main_peaks_over_threshold"]
+
 [tool.setuptools.packages.find]
 where    = ["backend/python"]
 include  = ["peaks_over_threshold*"]
-
-[tool.setuptools.py-modules]
-modules = ["main_peaks_over_threshold"]
 
 [tool.setuptools.package-data]
 "peaks_over_threshold" = ["*.pyd", "*.so", "*.dylib"]

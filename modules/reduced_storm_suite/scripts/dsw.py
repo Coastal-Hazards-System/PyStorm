@@ -95,15 +95,15 @@ def _plot_hc_comparison(HC_recon, HC_bench, tbl_aer, node_indices, out_dir):
                              figsize=(5 * ncols, 4 * nrows), squeeze=False)
     fig.suptitle("Reconstructed HC vs Benchmark", fontsize=13, fontweight="bold")
 
-    rp = 1.0 / tbl_aer
+    mri = 1.0 / tbl_aer        # mean return interval (yr)
 
     for ax_idx, node in enumerate(node_indices):
         r, c = divmod(ax_idx, ncols)
         ax = axes[r][c]
-        ax.plot(rp, HC_bench[node, :], "k-",  lw=1.5, label="Benchmark")
-        ax.plot(rp, HC_recon[node, :], "r--", lw=1.5, label="Reconstructed")
+        ax.plot(mri, HC_bench[node, :], "k-",  lw=1.5, label="Benchmark")
+        ax.plot(mri, HC_recon[node, :], "r--", lw=1.5, label="Reconstructed")
         ax.set_xscale("log")
-        ax.set_xlabel("Return Period (yr)"); ax.set_ylabel("Surge (m)")
+        ax.set_xlabel("Mean Return Interval, MRI (yr)"); ax.set_ylabel("Surge (m)")
         ax.set_title(f"Node {node}"); ax.grid(alpha=0.3)
         if ax_idx == 0:
             ax.legend(fontsize=8)

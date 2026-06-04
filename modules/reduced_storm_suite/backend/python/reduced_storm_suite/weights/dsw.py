@@ -39,7 +39,7 @@ Public API
       -> ndarray [m x N]
   evaluate_hc_metrics(Y_sub, HC_bench, tbl_aer, dry_thr, min_wet_storms, dsw_method)
       -> dict
-  evaluate_hc_reconstruction(Y_sub, HC_bench, tbl_aer, dry_thr, report_rp, dsw_method)
+  evaluate_hc_reconstruction(Y_sub, HC_bench, tbl_aer, dry_thr, report_aer, dsw_method)
       -> (HC_recon, metrics)
 """
 
@@ -102,20 +102,24 @@ def _hc_residual_metrics(HC_recon, HC_bench):
     }
 
 
-def _bias_at_return_periods(
-    HC_recon:  np.ndarray,
-    HC_bench:  np.ndarray,
-    tbl_aer:   np.ndarray,
-    report_rp: list,
+def _bias_at_aer_levels(
+    HC_recon:   np.ndarray,
+    HC_bench:   np.ndarray,
+    tbl_aer:    np.ndarray,
+    report_aer: list,
 ) -> dict:
-    """Mean nodal bias at specific return period levels."""
+    """Mean nodal bias at specific AER hazard levels.
+
+    Each level in ``report_aer`` is labelled by its MRI year N; the AER it
+    targets is 1/N (so N=1000 → AER=1e-3), and the result key is ``bias_aer{N}``.
+    """
     tbl_aer = np.asarray(tbl_aer)
     result  = {}
-    for rp in report_rp:
-        col = int(np.argmin(np.abs(tbl_aer - 1.0 / rp)))
+    for n in report_aer:                       # n = MRI-year level; AER = 1/n
+        col = int(np.argmin(np.abs(tbl_aer - 1.0 / n)))
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", RuntimeWarning)
-            result[f"bias_rp{rp}"] = float(np.nanmean(HC_recon[:, col] - HC_bench[:, col]))
+            result[f"bias_aer{n}"] = float(np.nanmean(HC_recon[:, col] - HC_bench[:, col]))
     return result
 
 
@@ -272,25 +276,25 @@ def evaluate_hc_reconstruction(
     HC_bench:       np.ndarray,
     tbl_aer:        np.ndarray,
     dry_thr:        float = 0.0,
-    report_rp:      list  = None,
+    report_aer:     list  = None,
     dsw_method:     int   = 1,
     min_wet_storms: int   = 2,
 ) -> tuple:
-    """Full DSW + HC reconstruction + global and per-return-period metrics.
+    """Full DSW + HC reconstruction + global and per-AER-level metrics.
 
     Returns
     -------
     HC_recon : ndarray [m x N_AER]
     metrics  : dict  (mean_bias, mean_uncertainty, mean_rmse,
-                      bias_rp<N> for each N in report_rp)
+                      bias_aer<N> for each N in report_aer)
     """
-    if report_rp is None:
-        report_rp = []
+    if report_aer is None:
+        report_aer = []
     DSW_global = compute_global_dsw(Y_sub, HC_bench, tbl_aer, dry_thr,
                                     min_wet_storms, method=dsw_method)
     HC_recon   = reconstruct_hc_global_dsw(Y_sub, DSW_global, tbl_aer, dry_thr)
     metrics    = {
         **_hc_residual_metrics(HC_recon, HC_bench),
-        **_bias_at_return_periods(HC_recon, HC_bench, tbl_aer, report_rp),
+        **_bias_at_aer_levels(HC_recon, HC_bench, tbl_aer, report_aer),
     }
     return HC_recon, metrics

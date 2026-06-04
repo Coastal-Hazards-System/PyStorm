@@ -22,10 +22,19 @@ config_model      = "probabilistic_simulation_technique.config:PSTConfig"
 runner            = "probabilistic_simulation_technique.orchestrator:PSTOrchestrator"
 entry             = "main_probabilistic_simulation_technique:run"
 
+[inputs]
+# Selected in the launcher via INPUT_MODE; main resolves the POT CSV(s).
+mode_path         = "process one POT CSV at an explicit path (INPUT_CSV)"
+mode_station      = "pull POT file(s) from the peaks_over_threshold outputs for a station"
+station_path      = "<pot_outputs_dir>/<station>/<target>_<station>_pot.csv"
+station_targets   = ["dwl", "ntr", "both"]   # both -> run PST on each
+
 [outputs]
-plot              = "<base>_PST_HC.png"
-ensemble          = "<base>_PST.csv"
-hc_table_be       = "<base>_PST_HC_BE_tbl.csv"
-hc_table_cb       = "<base>_PST_HC_CB_tbl.csv"
-hc_plot_be        = "<base>_PST_HC_BE_plt.csv"
-hc_plot_cb        = "<base>_PST_HC_CB_plt.csv"
+# <base> = POT CSV stem with its trailing token stripped, e.g. dwl_<station>.
+plot              = "<base>_pst_hc.png"
+qdo_diagnostics   = "<base>_qdo_threshold.png"   # QDO GPD-location (μ) selection QA
+ensemble          = "<base>_pst.csv"
+hc_table_be       = "<base>_pst_hc_be_tbl.csv"
+hc_table_cb       = "<base>_pst_hc_cb_tbl.csv"
+hc_plot_be        = "<base>_pst_hc_be_plt.csv"
+hc_plot_cb        = "<base>_pst_hc_cb_plt.csv"

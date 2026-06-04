@@ -38,6 +38,7 @@ def find_threshold_for_target_cpp(
     start_percentile:       float,
     step_size:              float,
     max_iter:               int,
+    record_length_years:    float = 0.0,
 ) -> Dict:
     """Call ``_pot.find_threshold_for_target`` and return its result dict.
 
@@ -67,4 +68,5 @@ def find_threshold_for_target_cpp(
         float(start_percentile),
         float(step_size),
         int(max_iter),
+        float(record_length_years),
     )
