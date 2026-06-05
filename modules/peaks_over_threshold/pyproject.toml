@@ -20,6 +20,12 @@ dependencies = [
   "requests>=2.28",
 ]
 
+[project.optional-dependencies]
+dev = [
+  "pybind11>=2.11",   # build-time (backend/engines/cpp/build.py)
+  "pytest>=7.4",      # test-time
+]
+
 [tool.setuptools]
 py-modules = ["main_peaks_over_threshold"]
 

@@ -20,6 +20,12 @@ dependencies = [
   "pydantic>=2.0",
 ]
 
+[project.optional-dependencies]
+dev = [
+  "pybind11>=2.11",   # build-time (backend/engines/build.py)
+  "pytest>=7.4",      # test-time
+]
+
 [tool.setuptools]
 # CyHAN v2.0 §5.3 / §16.2 orchestrator entry, sibling of the expanded package.
 py-modules = ["main_probabilistic_simulation_technique"]
