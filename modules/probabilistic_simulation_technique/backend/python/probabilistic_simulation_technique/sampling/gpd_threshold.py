@@ -105,8 +105,12 @@ class QDOResult:
                               candidates pinned here (degenerate over-fit)
     stab_tol       : float    ("stability") ξ-dispersion tolerance defining the
                               plateau (eligible candidates within stab_tol of min)
-    tol            : float    ("wmse") relative WMSE tolerance defining the
-                              WMSE-tolerance set (within (1+tol) of the in-band min)
+    tol            : float    ("wmse") WMSE-spread fraction defining the accept
+                              ceiling = best + tol·(upper − best), where upper is
+                              the Tukey-robust max in-band WMSE
+    wmse_ceiling   : float    ("wmse") the WMSE accept ceiling actually used (NaN
+                              for other methods); in-band candidates at or below
+                              it form the WMSE-tolerance set
     selection_method : str    "wmse" (default) or "stability" — which method ran
     tiebreak       : str      arbiter within the chosen set ("stability" = min
                               dispersion, ties → lowest μ; "lowest_mu" = lowest μ)
@@ -131,6 +135,7 @@ class QDOResult:
     shape_clip_low: float = -0.5
     stab_tol:       float = 0.02
     tol:            float = 0.05
+    wmse_ceiling:   float = float("nan")
     selection_method: str = "wmse"
     tiebreak:       str = "stability"
     selected_set_idx: np.ndarray = field(
@@ -223,18 +228,22 @@ def select_gpd_threshold_qdo(
         eligible candidates within ``stab_tol`` of the minimum robust dispersion.
         ξ is dimensionless, so this is station-agnostic.
     tol : float
-        ("wmse" method) relative WMSE tolerance defining the WMSE-tolerance set:
-        in-band candidates within ``(1 + tol)`` × the minimum in-band WMSE.
+        ("wmse" method) WMSE-spread fraction defining the WMSE-tolerance set:
+        in-band candidates with WMSE <= best + ``tol`` × (upper − best), where best
+        is the minimum in-band WMSE and upper the Tukey-robust max (highest in-band
+        WMSE <= Q3 + 1.5·IQR).
 
     Selection methods
     -----------------
     "wmse"  (DEFAULT) — the WMSE-tolerance set is every in-band candidate with
-        >= ``min_exceedances`` exceedances whose WMSE is within ``tol`` of the
-        in-band minimum WMSE; ``tiebreak`` picks μ within it. Simple and the
-        established behaviour. CAVEAT: the absolute-magnitude WMSE structurally
-        shrinks into the over-fit sparse tail, so on some stations its minimum
-        is a degenerate high-μ fit (ξ pinned at the lower clip). When the pick
-        looks degenerate, ``selection_warning`` flags it and suggests "stability".
+        >= ``min_exceedances`` exceedances whose WMSE is within a fraction
+        ``tol`` of the climb from the best fit (floor) to a robust ceiling (the
+        highest in-band WMSE that is not a Tukey outlier); ``tiebreak`` picks μ
+        within it. The pool is the FULL in-band set, so a genuinely bounded short
+        tail (ξ at the lower clip, e.g. hurricane-dominated) stays in the set.
+        CAVEAT: WMSE can still shrink into an over-thinned sparse tail, so when the
+        pick is ξ-pinned at the clip ``selection_warning`` flags it and suggests
+        "stability".
     "stability"  (opt-in) — STABILITY-PRIMARY, lower-clip-guarded. ELIGIBLE
         candidates are in-band, >= ``min_exceedances``, finite, and NOT pinned at
         ``shape_clip_low``; the STABILITY PLATEAU is those within ``stab_tol`` of
@@ -373,6 +382,7 @@ def select_gpd_threshold_qdo(
     mrl_slope = mrl_intercept = 0.0
     gof_stat = np.full(n, np.nan, dtype=np.float64)
     gof_crit = np.full(n, np.nan, dtype=np.float64)
+    wmse_ceiling = float("nan")   # set by the "wmse" method (plotted accept line)
 
     # Dispatch to the chosen selection method (default "wmse").
     if selection == "gof":
@@ -390,7 +400,7 @@ def select_gpd_threshold_qdo(
             shape_clip_low, stab_tol, tiebreak, band_lo, band_hi)
         best_threshold = float(candidates[best_idx])
     else:  # "wmse" (DEFAULT)
-        best_idx, selected_set, selection_warning = _select_wmse(
+        best_idx, selected_set, wmse_ceiling, selection_warning = _select_wmse(
             wmse, shape, shape_stability, n_exceed, in_band,
             int(min_exceedances), shape_clip_low, tol, tiebreak, band_lo, band_hi)
         best_threshold = float(candidates[best_idx])
@@ -412,6 +422,7 @@ def select_gpd_threshold_qdo(
         shape_clip_low = float(shape_clip_low),
         stab_tol       = float(stab_tol),
         tol            = tol,
+        wmse_ceiling   = float(wmse_ceiling),
         selection_method = selection,
         tiebreak       = tiebreak,
         selected_set_idx = np.asarray(selected_set, dtype=np.int64),
@@ -476,9 +487,20 @@ def _select_wmse(wmse, shape, xi_disp, n_exceed, in_band, min_exceedances,
     """DEFAULT method: WMSE-tolerance set + tie-break.
 
     The set is every in-band candidate above the exceedance floor whose WMSE is
-    within ``(1 + tol)`` × the in-band minimum WMSE; ``tiebreak`` picks within
-    it. Flags ``selection_warning`` when the pick looks degenerate (ξ at the
-    lower clip) or ξ-unstable, suggesting ``selection='stability'``.
+    within a fraction ``tol`` of the climb from the best fit (the floor, the
+    minimum in-band WMSE) up to a robust upper anchor:
+
+        ceiling = best + tol * (upper - best)
+
+    where ``upper`` is the highest in-band WMSE that is NOT a Tukey outlier (i.e.
+    the largest value <= Q3 + 1.5*IQR). Anchoring on this robust maximum makes the
+    span as high as the data honestly allows while a single freak-high fit cannot
+    inflate it, and keeps ``tol`` a single consistent meaning (a fraction of the
+    floor->robust-max WMSE spread). The pool is the FULL in-band set, with NO shape
+    filtering, so a genuinely bounded short tail (ξ at the lower clip, e.g.
+    hurricane-dominated) stays in the set and ``tiebreak`` arbitrates within it.
+    ``selection_warning`` flags a degenerate (ξ at the lower clip) or ξ-unstable
+    pick, suggesting ``selection='stability'``.
     """
     band_mask = in_band & (n_exceed >= min_exceedances)
     wmse_band = np.where(band_mask, wmse, np.nan)
@@ -494,13 +516,30 @@ def _select_wmse(wmse, shape, xi_disp, n_exceed, in_band, min_exceedances,
             f"floor (>= {min_exceedances}) but none yielded a finite WMSE (all "
             "GPD fits failed/degenerate). Check the POT input or widen the band.")
 
-    wmin       = float(np.nanmin(wmse_band))
-    sel_set    = np.where(wmse_band <= wmin * (1.0 + tol))[0]   # NaN cmp → False
-    if sel_set.size == 0:                                       # defensive
+    best       = float(np.nanmin(wmse_band))
+    upper      = _robust_upper_wmse(wmse_band)                 # Tukey-fenced max
+    ceiling    = best + tol * (upper - best)
+    sel_set    = np.where(wmse_band <= ceiling)[0]             # NaN cmp → False
+    if sel_set.size == 0:                                      # defensive
         sel_set = np.array([int(np.nanargmin(wmse_band))], dtype=np.int64)
     best_idx = _pick_within(sel_set, xi_disp, tiebreak)
-    return best_idx, sel_set, _wmse_pick_warning(best_idx, shape, xi_disp,
-                                                 shape_clip_low)
+    return best_idx, sel_set, float(ceiling), _wmse_pick_warning(
+        best_idx, shape, xi_disp, shape_clip_low)
+
+
+def _robust_upper_wmse(wmse_band: np.ndarray) -> float:
+    """Highest in-band WMSE that is not a Tukey outlier (<= Q3 + 1.5*IQR).
+
+    The robust upper anchor for the WMSE accept ceiling: as high as the in-band
+    fits honestly reach, but immune to a single freak-high WMSE candidate (which
+    would otherwise inflate the floor->ceiling span). Falls back to the plain
+    maximum if every finite value sits above the fence (degenerate spread).
+    """
+    finite = wmse_band[np.isfinite(wmse_band)]
+    q1, q3 = np.percentile(finite, [25.0, 75.0])
+    fence  = q3 + 1.5 * (q3 - q1)
+    inlier = finite[finite <= fence]
+    return float(np.max(inlier)) if inlier.size else float(np.max(finite))
 
 
 def _wmse_pick_warning(best_idx, shape, xi_disp, shape_clip_low) -> str:

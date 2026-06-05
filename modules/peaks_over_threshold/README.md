@@ -1,246 +1,150 @@
 # peaks_over_threshold
 
-**Peaks-Over-Threshold (POT) for Sampling of Independent Events from Time Series**
+*Peaks-Over-Threshold (POT) for sampling of independent events from time series.*
 
-PyStorm Module: POT (CyHAN v2.0 §5)
-
----
-
-## Introduction
-
-The **Peaks-Over-Threshold (POT)** method extracts independent extreme events
-from an environmental time series (e.g. water levels, storm surge) by:
-
-1. Selecting a percentile-based magnitude threshold,
-2. Filtering exceedances,
-3. Segmenting them into independent events using one of two
-   inter-event-time rules.
-
-The module ships an **iterative threshold search** that tunes the percentile
-until the segmentation-derived event rate matches a target events/year within
-a tolerance. The inner per-iteration kernel (percentile lookup +
-exceedance scan + event segmentation + rate check) is implemented in C++
-(`backend/engines/cpp/POTThresholdSearch.hpp`) and exposed as `_pot`. A
-pure-numpy fallback activates automatically when the extension is not built.
+PyStorm module
 
 ---
 
-## 1. Module Layout (CyHAN v2.0 §16.1)
+## Overview
 
-```
-peaks_over_threshold/
-├── run_peaks_over_threshold.py                 ← launcher (user-facing, §5.3)
-├── README.md
-├── pyproject.toml
-├── requirements.txt
-├── ENGINE_MANIFEST.toml
-├── backend/
-│   ├── engines/cpp/
-│   │   ├── POTThresholdSearch.hpp              header-only threshold-search kernel
-│   │   ├── pot_bindings.cpp                    pybind11 → _pot
-│   │   ├── CMakeLists.txt
-│   │   ├── build.py
-│   │   └── README.md
-│   └── python/
-│       ├── main_peaks_over_threshold.py        ← orchestrator entry (§5.3)
-│       └── peaks_over_threshold/               ← expanded package (§5.3)
-│           ├── __init__.py
-│           ├── config.py            pydantic POTConfig + PreprocessConfig
-│           ├── orchestrator.py      POTOrchestrator workflow runner
-│           ├── solver.py            thin _pot binding wrapper
-│           ├── sampling/
-│           │   └── threshold_search.py   IterativeThresholdSearch
-│           ├── segmentation/
-│           │   └── events.py            hydrograph + peak-gap segmenters
-│           ├── preprocessing/                upstream NOAA → NTR chain
-│           │   ├── noaa_download.py        download_noaa_wl_data
-│           │   ├── detrend.py              detrend_time_series
-│           │   ├── ntr.py                  estimate_ntr (NTR)
-│           │   └── orchestrator.py         PreprocessOrchestrator (stage runner)
-│           ├── postproc/
-│           │   └── plots.py             NaN-aware TimeSeriesPlotter
-│           └── io/
-│               └── time_series_csv.py   CSV reader + peaks/series writers
-├── tests/
-│   ├── test_smoke.py
-│   └── test_preprocessing.py
-├── data/                                       § 16.7
-│   ├── inputs/
-│   │   ├── raw/<station>/                     raw NOAA pulls (per gauge)
-│   │   └── processed/<station>/               detrended WL + NTR series
-│   └── outputs/<station>/                     POT peaks + plots/
-├── research/
-└── docs/
-```
+POT extracts independent storm peaks from a continuous water-level or non-tidal
+residual (NTR) series: the magnitudes and times that exceed an automatically
+chosen threshold, declustered into one value per storm event and trimmed to a
+fixed average rate. These peaks are the input to the PST module.
 
-The two mandatory entry artifacts per CyHAN v2.0 §5.3:
+The inner threshold search (percentile lookup, exceedance scan, event
+segmentation, rate check) runs in C++
+(`backend/engines/cpp/POTThresholdSearch.hpp`, exposed as `_pot`). A pure-numpy
+fallback runs automatically when the kernel is not built. The launcher builds the
+kernel on first run.
 
-| Artifact     | Location                                       | Role               |
-|--------------|------------------------------------------------|--------------------|
-| Launcher     | `run_peaks_over_threshold.py`                  | user-facing entry  |
-| Orchestrator | `backend/python/main_peaks_over_threshold.py`  | non-user-facing    |
+## Stages
 
----
+`STAGES` in the launcher selects which steps run, in canonical order. The primary
+use is `["pot"]` (POT only, on a user CSV). The upstream stages are optional and
+build the POT input from NOAA data.
 
-## 1a. Stages (CyHAN v2.0 §5.3)
+| Stage | Produces |
+|-------|----------|
+| `download` | `data/inputs/raw/<station>/water_level_*.csv`, `tide_prediction_*.csv` (hourly NOAA pulls) |
+| `detrend` | `data/inputs/processed/<station>/dwl_<station>.csv` (detrended water level) and `trend_<station>.csv` |
+| `ntr` | `data/inputs/processed/<station>/ntr_<station>.csv` (non-tidal residual) |
+| `pot` | `data/outputs/<station>/{dwl,ntr}_<station>_pot.csv` (declustered peaks) and plots |
 
-The launcher's `STAGES` list selects which steps run, in canonical order:
+With `pot` in a chain, peaks are extracted from both processed series (`dwl` and
+`ntr`). All output and plot filenames are lower case.
 
-| Stage      | Engine                                   | Produces                                   |
-|------------|------------------------------------------|--------------------------------------------|
-| `download` | `preprocessing.download_noaa_wl_data`    | `raw/<station>/water_level_*.csv`, `tide_prediction_*.csv` |
-| `detrend`  | `preprocessing.detrend_time_series`      | `processed/<station>/dwl_<station>.csv` (+ `trend_<station>.csv`) |
-| `ntr`      | `preprocessing.estimate_ntr`             | `processed/<station>/ntr_<station>.csv`    |
-| `pot`      | `orchestrator.POTOrchestrator`           | `outputs/<station>/dwl_<station>_pot.csv` **and** `ntr_<station>_pot.csv` (+ plots) |
+**NTR** (non-tidal residual) is the detrended water level minus the hourly
+astronomical tide on the same grid (tide is downloaded with `interval=h`). The
+tide aligns exactly on matched hours and interpolates only to fill a missing
+tide hour.
 
-In a chain, the `pot` stage extracts peaks from **both** processed series it
-finds — the detrended water level (`dwl_*`) and the non-tidal residual
-(`ntr_*`). All output and plot filenames are lower case.
+**Detrending** removes a linear sea-level trend by least squares. `midpoint`
+centers time on the National Tidal Datum Epoch (NTDE) midpoint, matching NOAA
+datum convention; `ordinary` centers on the record mean. The slope is fitted
+from the record or imposed with `DETREND_SLOPE`. NTDE and slope can be set per
+station: a single value applies to every station, or a list parallel to
+`STATION_IDS` gives one value each. NTDE years may be fractional (for example,
+2012.42).
 
-* **Primary use — POT only.** Default `STAGES = ["pot"]`: POT runs on the
-  user-provided `INPUT_CSV`. (A bare `POTConfig` or a dict without `stages`
-  behaves identically, preserving the original single-purpose entry.)
-* **Secondary use — NOAA → NTR pipeline.** Add any of `download`, `detrend`,
-  `ntr` to build the POT input from raw gauge data. When `pot` is also present
-  the chain feeds straight into extraction (`download → detrend → ntr → pot`).
+## Method
 
-`NTR` (non-tidal residual) = detrended water level − astronomical tide, both on
-the same hourly grid (tide is downloaded with `interval=h`); it replaces the v1
-"storm surge" naming throughout outputs and labels. Tide alignment to the WL
-timestamps is exact on matched hours and only interpolates as a fallback for a
-missing tide hour.
+**1. Effective duration.** The record length used for all rates is the effective
+duration: (number of non-NaN hourly steps) / (365.25 × 24) years. Gaps and
+missing data do not count, so a 100-year span that is 50 percent complete counts
+as about 50 years.
 
-Detrending uses a resolution-independent epoch-seconds cast, so it is correct
-under both nanosecond and microsecond pandas datetime resolutions.
+**2. Iterative threshold search.** The threshold is raised from `START_PERCENTILE`
+upward in `STEP_SIZE` increments (percentiles of the series). At each level the
+exceedances are declustered into independent events by `METHOD`:
 
----
+- `hydrograph`: consecutive exceedances within `INTEREVENT_HOURS` of one another
+  form a single event whose peak is the event maximum.
+- `peak_gap`: a sample is dropped if it lies within `INTEREVENT_HOURS` of, and is
+  no larger than, the previous retained peak.
 
-## 2. Methods
+The event rate is (number of events) / effective_duration. The search is
+one-sided: it keeps the highest threshold whose rate is still at least
+`TARGET_EVENTS_PER_YEAR`, and flags convergence when that rate lands in
+`[target, target + TOLERANCE]`.
 
-### 2.1 Iterative Threshold Search
-
-Let `values[0..n-1]` and `times_sec[0..n-1]` be the time series (values
-aligned with ascending Unix epoch seconds), `λ_target` the target events per
-year, `τ` the tolerance, `p₀` the starting percentile, `Δp` the percentile
-step, and `T = (times[-1] − times[0]) / (365.25 · 86400)` the record length
-in years. Pre-sort `values` descending so percentile lookup is `O(1)`.
-
-For iteration `i = 0, 1, …`:
-
-1. `p = p₀ + i · Δp`. Stop if `p ≥ 100`.
-2. `threshold = sorted_desc[k]` where `k = ⌊(1 − p/100) · (n − 1)⌋`.
-3. Compute exceedance indices `E = { j : values[j] > threshold }` in time
-   order.
-4. Segment `E` into independent peaks `P` via the chosen method (§2.2).
-5. `λ = |P| / T`. If `|λ − λ_target| < τ`, return `(threshold, P)`.
-
-Implementation: `sampling/threshold_search.py` (Python dispatcher) →
-`_pot.find_threshold_for_target` (C++) or a pure-numpy fallback.
-
-### 2.2 Event Segmentation
-
-Two segmentation rules are provided, both operating on the time-ordered
-exceedance index list `E`:
-
-**Hydrograph** (`method = "hydrograph"`): scan `E`; start a new group when
-the time gap to the previous exceedance exceeds `interevent_sec`. The selected
-peak per group is `argmax(values)`.
-
-**Peak-Gap** (`method = "peak_gap"`): sequential filter — drop a sample whose
-preceding (chronological) exceedance is within `interevent_sec` AND has
-value ≥ the current one. The legacy alias `"peaks"` is normalized to
-`"peak_gap"`.
+**3. Rank-trim to an exact count.** The retained peaks are rank-ordered and
+trimmed to exactly `round(TARGET_EVENTS_PER_YEAR × effective_duration)` of the
+largest, so the written sample has an effective rate of exactly the target. This
+is also what lets PST recover the record length from the peak count, so keep
+PST's `EVENTS_PER_YEAR` equal to `TARGET_EVENTS_PER_YEAR`.
 
 The C++ and Python implementations are algorithmically identical.
 
----
+## Outputs
 
-## 3. Workflow
+| File | Contents |
+|------|----------|
+| `<series>_<station>_pot.csv` | columns `datetime`, `value` (one declustered peak per row) |
+| `<series>_<station>_pot.png` | time series, peaks, and threshold |
 
-```
-┌──────────────────────────────────────────────────────────────────────┐
-│  data/inputs/processed/<base>.csv      (DATETIME_COL, VALUE_COL)     │
-└──────────────────────────────────────────────────────────────────────┘
-                                  │
-                                  ▼
-┌──────────────────────────────────────────────────────────────────────┐
-│  [1]  read_time_series_csv  →  (datetime, value)                     │
-├──────────────────────────────────────────────────────────────────────┤
-│  [2]  Convert to (values, times_sec) numpy arrays                    │
-├──────────────────────────────────────────────────────────────────────┤
-│  [3]  IterativeThresholdSearch (_pot or numpy fallback)              │
-│       → ThresholdSearchResult (threshold, peak_indices, ...)         │
-├──────────────────────────────────────────────────────────────────────┤
-│  [4]  Materialize peaks DataFrame from indices                       │
-├──────────────────────────────────────────────────────────────────────┤
-│  [5]  write_pot_peaks  +  TimeSeriesPlotter                          │
-│       → data/outputs/<base>_POT.csv                                  │
-│       → data/outputs/plots/<base>_POT.png                            │
-└──────────────────────────────────────────────────────────────────────┘
-```
+Data files go to `data/outputs/<station>/`; all plots go to the shared
+`data/outputs/plots/`.
 
----
-
-## 4. Outputs
-
-| File                | Contents                                                   |
-|---------------------|------------------------------------------------------------|
-| `<base>_POT.csv`    | Two columns: `datetime`, `value` for each selected peak    |
-| `<base>_POT.png`    | Time series + peaks + threshold line                       |
-
----
-
-## 5. Quickstart
+## Quickstart
 
 ```bash
 cd modules/peaks_over_threshold
 
-# (Optional) Build the C++ kernel. Pure-Python fallback works without this.
-python backend/engines/cpp/build.py
-
-# Make the package importable
-pip install -e .
-
-# Edit USER OPTIONS in run_peaks_over_threshold.py, then run:
+# Edit the USER OPTIONS block, then run (the C++ kernel builds on first run):
 python run_peaks_over_threshold.py
 
-# Or override on the CLI for ad-hoc runs:
-python run_peaks_over_threshold.py \
-    --input data/inputs/processed/storm_surge_8518750_1920_2025.csv \
-    --method hydrograph \
-    --target-events 10 \
-    --start-percentile 75
-```
+# CLI batch over explicit input CSVs (POT-only on each):
+python run_peaks_over_threshold.py path/to/ntr_8518750.csv another.csv
 
-Smoke tests:
-
-```bash
+# Tests:
 pytest tests/
 ```
 
----
+The USER OPTIONS block covers the stages, station list, POT parameters
+(interevent hours, method, target events per year, tolerance, start percentile,
+step size), and the NOAA-to-NTR pipeline settings (years, datum, NTDE, slope).
+Positional CLI paths force POT-only on each file; `--help` lists options.
 
-## 6. CyHAN v2.0 Compliance
+## Layout
 
-| Requirement                                                       | Status                                                         |
-|-------------------------------------------------------------------|----------------------------------------------------------------|
-| §1   API → Orchestrator → Engine; one-way dependency              | ✓ engine is header-only; orchestrator owns side effects        |
-| §4.1 Binding is a conduit, not authority                          | ✓ `_pot` exposes one function; orchestration lives in Python   |
-| §4.2 Orchestration in Python, non-user-facing                     | ✓ `main_<name>.py` + expanded package                          |
-| §5.1 Module ships engine + orchestrator + launcher                | ✓                                                              |
-| §5.2 Self-contained; no sibling-module imports                    | ✓                                                              |
-| §5.3 Launcher `run_<name>.py` at module root, user-facing         | ✓                                                              |
-| §5.3 Orchestrator `main_<name>.py` at `backend/python/`           | ✓                                                              |
-| §5.3 Launcher contains no orchestration logic                     | ✓ delegates to `main_<name>.run`                               |
-| §16.1 / §16.2 Recommended folder layout + layer mapping           | ✓                                                              |
-| §16.4 Engine isolated under `backend/engines/cpp/`                | ✓                                                              |
-| §16.7 Data convention                                             | ✓                                                              |
+```
+peaks_over_threshold/
+├── run_peaks_over_threshold.py             Launcher (user options only)
+├── pyproject.toml                          Installable orchestrator package
+├── ENGINE_MANIFEST.toml                    Structured module manifest
+├── backend/
+│   ├── engines/cpp/                        C++ threshold-search kernel (_pot)
+│   │   ├── POTThresholdSearch.hpp          Header-only kernel
+│   │   ├── pot_bindings.cpp                pybind11 → _pot
+│   │   ├── CMakeLists.txt
+│   │   └── build.py
+│   └── python/
+│       ├── main_peaks_over_threshold.py    Orchestrator entry (stage dispatch)
+│       └── peaks_over_threshold/           Orchestration package
+│           ├── config.py                   POTConfig + PreprocessConfig (pydantic)
+│           ├── orchestrator.py             POTOrchestrator
+│           ├── solver.py                   Thin _pot binding wrapper
+│           ├── sampling/                   IterativeThresholdSearch
+│           ├── segmentation/               hydrograph + peak_gap segmenters
+│           ├── preprocessing/              download / detrend / ntr chain
+│           ├── postproc/                   NaN-aware time-series plot
+│           └── io/                         CSV reader and writers
+├── tests/                                  Smoke + preprocessing tests
+└── data/                                   inputs/{raw,processed}/ & outputs/ (gitignored)
+```
 
----
+Per CyHAN v2.0, the launcher (`run_peaks_over_threshold.py`) holds user options
+only and calls the orchestrator (`backend/python/main_peaks_over_threshold.py`),
+which dispatches the stages. The module is self-contained.
 
-## 7. Acronyms
+## Acronyms
 
-| Acronym | Expansion                                              |
-|---------|--------------------------------------------------------|
-| CyHAN   | C++/Python Hybrid Architecture Network                 |
-| POT     | Peaks Over Threshold                                   |
+| Acronym | Expansion |
+|---------|-----------|
+| NTDE | National Tidal Datum Epoch |
+| NTR | Non-Tidal Residual |
+| POT | Peaks Over Threshold |
+| PST | Probabilistic Simulation Technique |
+| WL | Water Level |

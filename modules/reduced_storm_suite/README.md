@@ -1,8 +1,8 @@
 # reduced_storm_suite
 
-**Reduced Tropical Cyclone Suite (RTCS) Selection for Probabilistic Coastal Hazard Analysis**
+*Reduced Tropical Cyclone Suite (RTCS) selection for probabilistic coastal hazard analysis.*
 
-PyStorm, Module 1: Storm Selection
+PyStorm module
 
 ---
 
@@ -93,7 +93,7 @@ selection toward parameter coverage; alternative working points
 
 Implementation: `sampling/joint_matrix.py`.
 
-### 2.3 Subset Selection: k-medoids (PAM — Partitioning Around Medoids)
+### 2.3 Subset Selection: k-medoids (PAM - Partitioning Around Medoids)
 
 Given the joint matrix `Z`, we seek a subset `S` of size `k` that minimises
 the total within-cluster dissimilarity:
@@ -190,7 +190,7 @@ can be compared cell-by-cell with the benchmark.
 **Residual metrics**: nodal bias, uncertainty (std), and Root-Mean-Square
 Error (RMSE); the mean across nodes is reported as `mean_bias`,
 `mean_uncertainty`, `mean_rmse`.
-Per-AER-level biases (`bias_aer10`, `bias_aer100`, `bias_aer1000` — the AER
+Per-AER-level biases (`bias_aer10`, `bias_aer100`, `bias_aer1000` - the AER
 hazard levels at MRI = 10, 100, 1000 yr, i.e. AER = 1/N) are also reported to
 highlight tail performance.
 
@@ -246,16 +246,16 @@ re-added so they remain available downstream. Implementation:
 ## 3. Workflow
 
 The module exposes a single canonical launcher
-(`scripts/run_reduced_storm_suite.py`, CyHAN §5.3). It dispatches to one of
-two workflows based on `--mode`:
+(`run_reduced_storm_suite.py` at the module root, CyHAN §5.3). It dispatches
+to one of two workflows based on `--mode`:
 
 ```
   --mode fixed    →  workflows/rtcs_selection.run_rtcs_selection      (§3.2)
   --mode optimal  →  workflows/growth_evaluation.run_growth_evaluation (§3.3)
 ```
 
-The two workflows share the upstream data-prep stages — bounding-box
-filter, data load, PCA, joint-matrix build — and the downstream HC
+The two workflows share the upstream data-prep stages - bounding-box
+filter, data load, PCA, joint-matrix build - and the downstream HC
 verification and QBM post-correction. They diverge at the **selection
 phase** and at the outputs that selection produces. Diagrams for each
 mode are given below; step numbers are aligned across modes where the
@@ -291,7 +291,7 @@ The paths diverge at step [3]:
 - **Optimal-k** has no α/β sweep and goes straight to step [4] with
   `alpha_default`, `beta_default`.
 
-The `build_joint_matrix` call itself is the same in both modes — the only
+The `build_joint_matrix` call itself is the same in both modes - the only
 difference is the α, β values it receives.
 
 ### 3.2 Fixed-k workflow
@@ -316,10 +316,10 @@ is absent.
 │  [4]  Build joint matrix Z = [α·z(X) | β·z(Y_r)]   (sampling/joint) │
 │       └─ uses optimized α, β from [3] (or defaults if [3] skipped)  │
 ├─────────────────────────────────────────────────────────────────────┤
-│  [5]  Select k medoids via PAM — single call    (sampling/kmedoids) │
+│  [5]  Select k medoids via PAM - single call    (sampling/kmedoids) │
 │       └─ k = |forced| + k_additional  • honours forced indices      │
 ├─────────────────────────────────────────────────────────────────────┤
-│  [6]  Space-filling metrics      (sampling/metrics — one row)       │
+│  [6]  Space-filling metrics      (sampling/metrics - one row)       │
 │       └─ coverage • discrepancy • maximin                           │
 ├─────────────────────────────────────────────────────────────────────┤
 │  [7]  Save  selected_storms.csv  +  selection_metrics.csv           │
@@ -358,15 +358,15 @@ evaluating PAM + DSW + HC + RMSE at every `k`, then picks the smallest
 ┌─────────────────────────────────────────────────────────────────────┐
 │  [4]  Build joint matrix Z = [α·z(X) | β·z(Y_r)]   (sampling/joint) │
 │       └─ uses alpha_default, beta_default  (no α/β sweep in this    │
-│          mode — step [3] is skipped)                                │
+│          mode - step [3] is skipped)                                │
 ├─────────────────────────────────────────────────────────────────────┤
-│  [5]  Growth sweep — for k in [k_min, k_max] step k_step:           │
+│  [5]  Growth sweep - for k in [k_min, k_max] step k_step:           │
 │           PAM(Z, k, forced)              (sampling/kmedoids, C++)   │
 │           SF metrics  (coverage, discrepancy, maximin)              │
 │           DSW back-compute               (weights/dsw)              │
 │           HC reconstruction via JPM      (weights/dsw)              │
 │           record (k, coverage, discrepancy, RMSE, bias, bias_aerN)  │
-│       └─ runs to completion — no early stopping                     │
+│       └─ runs to completion - no early stopping                     │
 ├─────────────────────────────────────────────────────────────────────┤
 │  [6]  Pick k_selected:                                              │
 │           smallest k with global RMSE ≤ rmse_threshold              │
@@ -383,7 +383,7 @@ evaluating PAM + DSW + HC + RMSE at every `k`, then picks the smallest
 │ [10]  Diagnostic plots at k_selected     (postproc/plots)           │
 │       └─ Y-space PCA scatter • X-parameter SPLOM   (single set)     │
 ├─────────────────────────────────────────────────────────────────────┤
-│ [11]  HC verification at k_selected     (weights/dsw — REQUIRED)    │
+│ [11]  HC verification at k_selected     (weights/dsw - REQUIRED)    │
 │       └─ overlay reconstructed vs benchmark HC at 9 sample nodes    │
 ├─────────────────────────────────────────────────────────────────────┤
 │ [12]  QBM post-correction               (weights/qbm)               │
@@ -434,7 +434,7 @@ Key properties:
 | Selection (step [5])           | Single `PAM(Z, k)` call     | Sweep over `k` of `PAM + SF + DSW + HC + RMSE` |
 | SF metrics                     | One row                     | One row per `k` → `growth_history.csv`       |
 | Sub-RTCS                       | Available                   | Not invoked                                  |
-| Extra outputs vs the other mode| —                           | `growth_history.csv`, `node_rmse.csv`, `rmse_vs_k.png` |
+| Extra outputs vs the other mode| -                           | `growth_history.csv`, `node_rmse.csv`, `rmse_vs_k.png` |
 | Diagnostic plots               | Initial + final (PCA, SPLOM)| At `k_selected` only                         |
 | HC verification (step [10]/[11])| Conditional on `HC_bench`  | Required (`HC_bench` mandatory)              |
 | QBM post-correction            | Conditional on `HC_bench`   | Required                                     |
@@ -443,8 +443,8 @@ Key properties:
 
 ## 4. Outputs
 
-Outputs are written to `data/outputs/<mode>/` so that the two
-modes never overwrite each other.
+Outputs are written to `data/outputs/<dataset>/<scope>/<mode>/`, keyed by
+dataset, scope, and mode so that runs never overwrite each other.
 
 | File                       | Mode  | Contents                                                          |
 |----------------------------|-------|-------------------------------------------------------------------|
@@ -526,25 +526,19 @@ All other operations are deterministic.
 ```bash
 cd modules/reduced_storm_suite
 
-# 1. (Optional) Build the C++ k-medoids kernel. Pure-Python fallback otherwise.
-python backend/engines/cpp/build.py
-
-# 2. Make the package importable
-pip install -e .
-
-# 3. Ingest raw inputs → tc_data.h5
-python scripts/preprocess.py
-
-# 4. Select the RTCS — edit USER OPTIONS in run_reduced_storm_suite.py, then:
-python run_reduced_storm_suite.py                # uses MODE constant
+# Edit USER OPTIONS in run_reduced_storm_suite.py, then run. The C++ k-medoids
+# kernel builds on first run (pure-Python fallback otherwise), and tc_data.h5
+# is built from the raw inputs automatically if it is missing.
+python run_reduced_storm_suite.py                # uses the MODE constant
 python run_reduced_storm_suite.py --mode fixed
 python run_reduced_storm_suite.py --mode optimal
 
-# 5. (Optional) Post-selection DSW + HC reconstruction
-python scripts/dsw.py
+# Optional ancillary tools:
+python scripts/preprocess.py     # rebuild tc_data.h5 from raw inputs
+python scripts/dsw.py            # standalone post-selection DSW + HC reconstruction
 ```
 
-Outputs land in `data/outputs/fixed/` or `data/outputs/optimal/`.
+Outputs land under `data/outputs/<dataset>/<scope>/<mode>/`.
 
 ---
 
@@ -552,20 +546,18 @@ Outputs land in `data/outputs/fixed/` or `data/outputs/optimal/`.
 
 ```
 reduced_storm_suite/
-├── run_reduced_storm_suite.py            ← launcher (user-facing, §5.3)
-├── README.md                             (this file)
-├── pyproject.toml
-├── requirements.txt
-├── ENGINE_MANIFEST.toml
+├── run_reduced_storm_suite.py            Launcher (user options only)
+├── pyproject.toml                        Installable orchestrator package
+├── ENGINE_MANIFEST.toml                  Structured module manifest
 ├── backend/
-│   ├── engines/cpp/                      C++ k-medoids kernel (§16.4)
+│   ├── engines/cpp/                      C++ k-medoids kernel (_rss)
 │   │   ├── kmedoids_core.hpp             Header-only PAM with FastPAM1 refinement
 │   │   ├── bindings.cpp                  pybind11 → _rss
 │   │   ├── CMakeLists.txt
 │   │   └── build.py
 │   └── python/
-│       ├── main_reduced_storm_suite.py   ← orchestrator entry (§5.3)
-│       └── reduced_storm_suite/          ← expanded package (§5.3)
+│       ├── main_reduced_storm_suite.py   Orchestrator entry (input + path wiring)
+│       └── reduced_storm_suite/          Orchestration package
 │           ├── config/                   defaults, YAML loader, templates
 │           ├── io/                       HDF5 store, multi-format readers
 │           ├── geo/                      bbox filter, basemap rendering
@@ -573,16 +565,11 @@ reduced_storm_suite/
 │           ├── weights/                  DSW back-comp, QBM bias correction
 │           ├── postproc/                 diagnostic plots
 │           └── workflows/                ingest, rtcs_selection, growth_evaluation
-├── scripts/                              ancillary tools (§16.10)
-│   ├── preprocess.py                     data ingestion
-│   └── dsw.py                            standalone DSW reconstruction
-├── tests/
-├── data/                                 § 16.7
-│   ├── inputs/
-│   │   ├── raw/                          vendor .mat / .trop sources (immutable)
-│   │   └── processed/                    canonical tc_data.h5 store (schema-defined)
-│   └── outputs/                          workflow results: fixed/, optimal/
-└── docs/
+├── scripts/                              Ancillary tools
+│   ├── preprocess.py                     Raw inputs → tc_data.h5
+│   └── dsw.py                            Post-selection DSW + HC reconstruction
+├── tests/                               Smoke + round-trip tests
+└── data/                                inputs/{raw,processed}/ & outputs/<dataset>/<scope>/<mode>/ (gitignored)
 ```
 
 The two mandatory entry artifacts per CyHAN v2.0 §5.3:
@@ -594,27 +581,7 @@ The two mandatory entry artifacts per CyHAN v2.0 §5.3:
 
 ---
 
-## 9. CyHAN v2.0 Compliance
-
-| Requirement                                                       | Status                                                                |
-|-------------------------------------------------------------------|-----------------------------------------------------------------------|
-| §1   API → Orchestrator → Engine; one-way dependency              | ✓ engine isolated; orchestrator owns workflow + I/O                   |
-| §4.1 Binding is a conduit, not authority                          | ✓ `_rss` exposes `kmedoids_pam` only                                   |
-| §4.2 Orchestration in Python, non-user-facing                     | ✓ `main_<name>.py` + expanded package                                 |
-| §5.1 Module ships engine + orchestrator + launcher                | ✓                                                                     |
-| §5.2 Self-contained; no sibling-module imports                    | ✓                                                                     |
-| §5.3 Launcher `run_<name>.py` at module root, user-facing         | ✓                                                                     |
-| §5.3 Orchestrator `main_<name>.py` at `backend/python/`           | ✓                                                                     |
-| §5.3 Launcher contains no orchestration logic                     | ✓ bbox + mode dispatch live in `main_<name>.run`                      |
-| §5.4 `snake_case` module identifier end-to-end                    | ✓ `reduced_storm_suite`                                               |
-| §16.1 / §16.2 Recommended folder layout + layer mapping           | ✓                                                                     |
-| §16.4 Engine isolated under `backend/engines/cpp/`                | ✓                                                                     |
-| §16.7 Data convention                                             | ✓                                                                     |
-| §16.10 `scripts/` for ancillary tools only                        | ✓ `preprocess.py`, `dsw.py` are non-canonical helpers                 |
-
----
-
-## 10. References
+## 9. References
 
 ### Joint Probability Method and Coastal Hazards System (Nadal-Caraballo et al.)
 
@@ -660,7 +627,7 @@ The two mandatory entry artifacts per CyHAN v2.0 §5.3:
 
 ---
 
-## 11. Acronyms
+## 10. Acronyms
 
 | Acronym  | Expansion                                                               |
 |----------|-------------------------------------------------------------------------|
@@ -668,7 +635,7 @@ The two mandatory entry artifacts per CyHAN v2.0 §5.3:
 | AER      | Annual Exceedance Rate                                                  |
 | BE       | Best-Estimate (hazard curve)                                            |
 | CHS      | Coastal Hazards System                                                  |
-| CHS-LA   | Coastal Hazards System — Louisiana study                                |
+| CHS-LA   | Coastal Hazards System - Louisiana study                                |
 | CLI      | Command-Line Interface                                                  |
 | CyHAN    | C++/Python Hybrid Architecture Network                                  |
 | DSW      | Discrete Storm Weight                                                   |

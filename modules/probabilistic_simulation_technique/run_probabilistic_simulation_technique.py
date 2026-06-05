@@ -57,18 +57,26 @@ extraction threshold u — produced by the peaks_over_threshold module.
     μ is then chosen by GPD_SELECTION:
       "wmse" (DEFAULT) — the WMSE-TOLERANCE SET is every in-band candidate with
         ≥ MIN_EXCEEDANCES exceedances whose WMSE is within WMSE_TOLERANCE of the
-        in-band minimum; GPD_TIEBREAK picks μ within it. The established method.
-        CAVEAT: with absolute magnitudes WMSE can keep shrinking into the
-        over-fit sparse tail, so on some stations its minimum is a degenerate
-        high-μ fit (ξ at the lower clip); the run then prints a WARNING pointing
-        to "stability". Always check the QDO diagnostics plot.
+        climb from the best fit (floor) up to a robust ceiling: the highest in-band
+        WMSE that is not a Tukey outlier (≤ Q3 + 1.5·IQR). So
+        ceiling = best + WMSE_TOLERANCE·(robust_max − best). The pool is the full
+        in-band set, so a genuinely bounded short tail (ξ at the clip, e.g.
+        hurricane-dominated) stays in the set; GPD_TIEBREAK picks μ within it.
+        CAVEAT: WMSE can still shrink into an over-thinned sparse tail, so when the
+        pick is ξ-pinned at the clip the run prints a WARNING pointing to
+        "stability". Always check the QDO diagnostics plot.
       "stability" (opt-in) — ξ should PLATEAU above the true threshold (GPD
         threshold-stability). ELIGIBLE candidates are in-band, ≥ MIN_EXCEEDANCES,
         and have ξ NOT pinned at the lower clip (the sparse-tail over-fit
         signature). The STABILITY PLATEAU = eligible candidates within
-        STABILITY_TOL of the minimum ROBUST ξ-dispersion (scaled MAD over
-        ±STABILITY_WINDOW); GPD_TIEBREAK picks μ within it. Avoids the sparse-
-        tail trap with no per-station tuning.
+        STABILITY_TOL of the minimum ROBUST ξ-dispersion. That dispersion is
+        the SCALED MAD of ξ over the ±STABILITY_WINDOW neighbouring candidates:
+        MAD is the median absolute deviation, median(|ξ - median(ξ)|), and
+        "scaled" multiplies it by 1.4826 so it reads on the same scale as a
+        standard deviation for normal data while a single anomalous fit cannot
+        inflate it (as it would the std). Near-zero marks the flat-ξ shelf;
+        GPD_TIEBREAK picks μ within it. Avoids the sparse-tail trap with no
+        per-station tuning.
 
 (4) Tail / bulk split at μ.
     Peaks above μ feed the GPD tail; peaks at or below μ are kept as empirical
@@ -201,17 +209,21 @@ RECORD_LENGTH_YEARS = None
 # the POT values (data quantiles, robust to outliers). The count floor
 # (MIN_EXCEEDANCES) is the real upper cap and for typical n_pot binds before the
 # ceiling, which acts as an interpretable guardrail.
-BAND_FLOOR_PCT   = 50.0       # do not place μ below this data percentile
-BAND_CEILING_PCT = 95.0       # nor above this one (guardrail; floor usually binds)
+BAND_FLOOR_PCT   = 75.0       # do not place μ below this data percentile
+BAND_CEILING_PCT = 99.0       # nor above this one (guardrail; floor usually binds)
 
 # A candidate μ must keep at least this many exceedances to be selectable —
 # prevents the QDO search from over-fitting the sparse tail.
 MIN_EXCEEDANCES = 20
 
-# Accept set = candidates whose WMSE is within this RELATIVE tolerance of the
-# in-band minimum WMSE (0.05 = 5%). The tie-break chooses among them; widen it
-# to let stability arbitrate over more near-optimal fits.
-WMSE_TOLERANCE = 0.05
+# Accept set = in-band candidates whose WMSE is within this fraction of the climb
+# from the best fit (the floor, min WMSE) up to a robust ceiling: the highest
+# in-band WMSE that is not a Tukey outlier (<= Q3 + 1.5*IQR).
+#   ceiling = best + WMSE_TOLERANCE * (robust_max - best)
+# So the tolerance is a fraction of the WMSE SPREAD, with the upper anchor as high
+# as the data honestly allows but immune to a single freak-high fit. The tie-break
+# chooses among the set; widen this to let stability arbitrate over more fits.
+WMSE_TOLERANCE = 0.10
 
 # GPD-location selection method (see step 3 of the method header):
 #   "wmse"      (DEFAULT) — choose μ from the WMSE-tolerance set: in-band
@@ -253,8 +265,12 @@ GOF_SIGNIFICANCE = 0.05
 GPD_TIEBREAK     = "stability"
 # ξ-dispersion knobs (used by the "stability" method, and by the "stability"
 # tie-break under either method):
-#   STABILITY_WINDOW — ± candidates over which the ROBUST ξ-dispersion (scaled
-#                      MAD) is measured (the smoothing scale).
+#   STABILITY_WINDOW — ± candidates over which the ROBUST ξ-dispersion is
+#                      measured (the smoothing scale). That dispersion is the
+#                      SCALED MAD of ξ: the median absolute deviation
+#                      median(|ξ - median(ξ)|) times 1.4826, which puts it on
+#                      the same scale as a standard deviation for normal data
+#                      but keeps it immune to a single outlier fit.
 #   STABILITY_TOL    — ξ-dispersion tolerance defining the plateau (ξ is
 #                      dimensionless, so this is the same for all stations).
 STABILITY_WINDOW = 3

@@ -373,11 +373,13 @@ def plot_qdo_diagnostics(qdo, output_path: Path, ylabel: str = "Response") -> No
     a0.plot([], [], **sel_kw,
             label=f"selected μ = {qdo.best_threshold:.2f}  (λμ = {lam_sel:.2f}/yr)")
     if not is_stab and sset.size:
-        # Accept tolerance line: in-set candidates have WMSE ≤ wmin·(1+tol).
-        wmin = float(np.nanmin(qdo.wmse[sset]))
-        tol  = float(getattr(qdo, "tol", 0.05))
-        a0.axhline(wmin * (1.0 + tol), color=_C["above"], linestyle="--",
-                   linewidth=1.3, zorder=3, label=f"accept tol (+{tol:.0%} of min)")
+        # Accept ceiling: WMSE ≤ best + tol·(upper − best), upper = Tukey-robust
+        # max in-band WMSE. The selector computes it; draw the value it used.
+        ceiling = float(getattr(qdo, "wmse_ceiling", np.nan))
+        tol     = float(getattr(qdo, "tol", 0.05))
+        if np.isfinite(ceiling):
+            a0.axhline(ceiling, color=_C["above"], linestyle="--", linewidth=1.3,
+                       zorder=3, label=f"accept ceiling ({tol:.0%} of floor→robust-max)")
     a0.set_ylabel("WMSE")
     a0.set_title("PyStorm — QDO GPD-location (μ) selection diagnostics  "
                  f"[{method}]", fontsize=12, fontweight="bold")
