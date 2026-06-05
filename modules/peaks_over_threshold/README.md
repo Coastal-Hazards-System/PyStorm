@@ -1,6 +1,6 @@
 # peaks_over_threshold
 
-**Peaks-Over-Threshold (POT) Event Extraction for Environmental Time Series**
+**Peaks-Over-Threshold (POT) for Sampling of Independent Events from Time Series**
 
 PyStorm Module: POT (CyHAN v2.0 §5)
 
