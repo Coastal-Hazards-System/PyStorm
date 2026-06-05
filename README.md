@@ -6,15 +6,14 @@
 
 ## Overview
 
-PyStorm supports coastal hazard quantification, stochastic storm simulation, and
+The PyStorm framework supports coastal hazards quantification, probabilistic modeling, stochastic storm simulation, and
 extreme-value analysis. Python handles orchestration, configuration, I/O, and
 plotting; C++ engines handle the inner numerical kernels that dominate runtime.
 Workflows stay script-driven and reproducible while the compiled kernels carry
 the heavy compute.
 
-Every compiled engine has a pure-Python fallback, so each workflow runs whether
-or not the extension is built. When a kernel is built it loads transparently,
-with no change at the Python call site.
+Every compiled engine will have a pure-Python fallback, so each workflow runs whether
+or not the extension is built.
 
 ## Modules
 
