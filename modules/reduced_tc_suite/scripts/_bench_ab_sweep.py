@@ -18,22 +18,22 @@ sys.path.insert(0, str(_MODULE_ROOT))
 
 # Mirror the launcher's config so we exercise the real path.
 # noinspection PyUnresolvedReferences
-from run_reduced_storm_suite import CONFIG, SCOPE, _build_bbox_config  # noqa: E402
+from run_reduced_tc_suite import CONFIG, SCOPE, _build_bbox_config  # noqa: E402
 
 import numpy as np  # noqa: E402
 
 # noinspection PyUnresolvedReferences
-from reduced_storm_suite.geo.bbox_filter import apply_bbox_filter  # noqa: E402
+from reduced_tc_suite.geo.bbox_filter import apply_bbox_filter  # noqa: E402
 # noinspection PyUnresolvedReferences
-from reduced_storm_suite.workflows.rtcs_selection import (  # noqa: E402
+from reduced_tc_suite.workflows.rtcs_selection import (  # noqa: E402
     _load_pipeline_data, _load_forced_indices, _remap_forced_indices,
 )
 # noinspection PyUnresolvedReferences
-from reduced_storm_suite.sampling.pca import reduce_output  # noqa: E402
+from reduced_tc_suite.sampling.pca import reduce_output  # noqa: E402
 # noinspection PyUnresolvedReferences
-from reduced_storm_suite.workflows._ab_sweep import run_ab_sweep  # noqa: E402
+from reduced_tc_suite.workflows._ab_sweep import run_ab_sweep  # noqa: E402
 # noinspection PyUnresolvedReferences
-from reduced_storm_suite.config.defaults import RTCS_SELECTION_DEFAULTS  # noqa: E402
+from reduced_tc_suite.config.defaults import RTCS_SELECTION_DEFAULTS  # noqa: E402
 
 
 def main() -> None:

@@ -10,7 +10,7 @@ from pathlib import Path
 
 import numpy as np
 
-from reduced_storm_suite.io.readers import load_array
+from reduced_tc_suite.io.readers import load_array
 
 
 # ---------------------------------------------------------------------------
@@ -261,7 +261,7 @@ def apply_bbox_filter(
     output_dir: str | Path,
 ) -> dict:
     """Run the full bounding-box filter pipeline."""
-    from reduced_storm_suite.io.store import read_store
+    from reduced_tc_suite.io.store import read_store
 
     print("\n[0] Bounding-box filter ...")
     bbox = bbox_cfg["bbox"]

@@ -1,13 +1,13 @@
-"""run_reduced_storm_suite — RTCS launcher (CyHAN v2.0 §5.3).
+"""run_reduced_tc_suite — RTCS launcher (CyHAN v2.0 §5.3).
 
 Author / POC : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
 
-User-facing entry point for the Reduced Storm Suite (formerly
+User-facing entry point for the Reduced TC Suite (formerly
 ``storm_selection``). The operator edits values in the USER OPTIONS block
 below and runs the script. This file holds ONLY declarative options — every
 code element (path wiring, store bootstrap, bbox assembly, CLI parsing,
-dispatch) lives in ``main_reduced_storm_suite``; the launcher simply calls
-``main_reduced_storm_suite.launch`` with the option block per §5.3.
+dispatch) lives in ``main_reduced_tc_suite``; the launcher simply calls
+``main_reduced_tc_suite.launch`` with the option block per §5.3.
 
 ================================================================================
 WHAT RSS PRODUCES
@@ -74,15 +74,15 @@ Headless by design — figures (SPLOM, PCA y-space, HC, QBM) are written to disk
          pip install -r requirements.txt
   2. Edit the USER OPTIONS block below (DATASET, RAW_FILES, CONFIG, …).
   3. Run from the module directory (uses the DATASET / MODE / SCOPE constants):
-         python run_reduced_storm_suite.py
+         python run_reduced_tc_suite.py
      ...override mode/scope on the command line for ad-hoc runs:
-         python run_reduced_storm_suite.py --mode fixed   --scope local
-         python run_reduced_storm_suite.py --mode optimal --scope regional
+         python run_reduced_tc_suite.py --mode fixed   --scope local
+         python run_reduced_tc_suite.py --mode optimal --scope regional
      ...batch over one or more REGISTERED dataset keys (no editing needed):
-         python run_reduced_storm_suite.py --dataset chs-na chs-la
-         python run_reduced_storm_suite.py --dataset chs-tx --mode optimal --scope regional
+         python run_reduced_tc_suite.py --dataset chs-na chs-la
+         python run_reduced_tc_suite.py --dataset chs-tx --mode optimal --scope regional
      ...or from the repository root:
-         python modules/reduced_storm_suite/run_reduced_storm_suite.py
+         python modules/reduced_tc_suite/run_reduced_tc_suite.py
 
 Unlike the POT/PST launchers (which take input-file PATHS), this one batches by
 DATASET KEY — each key must exist in RAW_FILES_BY_DATASET below, because RSS
@@ -126,7 +126,7 @@ def _ensure_cpp_extension() -> None:
     Must run before the package is imported (kmedoids probes for _rss at import
     time). A failed build is non-fatal — the pure-Python fallback runs.
     """
-    pkg = _BACKEND_PY / "reduced_storm_suite"
+    pkg = _BACKEND_PY / "reduced_tc_suite"
     if any(p.suffix in (".pyd", ".so", ".dylib") for p in pkg.glob("_rss*")):
         return
     build = ROOT / "backend" / "engines" / "cpp" / "build.py"
@@ -313,7 +313,7 @@ TRACK_FILE_PATTERNS = {
 #   2. Keep only storms whose ITCS track passes within max_track_dist_km of
 #      the geographic medoid of the kept nodes.
 # Only the geographic window and node-coord decode options live here; the
-# launcher (main_reduced_storm_suite._build_bbox_config) completes the block
+# launcher (main_reduced_tc_suite._build_bbox_config) completes the block
 # with resolved paths — node_coord_source, track_dir, track_file_pattern.
 #
 # When switching to a non-CHS-LA dataset in local mode you MUST update the
@@ -342,7 +342,7 @@ BBOX = {
 
 # ── Main configuration ──────────────────────────────────────────────────
 # Backend selection-engine tuning knobs. Keys consumed by
-# reduced_storm_suite.workflows.{rtcs_selection, growth_evaluation}.
+# reduced_tc_suite.workflows.{rtcs_selection, growth_evaluation}.
 # Defaults for every key live in config/defaults.py — entries below override
 # only what's relevant for this study area. Per-dataset paths (h5_path,
 # output_dir, pre_selected_csv) are NOT set here — the launcher derives them
@@ -515,7 +515,7 @@ CONFIG["alpha_beta_grid"] = AB_GRID if AB_SWEEP else None
 # ===========================================================================
 #
 # All launcher logic (path wiring, store bootstrap, bbox assembly, CLI
-# parsing, dispatch) lives in main_reduced_storm_suite.launch. This file
+# parsing, dispatch) lives in main_reduced_tc_suite.launch. This file
 # only hands it the operator option block above.
 
 def _resolve_dataset(ds: str):
@@ -546,8 +546,8 @@ if __name__ == "__main__":
     import argparse
 
     _cli = argparse.ArgumentParser(
-        prog="run_reduced_storm_suite.py",
-        description="Run the Reduced Storm Suite headless. With no --dataset it "
+        prog="run_reduced_tc_suite.py",
+        description="Run the Reduced TC Suite headless. With no --dataset it "
                     "uses the DATASET option above; pass one or more registered "
                     "dataset keys to batch over study areas.")
     _cli.add_argument("--dataset", nargs="+", metavar="KEY", default=None,
@@ -566,11 +566,11 @@ if __name__ == "__main__":
 
     _ensure_cpp_extension()   # build _rss on first run if needed
 
-    # The orchestrator entry (main_reduced_storm_suite) lives in backend/python,
+    # The orchestrator entry (main_reduced_tc_suite) lives in backend/python,
     # added to sys.path above at runtime. Resolve it dynamically so there is no
     # static import for the IDE to flag as unresolved.
     from importlib import import_module
-    launch = import_module("main_reduced_storm_suite").launch
+    launch = import_module("main_reduced_tc_suite").launch
 
     _rc = 0
     for _ds in _datasets:

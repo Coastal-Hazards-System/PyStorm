@@ -19,7 +19,7 @@ if str(_PKG_PATH) not in sys.path:
 
 def _make_store(tmp_path, Y, X=None, HC=None):
     """Write a minimal tc_data.h5 for testing read_store."""
-    from reduced_storm_suite.io.store import write_store
+    from reduced_tc_suite.io.store import write_store
     n_storms, m_nodes = Y.shape
     X = X if X is not None else np.random.default_rng(0).standard_normal((n_storms, 3))
     out = tmp_path / "tc_data.h5"
@@ -28,7 +28,7 @@ def _make_store(tmp_path, Y, X=None, HC=None):
 
 
 def test_read_store_converts_minus_99999_to_nan(tmp_path):
-    from reduced_storm_suite.io.store import read_store
+    from reduced_tc_suite.io.store import read_store
     Y = np.array([
         [1.0, -99999.0, 0.5],
         [0.3, -99999.0, 0.7],
@@ -46,7 +46,7 @@ def test_read_store_drops_not_simulated_keeps_dry(tmp_path):
     """An all-NaN row (never simulated = failed HPC run) is dropped, but an
     all-(-99999) row (simulated, everywhere dry = valid storm) is KEPT. The
     failed-storm test must run BEFORE the -99999 -> NaN normalisation."""
-    from reduced_storm_suite.io.store import read_store
+    from reduced_tc_suite.io.store import read_store
     Y = np.array([
         [1.0, 0.5],
         [np.nan, np.nan],         # not simulated -> failed -> DROP
@@ -64,7 +64,7 @@ def test_read_store_drops_not_simulated_keeps_dry(tmp_path):
 
 def test_read_store_drops_failed_storm_and_subsets_storm_ids(tmp_path):
     """X, Y, and storm_ids drop in lockstep so survivors keep their true IDs."""
-    from reduced_storm_suite.io.store import write_store, read_store
+    from reduced_tc_suite.io.store import write_store, read_store
     Y = np.array([
         [1.0, 0.5],
         [np.nan, np.nan],         # storm '102' not simulated -> dropped
@@ -81,7 +81,7 @@ def test_read_store_drops_failed_storm_and_subsets_storm_ids(tmp_path):
 
 
 def test_read_store_passes_through_when_no_sentinels(tmp_path):
-    from reduced_storm_suite.io.store import read_store
+    from reduced_tc_suite.io.store import read_store
     Y = np.array([[1.0, 2.0], [3.0, 4.0]], dtype=np.float64)
     p = _make_store(tmp_path, Y)
     data = read_store(p)
@@ -95,7 +95,7 @@ def test_read_store_passes_through_when_no_sentinels(tmp_path):
 
 def test_pca_drop_always_dry(capsys):
     """All-NaN columns are dropped; remaining NaN are zero-filled."""
-    from reduced_storm_suite.sampling.pca import reduce_output
+    from reduced_tc_suite.sampling.pca import reduce_output
     rng = np.random.default_rng(0)
     Y = rng.standard_normal((20, 8))
     Y[:, 0] = np.nan              # entire column NaN -> must be dropped
@@ -112,7 +112,7 @@ def test_pca_drop_always_dry(capsys):
 
 
 def test_pca_zero_strategy_does_not_drop():
-    from reduced_storm_suite.sampling.pca import reduce_output
+    from reduced_tc_suite.sampling.pca import reduce_output
     rng = np.random.default_rng(1)
     Y = rng.standard_normal((15, 6))
     Y[:, 0] = np.nan
@@ -122,7 +122,7 @@ def test_pca_zero_strategy_does_not_drop():
 
 
 def test_pca_wet_only_drops_partial_nan_columns():
-    from reduced_storm_suite.sampling.pca import reduce_output
+    from reduced_tc_suite.sampling.pca import reduce_output
     rng = np.random.default_rng(2)
     Y = rng.standard_normal((10, 5))
     Y[0, 1] = np.nan      # column 1 has a NaN -> drop
@@ -132,7 +132,7 @@ def test_pca_wet_only_drops_partial_nan_columns():
 
 
 def test_pca_node_mean_imputes_with_per_node_mean():
-    from reduced_storm_suite.sampling.pca import reduce_output
+    from reduced_tc_suite.sampling.pca import reduce_output
     Y = np.array([
         [1.0, 2.0, np.nan],
         [3.0, np.nan, 4.0],
@@ -146,7 +146,7 @@ def test_pca_wet_ratio_floor_drops_below_threshold(capsys):
     """Nodes wet for < min_wet_fraction of storms are dropped; the rest are
     zero-filled. With 10 storms and a 0.5 floor, a node must be wet for >= 5
     storms to survive."""
-    from reduced_storm_suite.sampling.pca import reduce_output
+    from reduced_tc_suite.sampling.pca import reduce_output
     rng = np.random.default_rng(4)
     Y = rng.standard_normal((10, 4))
     Y[:8, 0] = np.nan     # col 0 wet for 2/10 = 0.2  -> drop  (< 0.5)
@@ -164,7 +164,7 @@ def test_pca_wet_ratio_floor_drops_below_threshold(capsys):
 def test_pca_wet_ratio_floor_small_floor_keeps_partially_wet():
     """A small positive floor drops only fully-dry nodes while retaining
     nodes wet for even a single storm — matching drop_always_dry node count."""
-    from reduced_storm_suite.sampling.pca import reduce_output
+    from reduced_tc_suite.sampling.pca import reduce_output
     rng = np.random.default_rng(5)
     Y = rng.standard_normal((10, 5))
     Y[:, 0] = np.nan      # fully dry -> wet fraction 0.0, dropped (< 0.05)
@@ -179,7 +179,7 @@ def test_pca_raises_clear_error_when_strategy_drops_all_nodes():
     """wet_only on a matrix where every node has a NaN drops everything; the
     error must name the strategy and suggest alternatives, not surface the
     opaque sklearn '0 feature(s)' message."""
-    from reduced_storm_suite.sampling.pca import reduce_output
+    from reduced_tc_suite.sampling.pca import reduce_output
     rng = np.random.default_rng(7)
     Y = rng.standard_normal((10, 4))
     for j in range(4):
@@ -191,7 +191,7 @@ def test_pca_raises_clear_error_when_strategy_drops_all_nodes():
 def test_pca_wet_ratio_floor_too_high_raises_with_knob_hint():
     """An over-aggressive min_wet_fraction (>max wet fraction) drops all nodes;
     the message should point at pca_min_wet_fraction."""
-    from reduced_storm_suite.sampling.pca import reduce_output
+    from reduced_tc_suite.sampling.pca import reduce_output
     rng = np.random.default_rng(8)
     Y = rng.standard_normal((10, 3))
     Y[0, :] = np.nan               # each node wet for 9/10 = 0.9 at most
@@ -202,7 +202,7 @@ def test_pca_wet_ratio_floor_too_high_raises_with_knob_hint():
 
 def test_pca_no_nan_path_unchanged():
     """When Y is fully finite, all strategies are identical."""
-    from reduced_storm_suite.sampling.pca import reduce_output
+    from reduced_tc_suite.sampling.pca import reduce_output
     rng = np.random.default_rng(3)
     Y = rng.standard_normal((30, 12))
     r_default, _ = reduce_output(Y, 0.95)

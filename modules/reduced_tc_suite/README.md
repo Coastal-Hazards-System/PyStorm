@@ -1,4 +1,4 @@
-# reduced_storm_suite
+# reduced_tc_suite
 
 *Reduced Tropical Cyclone Suite (RTCS) selection for probabilistic coastal hazard analysis.*
 
@@ -17,7 +17,7 @@ span the hydrodynamic response space at the coastal nodes of interest, and
 (c) reproduce benchmark hazard curves (HCs) within a stated tolerance after
 discrete storm weights are back-computed.
 
-The `reduced_storm_suite` module implements an end-to-end, reproducible pipeline
+The `reduced_tc_suite` module implements an end-to-end, reproducible pipeline
 that addresses these three objectives jointly. Inputs are a TC parameter
 matrix `X`, a peak surge response matrix `Y`, and an optional benchmark
 hazard-curve cube `HC`. Outputs are a small set of representative storm
@@ -53,7 +53,7 @@ The goal is to choose `k ≪ n` storm indices `S ⊂ {1, …, n}` such that
    Discrete Storm Weights (DSW) reproduces `HC` to within a target tolerance.
 
 The exact selection problem is combinatorial and has no efficient
-solution at relevant scales. The `reduced_storm_suite` module attacks it
+solution at relevant scales. The `reduced_tc_suite` module attacks it
 with a sequence of well-defined, computationally tractable surrogates.
 
 ---
@@ -105,7 +105,7 @@ Medoids (PAM) with maximin **BUILD** (initialization) and an exhaustive
 **SWAP** (refinement) phase. Three back-ends dispatch in order:
 
 1. A C++ kernel (`backend/engines/cpp/`, binding installed as
-   `reduced_storm_suite._rss`) exposed through pybind11. Honours arbitrary
+   `reduced_tc_suite._rss`) exposed through pybind11. Honours arbitrary
    forced medoids.
 2. `sklearn-extra` `KMedoids(method="pam")` when no forced medoids are
    requested.
@@ -246,7 +246,7 @@ re-added so they remain available downstream. Implementation:
 ## 3. Workflow
 
 The module exposes a single canonical launcher
-(`run_reduced_storm_suite.py` at the module root, CyHAN §5.3). It dispatches
+(`run_reduced_tc_suite.py` at the module root, CyHAN §5.3). It dispatches
 to one of two workflows based on `--mode`:
 
 ```
@@ -494,7 +494,7 @@ workflow requires it.
   `kmedoids_pam(D, k, seed, forced)`. It carries no I/O, no configuration,
   and no orchestration logic.
 - All workflow logic is Python and resides in
-  `backend/python/reduced_storm_suite/`. The binding is imported as a conduit
+  `backend/python/reduced_tc_suite/`. The binding is imported as a conduit
   by `sampling/kmedoids.py`; the Python package owns the dispatch chain
   (C++ → sklearn-extra → pure-Python fallback).
 
@@ -524,14 +524,14 @@ All other operations are deterministic.
 ## 7. Quickstart
 
 ```bash
-cd modules/reduced_storm_suite
+cd modules/reduced_tc_suite
 
-# Edit USER OPTIONS in run_reduced_storm_suite.py, then run. The C++ k-medoids
+# Edit USER OPTIONS in run_reduced_tc_suite.py, then run. The C++ k-medoids
 # kernel builds on first run (pure-Python fallback otherwise), and tc_data.h5
 # is built from the raw inputs automatically if it is missing.
-python run_reduced_storm_suite.py                # uses the MODE constant
-python run_reduced_storm_suite.py --mode fixed
-python run_reduced_storm_suite.py --mode optimal
+python run_reduced_tc_suite.py                # uses the MODE constant
+python run_reduced_tc_suite.py --mode fixed
+python run_reduced_tc_suite.py --mode optimal
 
 # Optional ancillary tools:
 python scripts/preprocess.py     # rebuild tc_data.h5 from raw inputs
@@ -545,8 +545,8 @@ Outputs land under `data/outputs/<dataset>/<scope>/<mode>/`.
 ## 8. Module Layout (CyHAN v2.0 §16.1)
 
 ```
-reduced_storm_suite/
-├── run_reduced_storm_suite.py            Launcher (user options only)
+reduced_tc_suite/
+├── run_reduced_tc_suite.py            Launcher (user options only)
 ├── pyproject.toml                        Installable orchestrator package
 ├── ENGINE_MANIFEST.toml                  Structured module manifest
 ├── backend/
@@ -556,8 +556,8 @@ reduced_storm_suite/
 │   │   ├── CMakeLists.txt
 │   │   └── build.py
 │   └── python/
-│       ├── main_reduced_storm_suite.py   Orchestrator entry (input + path wiring)
-│       └── reduced_storm_suite/          Orchestration package
+│       ├── main_reduced_tc_suite.py   Orchestrator entry (input + path wiring)
+│       └── reduced_tc_suite/          Orchestration package
 │           ├── config/                   defaults, YAML loader, templates
 │           ├── io/                       HDF5 store, multi-format readers
 │           ├── geo/                      bbox filter, basemap rendering
@@ -576,8 +576,8 @@ The two mandatory entry artifacts per CyHAN v2.0 §5.3:
 
 | Artifact     | Location                                       | Role               |
 |--------------|------------------------------------------------|--------------------|
-| Launcher     | `run_reduced_storm_suite.py`                   | user-facing entry  |
-| Orchestrator | `backend/python/main_reduced_storm_suite.py`   | non-user-facing    |
+| Launcher     | `run_reduced_tc_suite.py`                   | user-facing entry  |
+| Orchestrator | `backend/python/main_reduced_tc_suite.py`   | non-user-facing    |
 
 ---
 

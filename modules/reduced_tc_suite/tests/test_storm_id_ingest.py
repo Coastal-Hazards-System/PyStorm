@@ -22,7 +22,7 @@ def _trop(dirpath: Path, pattern: str, sid: int):
 
 
 def _preproc(cfg):
-    from reduced_storm_suite.workflows.ingest import Preprocessor
+    from reduced_tc_suite.workflows.ingest import Preprocessor
     return Preprocessor(cfg)
 
 
@@ -90,7 +90,7 @@ def test_resolve_noop_without_track_dir():
 # ---------------------------------------------------------------------------
 
 def test_store_roundtrip_with_storm_ids(tmp_path):
-    from reduced_storm_suite.io.store import write_store, read_store, validate_store
+    from reduced_tc_suite.io.store import write_store, read_store, validate_store
     X = np.arange(12.0).reshape(4, 3)
     Y = np.arange(8.0).reshape(4, 2)
     out = tmp_path / "tc_data.h5"
@@ -104,7 +104,7 @@ def test_store_roundtrip_with_storm_ids(tmp_path):
 def test_validate_store_rejects_misaligned_storm_ids(tmp_path):
     """A /storm_ids length != n_storms must fail validation."""
     import h5py
-    from reduced_storm_suite.io.store import write_store, validate_store
+    from reduced_tc_suite.io.store import write_store, validate_store
     X = np.arange(12.0).reshape(4, 3)
     Y = np.arange(8.0).reshape(4, 2)
     out = tmp_path / "tc_data.h5"

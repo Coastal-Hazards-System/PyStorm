@@ -1,13 +1,13 @@
-"""reduced_storm_suite — post-selection DSW + HC reconstruction.
+"""reduced_tc_suite — post-selection DSW + HC reconstruction.
 
 Author / POC : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
 
 Compute Discrete Storm Weights and reconstruct hazard curves for a previously
-selected storm subset (the selected_storms.csv emitted by run_reduced_storm_suite.py).
+selected storm subset (the selected_storms.csv emitted by run_reduced_tc_suite.py).
 
 Usage
 -----
-  1. Run scripts/run_reduced_storm_suite.py first to produce selected_storms.csv.
+  1. Run scripts/run_reduced_tc_suite.py first to produce selected_storms.csv.
   2. Edit the USER OPTIONS block below.
   3. Run:  python scripts/dsw.py
 """
@@ -52,7 +52,7 @@ CONFIG = {
 
 
 def _load_inputs(cfg):
-    from reduced_storm_suite.io.store import read_store
+    from reduced_tc_suite.io.store import read_store
 
     store = read_store(Path(cfg["h5_path"]))
 
@@ -60,7 +60,7 @@ def _load_inputs(cfg):
     if "original_index" not in sel.columns:
         raise ValueError(
             "selected_storms.csv must contain an 'original_index' column.\n"
-            "Re-run scripts/run_reduced_storm_suite.py to regenerate it."
+            "Re-run scripts/run_reduced_tc_suite.py to regenerate it."
         )
     indices = sel["original_index"].values.astype(int)
 
@@ -119,7 +119,7 @@ def _plot_hc_comparison(HC_recon, HC_bench, tbl_aer, node_indices, out_dir):
 
 
 def main():
-    from reduced_storm_suite.weights.dsw import (
+    from reduced_tc_suite.weights.dsw import (
         compute_global_dsw, reconstruct_hc_global_dsw, _hc_residual_metrics,
     )
 

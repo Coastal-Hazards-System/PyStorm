@@ -23,7 +23,7 @@ PyStorm has three modules. POT and PST chain together; RSS is independent.
 |--------|---------|
 | [`peaks_over_threshold`](modules/peaks_over_threshold/README.md) (POT) | Extract independent storm peaks from a continuous water-level or NTR time series. |
 | [`probabilistic_simulation_technique`](modules/probabilistic_simulation_technique/README.md) (PST) | Turn a POT peak sample into a hazard curve (response magnitude versus AER) with a confidence band. |
-| [`reduced_storm_suite`](modules/reduced_storm_suite/README.md) (RSS) | Select a small, representative Reduced Tropical Cyclone Suite that reproduces the full synthetic suite's hazard. |
+| [`reduced_tc_suite`](modules/reduced_tc_suite/README.md) (RSS) | Select a small, representative Reduced Tropical Cyclone Suite that reproduces the full synthetic suite's hazard. |
 
 POT writes per-station peak files that PST reads directly.
 
@@ -53,9 +53,9 @@ python run_peaks_over_threshold.py
 cd modules/probabilistic_simulation_technique
 python run_probabilistic_simulation_technique.py
 
-# RSS: reduced storm suite selection
-cd modules/reduced_storm_suite
-python run_reduced_storm_suite.py
+# RSS: reduced tc suite selection
+cd modules/reduced_tc_suite
+python run_reduced_tc_suite.py
 ```
 
 Each launcher has a USER OPTIONS block at the top and `--help` for command-line
@@ -71,7 +71,7 @@ builds its kernel on first run, or build it manually:
 ```bash
 python modules/peaks_over_threshold/backend/engines/cpp/build.py            # _pot
 python modules/probabilistic_simulation_technique/backend/engines/build.py  # _pst
-python modules/reduced_storm_suite/backend/engines/cpp/build.py             # _rss
+python modules/reduced_tc_suite/backend/engines/cpp/build.py             # _rss
 ```
 
 `build.py` tries setuptools, then CMake, then a direct compiler call. It needs
@@ -120,8 +120,8 @@ PyStorm/
 │   │   ├── tests/                                 Smoke tests
 │   │   └── data/                                  inputs/{raw,processed}/ & outputs/ (gitignored)
 │   │
-│   └── reduced_storm_suite/                       RTCS selection
-│       ├── run_reduced_storm_suite.py            Launcher at module root
+│   └── reduced_tc_suite/                       RTCS selection
+│       ├── run_reduced_tc_suite.py            Launcher at module root
 │       ├── README.md                             Module reference (methods, data flow, API)
 │       ├── pyproject.toml                         Installable orchestrator package
 │       ├── ENGINE_MANIFEST.toml                   Structured module manifest
@@ -132,8 +132,8 @@ PyStorm/
 │       │   │   ├── CMakeLists.txt
 │       │   │   └── build.py
 │       │   └── python/
-│       │       ├── main_reduced_storm_suite.py   Orchestrator entry
-│       │       └── reduced_storm_suite/          Expanded orchestration package
+│       │       ├── main_reduced_tc_suite.py   Orchestrator entry
+│       │       └── reduced_tc_suite/          Expanded orchestration package
 │       ├── scripts/                               Ancillary tools
 │       │   ├── preprocess.py                      Raw inputs → tc_data.h5
 │       │   └── dsw.py                             Post-selection DSW + HC reconstruction

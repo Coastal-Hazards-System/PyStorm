@@ -2,8 +2,8 @@
 
 Author / POC : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
 
-Owns the sequence; delegates format I/O to reduced_storm_suite.io.readers and
-store writes to reduced_storm_suite.io.store.
+Owns the sequence; delegates format I/O to reduced_tc_suite.io.readers and
+store writes to reduced_tc_suite.io.store.
 """
 
 from __future__ import annotations
@@ -14,8 +14,8 @@ from typing import Optional
 
 import numpy as np
 
-from reduced_storm_suite.io.readers import load_array
-from reduced_storm_suite.io.store import write_store, validate_store
+from reduced_tc_suite.io.readers import load_array
+from reduced_tc_suite.io.store import write_store, validate_store
 
 
 _DEFAULT_AER: list = (1.0 / np.array([
@@ -97,7 +97,7 @@ class Preprocessor:
             return storm_ids
 
         # Lazy import: keep the geo stack out of the ingest import path.
-        from reduced_storm_suite.geo.bbox_filter import storm_ids_from_track_dir
+        from reduced_tc_suite.geo.bbox_filter import storm_ids_from_track_dir
         pattern = self.cfg.get("storm_id_track_pattern",
                                "LACPR2_JPM{:04d}_TROP.txt")
         ids = storm_ids_from_track_dir(track_dir, pattern)

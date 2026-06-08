@@ -1,5 +1,5 @@
 """Tests for the tc_data.h5 auto-bootstrap in
-main_reduced_storm_suite._ensure_h5_exists.
+main_reduced_tc_suite._ensure_h5_exists.
 
 Patches the Preprocessor class so the test doesn't actually need any real
 input files; we only validate the launcher's bootstrap dispatch logic. Raw
@@ -20,7 +20,7 @@ if str(_PKG_PATH) not in sys.path:
 
 # Orchestrator entry lives in backend/python (added to sys.path above); resolve
 # it dynamically so there is no static import for the IDE to flag as unresolved.
-rss_main = import_module("main_reduced_storm_suite")
+rss_main = import_module("main_reduced_tc_suite")
 
 
 class _FakePreprocessor:
@@ -45,7 +45,7 @@ def _reset_fake():
 
 def _install_fake_preprocessor(monkeypatch):
     """Insert _FakePreprocessor where the launcher's lazy import looks."""
-    import reduced_storm_suite.workflows.ingest as ingest_mod
+    import reduced_tc_suite.workflows.ingest as ingest_mod
     monkeypatch.setattr(ingest_mod, "Preprocessor", _FakePreprocessor)
 
 

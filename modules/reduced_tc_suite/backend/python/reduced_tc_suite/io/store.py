@@ -1,4 +1,4 @@
-"""Read, write, validate, and CSV-export the standard reduced_storm_suite HDF5 store.
+"""Read, write, validate, and CSV-export the standard reduced_tc_suite HDF5 store.
 
 Author / POC : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
 
@@ -86,7 +86,7 @@ def write_store(
                           dtype=str_dt, shape=(len(encoded),))
 
     with h5py.File(path, "w") as fh:
-        fh.attrs["description"]    = "reduced_storm_suite standard input store"
+        fh.attrs["description"]    = "reduced_tc_suite standard input store"
         fh.attrs["format_version"] = "1.0"
 
         _str_dataset(fh, "storm_ids", storm_ids)

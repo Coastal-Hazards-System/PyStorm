@@ -1,4 +1,4 @@
-"""Diagnostic plots for the reduced_storm_suite pipeline.
+"""Diagnostic plots for the reduced_tc_suite pipeline.
 
 Author / POC : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
 
@@ -345,7 +345,7 @@ def plot_tc_splom(
 
 def _nodal_dsw_at_node(resp, hc_node, tbl_aer, dry_thr):
     """Back-compute nodal DSWs for a single node via DRM."""
-    from reduced_storm_suite.weights.dsw import _surge_to_aer
+    from reduced_tc_suite.weights.dsw import _surge_to_aer
 
     valid = (~np.isnan(resp)) & (resp > dry_thr)
     if valid.sum() < 2:
@@ -467,7 +467,7 @@ def plot_hc_qbm(
     ramp_frac:    float = 0.03,
 ):
     """Plot HC comparison: Benchmark vs DSW-only vs QBM-corrected (3x3 grid)."""
-    from reduced_storm_suite.weights.qbm import correct_node_qbm
+    from reduced_tc_suite.weights.qbm import correct_node_qbm
 
     CLR_BENCH = "gray"
     CLR_DSW   = "#C62828"

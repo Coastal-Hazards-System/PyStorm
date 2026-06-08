@@ -20,9 +20,9 @@ from typing import Optional
 
 import numpy as np
 
-from reduced_storm_suite.sampling.joint_matrix import build_joint_matrix
-from reduced_storm_suite.sampling.kmedoids import select_kmedoids
-from reduced_storm_suite.weights.dsw import evaluate_hc_metrics
+from reduced_tc_suite.sampling.joint_matrix import build_joint_matrix
+from reduced_tc_suite.sampling.kmedoids import select_kmedoids
+from reduced_tc_suite.weights.dsw import evaluate_hc_metrics
 
 
 # ---------------------------------------------------------------------------

@@ -1,4 +1,4 @@
-"""YAML / JSON configuration loader for the reduced_storm_suite module.
+"""YAML / JSON configuration loader for the reduced_tc_suite module.
 
 Author / POC : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
 """
@@ -34,7 +34,7 @@ def load_config(config_path: str | Path) -> dict:
 
 
 PREPROCESS_CONFIG_YAML = """\
-# reduced_storm_suite preprocessor — Example Configuration
+# reduced_tc_suite preprocessor — Example Configuration
 # =====================================================
 # Edit paths and variable names for your data, then run:
 #   python scripts/preprocess.py --config this_file.yaml

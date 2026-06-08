@@ -13,29 +13,29 @@ if str(_PKG_PATH) not in sys.path:
 
 
 def test_package_imports():
-    import reduced_storm_suite                             # noqa: F401
-    from reduced_storm_suite.config.defaults import RTCS_SELECTION_DEFAULTS
-    from reduced_storm_suite.config.loader   import load_config           # noqa: F401
-    from reduced_storm_suite.io.readers       import load_array            # noqa: F401
-    from reduced_storm_suite.io.store         import read_store            # noqa: F401
-    from reduced_storm_suite.sampling.pca     import reduce_output         # noqa: F401
-    from reduced_storm_suite.sampling.joint_matrix import build_joint_matrix  # noqa: F401
-    from reduced_storm_suite.sampling.kmedoids     import select_kmedoids     # noqa: F401
-    from reduced_storm_suite.sampling.metrics      import evaluate_sf_metrics # noqa: F401
-    from reduced_storm_suite.weights.dsw      import compute_global_dsw    # noqa: F401
-    from reduced_storm_suite.weights.qbm      import compute_qbm_bias      # noqa: F401
-    from reduced_storm_suite.postproc.plots   import plot_pca_yspace       # noqa: F401
-    from reduced_storm_suite.workflows.rtcs_selection import run_rtcs_selection  # noqa: F401
-    from reduced_storm_suite.workflows.growth_evaluation import run_growth_evaluation  # noqa: F401
-    from reduced_storm_suite.workflows.ingest        import Preprocessor        # noqa: F401
+    import reduced_tc_suite                             # noqa: F401
+    from reduced_tc_suite.config.defaults import RTCS_SELECTION_DEFAULTS
+    from reduced_tc_suite.config.loader   import load_config           # noqa: F401
+    from reduced_tc_suite.io.readers       import load_array            # noqa: F401
+    from reduced_tc_suite.io.store         import read_store            # noqa: F401
+    from reduced_tc_suite.sampling.pca     import reduce_output         # noqa: F401
+    from reduced_tc_suite.sampling.joint_matrix import build_joint_matrix  # noqa: F401
+    from reduced_tc_suite.sampling.kmedoids     import select_kmedoids     # noqa: F401
+    from reduced_tc_suite.sampling.metrics      import evaluate_sf_metrics # noqa: F401
+    from reduced_tc_suite.weights.dsw      import compute_global_dsw    # noqa: F401
+    from reduced_tc_suite.weights.qbm      import compute_qbm_bias      # noqa: F401
+    from reduced_tc_suite.postproc.plots   import plot_pca_yspace       # noqa: F401
+    from reduced_tc_suite.workflows.rtcs_selection import run_rtcs_selection  # noqa: F401
+    from reduced_tc_suite.workflows.growth_evaluation import run_growth_evaluation  # noqa: F401
+    from reduced_tc_suite.workflows.ingest        import Preprocessor        # noqa: F401
     assert "TBL_AER" in RTCS_SELECTION_DEFAULTS
 
 
 def test_kmedoids_round_trip():
     import numpy as np
-    from reduced_storm_suite.sampling.joint_matrix import build_joint_matrix
-    from reduced_storm_suite.sampling.kmedoids import select_kmedoids
-    from reduced_storm_suite.sampling.pca import reduce_output
+    from reduced_tc_suite.sampling.joint_matrix import build_joint_matrix
+    from reduced_tc_suite.sampling.kmedoids import select_kmedoids
+    from reduced_tc_suite.sampling.pca import reduce_output
 
     rng = np.random.default_rng(0)
     X = rng.standard_normal((50, 4))
@@ -54,7 +54,7 @@ def test_kmedoids_forced_indices_path():
     """Exercise the forced-medoids dispatch (C++ binding when available,
     Python BUILD+SWAP otherwise)."""
     import numpy as np
-    from reduced_storm_suite.sampling.kmedoids import select_kmedoids
+    from reduced_tc_suite.sampling.kmedoids import select_kmedoids
 
     rng = np.random.default_rng(1)
     Z = rng.standard_normal((40, 6))

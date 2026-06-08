@@ -38,7 +38,7 @@ def _make_case(seed: int = 7, k: int = 30, m: int = 200, n_aer: int = 10):
 
 
 def test_compute_global_dsw_methods_pinned():
-    from reduced_storm_suite.weights.dsw import compute_global_dsw
+    from reduced_tc_suite.weights.dsw import compute_global_dsw
 
     Y_sub, HC_bench, tbl_aer = _make_case()
 
@@ -84,7 +84,7 @@ def _save_or_compare(name: str, arrays: dict, rtol: float = 1e-9, atol: float = 
 
 def test_dsw_pipeline_snapshot():
     """Pin compute_global_dsw + reconstruct_hc_global_dsw outputs."""
-    from reduced_storm_suite.weights.dsw import (
+    from reduced_tc_suite.weights.dsw import (
         compute_global_dsw, reconstruct_hc_global_dsw,
     )
 
@@ -104,7 +104,7 @@ def test_dsw_pipeline_snapshot():
 
 
 def test_evaluate_hc_metrics_snapshot():
-    from reduced_storm_suite.weights.dsw import evaluate_hc_metrics
+    from reduced_tc_suite.weights.dsw import evaluate_hc_metrics
 
     Y_sub, HC_bench, tbl_aer = _make_case()
 

@@ -36,29 +36,29 @@ import h5py
 import numpy as np
 import pandas as pd
 
-from reduced_storm_suite.sampling.pca import reduce_output
-from reduced_storm_suite.sampling.joint_matrix import build_joint_matrix
-from reduced_storm_suite.sampling.kmedoids import select_subset
-from reduced_storm_suite.sampling.metrics import evaluate_sf_metrics
-from reduced_storm_suite.weights.dsw import (
+from reduced_tc_suite.sampling.pca import reduce_output
+from reduced_tc_suite.sampling.joint_matrix import build_joint_matrix
+from reduced_tc_suite.sampling.kmedoids import select_subset
+from reduced_tc_suite.sampling.metrics import evaluate_sf_metrics
+from reduced_tc_suite.weights.dsw import (
     compute_global_dsw,
     reconstruct_hc_global_dsw,
     evaluate_hc_reconstruction,
 )
-from reduced_storm_suite.weights.qbm import compute_qbm_bias
-from reduced_storm_suite.workflows.rtcs_selection import (
+from reduced_tc_suite.weights.qbm import compute_qbm_bias
+from reduced_tc_suite.workflows.rtcs_selection import (
     _load_pipeline_data,
     _load_forced_indices,
     _remap_forced_indices,
     _splom,
 )
-from reduced_storm_suite.postproc.plots import (
+from reduced_tc_suite.postproc.plots import (
     plot_rmse_vs_k,
     plot_pca_yspace,
     plot_hc_comparison,
     plot_hc_qbm,
 )
-from reduced_storm_suite.config.defaults import RTCS_SELECTION_DEFAULTS
+from reduced_tc_suite.config.defaults import RTCS_SELECTION_DEFAULTS
 
 
 def _select_optimal_k(history_df: pd.DataFrame,

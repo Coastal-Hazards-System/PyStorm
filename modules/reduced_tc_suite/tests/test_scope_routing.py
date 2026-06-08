@@ -1,4 +1,4 @@
-"""Tests for the scope (local vs regional) dispatch in main_reduced_storm_suite.run."""
+"""Tests for the scope (local vs regional) dispatch in main_reduced_tc_suite.run."""
 
 import sys
 from importlib import import_module
@@ -13,7 +13,7 @@ if str(_PKG_PATH) not in sys.path:
 
 # Orchestrator entry lives in backend/python (added to sys.path above); resolve
 # it dynamically so there is no static import for the IDE to flag as unresolved.
-rss_main = import_module("main_reduced_storm_suite")
+rss_main = import_module("main_reduced_tc_suite")
 
 
 def test_run_rejects_bad_scope():
@@ -41,7 +41,7 @@ def test_regional_scope_forces_bbox_to_none(monkeypatch, tmp_path):
 
     monkeypatch.setattr(mod, "_apply_bbox", fake_apply_bbox)
     # patch the lazy import target in the dispatch branch
-    import reduced_storm_suite.workflows.rtcs_selection as rtcs
+    import reduced_tc_suite.workflows.rtcs_selection as rtcs
     monkeypatch.setattr(rtcs, "run_rtcs_selection", fake_workflow)
 
     bogus_bbox = {"bbox": {"lat_min": 0, "lat_max": 1, "lon_min": 0, "lon_max": 1}}
@@ -66,7 +66,7 @@ def test_local_scope_invokes_bbox_when_given(monkeypatch, tmp_path):
         return ("ok", {})
 
     monkeypatch.setattr(mod, "_apply_bbox", fake_apply_bbox)
-    import reduced_storm_suite.workflows.rtcs_selection as rtcs
+    import reduced_tc_suite.workflows.rtcs_selection as rtcs
     monkeypatch.setattr(rtcs, "run_rtcs_selection", fake_workflow)
 
     bbox = {"bbox": {"lat_min": 0, "lat_max": 1, "lon_min": 0, "lon_max": 1}}
@@ -84,7 +84,7 @@ def test_local_scope_without_bbox_skips_filter(monkeypatch, tmp_path):
 
     monkeypatch.setattr(mod, "_apply_bbox",
                         lambda *a, **k: seen.__setitem__("bbox_called", True))
-    import reduced_storm_suite.workflows.rtcs_selection as rtcs
+    import reduced_tc_suite.workflows.rtcs_selection as rtcs
     monkeypatch.setattr(rtcs, "run_rtcs_selection", lambda cfg: ("ok", {}))
 
     mod.run(config={"output_dir": str(tmp_path)},

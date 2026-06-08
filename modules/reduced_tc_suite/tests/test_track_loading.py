@@ -40,7 +40,7 @@ def _write_trop(path: Path, pts):
     ("no-digits", None),
 ])
 def test_storm_id_to_int(raw, expected):
-    from reduced_storm_suite.geo.bbox_filter import _storm_id_to_int
+    from reduced_tc_suite.geo.bbox_filter import _storm_id_to_int
     assert _storm_id_to_int(raw) == expected
 
 
@@ -49,7 +49,7 @@ def test_storm_id_to_int(raw, expected):
 # ---------------------------------------------------------------------------
 
 def test_load_tracks_sequential_numbering(tmp_path):
-    from reduced_storm_suite.geo.bbox_filter import load_tc_tracks
+    from reduced_tc_suite.geo.bbox_filter import load_tc_tracks
     pattern = "NACCS_JPM{:04d}_TROP.txt"
     _write_trop(tmp_path / pattern.format(1), [(30.0, -90.0)])
     _write_trop(tmp_path / pattern.format(3), [(31.0, -91.0), (31.5, -91.5)])
@@ -70,7 +70,7 @@ def test_load_tracks_by_master_storm_ids(tmp_path):
     """Y rows map to files by master ID, not by position. Two Y rows whose
     master IDs are 65 and 1700 must read files 0065 and 1700 — even though a
     sequential 1..2 scan would look for 0001 / 0002."""
-    from reduced_storm_suite.geo.bbox_filter import load_tc_tracks
+    from reduced_tc_suite.geo.bbox_filter import load_tc_tracks
     pattern = "SACCS_JPM{:04d}_TROP.txt"
     _write_trop(tmp_path / pattern.format(65),   [(29.0, -89.0)])
     _write_trop(tmp_path / pattern.format(1700), [(28.0, -88.0), (28.5, -88.5)])
@@ -84,7 +84,7 @@ def test_load_tracks_by_master_storm_ids(tmp_path):
 
 
 def test_load_tracks_unparseable_id_loads_empty(tmp_path):
-    from reduced_storm_suite.geo.bbox_filter import load_tc_tracks
+    from reduced_tc_suite.geo.bbox_filter import load_tc_tracks
     pattern = "SACCS_JPM{:04d}_TROP.txt"
     _write_trop(tmp_path / pattern.format(65), [(29.0, -89.0)])
 
@@ -100,7 +100,7 @@ def test_load_tracks_unparseable_id_loads_empty(tmp_path):
 
 def test_storm_ids_from_track_dir_subset_ascending(tmp_path):
     """Non-contiguous SACS subset: IDs parsed from filenames, sorted ascending."""
-    from reduced_storm_suite.geo.bbox_filter import storm_ids_from_track_dir
+    from reduced_tc_suite.geo.bbox_filter import storm_ids_from_track_dir
     pattern = "SACCS_JPM{:04d}_TROP.txt"
     for sid in (1700, 65, 102):           # deliberately out of order on disk
         _write_trop(tmp_path / pattern.format(sid), [(29.0, -89.0)])
@@ -110,7 +110,7 @@ def test_storm_ids_from_track_dir_subset_ascending(tmp_path):
 
 
 def test_storm_ids_from_track_dir_contiguous(tmp_path):
-    from reduced_storm_suite.geo.bbox_filter import storm_ids_from_track_dir
+    from reduced_tc_suite.geo.bbox_filter import storm_ids_from_track_dir
     pattern = "NACCS_JPM{:04d}_TROP.txt"
     for sid in range(1, 6):
         _write_trop(tmp_path / pattern.format(sid), [(30.0, -90.0)])
@@ -119,7 +119,7 @@ def test_storm_ids_from_track_dir_contiguous(tmp_path):
 
 def test_storm_ids_from_track_dir_alt_extension(tmp_path):
     """Pattern with a different extension (chs-tx: TC_JPM####.TROP)."""
-    from reduced_storm_suite.geo.bbox_filter import storm_ids_from_track_dir
+    from reduced_tc_suite.geo.bbox_filter import storm_ids_from_track_dir
     pattern = "TC_JPM{:04d}.TROP"
     for sid in (3, 1, 2):
         _write_trop(tmp_path / pattern.format(sid), [(28.0, -88.0)])

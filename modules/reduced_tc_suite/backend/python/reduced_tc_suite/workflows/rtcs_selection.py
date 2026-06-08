@@ -21,19 +21,19 @@ from typing import Optional
 import numpy as np
 import pandas as pd
 
-from reduced_storm_suite.io.store import read_store
-from reduced_storm_suite.sampling.pca import reduce_output
-from reduced_storm_suite.sampling.joint_matrix import build_joint_matrix
-from reduced_storm_suite.sampling.kmedoids import (
+from reduced_tc_suite.io.store import read_store
+from reduced_tc_suite.sampling.pca import reduce_output
+from reduced_tc_suite.sampling.joint_matrix import build_joint_matrix
+from reduced_tc_suite.sampling.kmedoids import (
     select_subset, select_kmedoids, select_maximin,
 )
-from reduced_storm_suite.sampling.metrics import evaluate_sf_metrics
-from reduced_storm_suite.weights.dsw import evaluate_hc_metrics, compute_global_dsw
-from reduced_storm_suite.weights.qbm import compute_qbm_bias
-from reduced_storm_suite.postproc.plots import (
+from reduced_tc_suite.sampling.metrics import evaluate_sf_metrics
+from reduced_tc_suite.weights.dsw import evaluate_hc_metrics, compute_global_dsw
+from reduced_tc_suite.weights.qbm import compute_qbm_bias
+from reduced_tc_suite.postproc.plots import (
     plot_pca_yspace, plot_tc_splom, plot_hc_comparison, plot_hc_qbm,
 )
-from reduced_storm_suite.config.defaults import RTCS_SELECTION_DEFAULTS
+from reduced_tc_suite.config.defaults import RTCS_SELECTION_DEFAULTS
 
 
 # ---------------------------------------------------------------------------
@@ -267,7 +267,7 @@ def run_rtcs_selection(cfg: Optional[dict] = None):
 
     ab_grid = cfg.get("alpha_beta_grid")
     if ab_grid is not None and HC_bench is not None:
-        from reduced_storm_suite.workflows._ab_sweep import run_ab_sweep
+        from reduced_tc_suite.workflows._ab_sweep import run_ab_sweep
 
         workers     = cfg.get("ab_search_workers")     # None = auto, 1 = sequential
         node_sample = cfg.get("ab_search_node_sample") # None = all nodes

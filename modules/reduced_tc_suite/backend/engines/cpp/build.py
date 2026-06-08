@@ -5,7 +5,7 @@ Author / POC : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usa
 
 Builds the C++ k-medoids kernel (``kmedoids_core.hpp`` + ``bindings.cpp``) and
 installs the resulting extension into the expanded orchestration package
-(``backend/python/reduced_storm_suite/``) per CyHAN v2.0 §16.2 / §16.5.
+(``backend/python/reduced_tc_suite/``) per CyHAN v2.0 §16.2 / §16.5.
 
 Usage
 -----
@@ -28,7 +28,7 @@ from pathlib import Path
 
 HERE      = Path(__file__).resolve().parent
 BUILD_DIR = HERE / "_build"
-PYTHON_PKG_DIR = (HERE / ".." / ".." / "python" / "reduced_storm_suite").resolve()
+PYTHON_PKG_DIR = (HERE / ".." / ".." / "python" / "reduced_tc_suite").resolve()
 
 MODULE_NAME = "_rss"
 SOURCE_FILE = HERE / "bindings.cpp"

@@ -24,7 +24,7 @@ def _synth_case(seed: int = 11):
     X  = rng.standard_normal((n_storms, 4))
     Y  = rng.gamma(2.0, 1.0, size=(n_storms, n_nodes))
     Y[:, :5] = 0.0
-    from reduced_storm_suite.sampling.pca import reduce_output
+    from reduced_tc_suite.sampling.pca import reduce_output
     Y_r, _ = reduce_output(Y, variance_threshold=0.95)
     tbl_aer = 1.0 / np.array([0.1, 0.2, 0.5, 1, 2, 5, 10, 20][:n_aer], dtype=float)
     base = np.linspace(5.0, 0.5, n_aer)
@@ -34,7 +34,7 @@ def _synth_case(seed: int = 11):
 
 
 def test_sequential_matches_grid_order():
-    from reduced_storm_suite.workflows._ab_sweep import run_ab_sweep
+    from reduced_tc_suite.workflows._ab_sweep import run_ab_sweep
     X, Y, Y_r, HC, tbl = _synth_case()
     grid = [(0.5, 1.0), (1.0, 1.0), (2.0, 0.5)]
 
@@ -50,7 +50,7 @@ def test_sequential_matches_grid_order():
 
 def test_node_subsample_runs_and_changes_nothing_when_full():
     """Subsampling with N >= n_nodes is a no-op (no node selection happens)."""
-    from reduced_storm_suite.workflows._ab_sweep import run_ab_sweep
+    from reduced_tc_suite.workflows._ab_sweep import run_ab_sweep
     X, Y, Y_r, HC, tbl = _synth_case()
     grid = [(1.0, 1.0), (2.0, 0.5)]
 
@@ -74,7 +74,7 @@ def test_node_subsample_runs_and_changes_nothing_when_full():
 
 
 def test_parallel_matches_sequential():
-    from reduced_storm_suite.workflows._ab_sweep import run_ab_sweep
+    from reduced_tc_suite.workflows._ab_sweep import run_ab_sweep
     X, Y, Y_r, HC, tbl = _synth_case()
     grid = [(0.5, 1.0), (1.0, 1.0), (2.0, 0.5), (5.0, 0.1)]
 

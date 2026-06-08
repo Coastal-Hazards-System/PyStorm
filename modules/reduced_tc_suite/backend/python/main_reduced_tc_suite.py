@@ -1,19 +1,19 @@
-"""main_reduced_storm_suite — orchestrator entry (CyHAN v2.0 §5.3).
+"""main_reduced_tc_suite — orchestrator entry (CyHAN v2.0 §5.3).
 
 Author / POC : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
 
 Non-user-facing realization of the Python Orchestration role (§4.2).
-``run_reduced_storm_suite.py`` at the module root imports ``run`` from this
+``run_reduced_tc_suite.py`` at the module root imports ``run`` from this
 file with the operator-edited configuration, the optional bounding-box
 configuration, and the selected mode (``"fixed"`` or ``"optimal"``).
 
 The substantive workflow is already expanded into the
-``reduced_storm_suite`` package — this entry composes (a) CLI / option
+``reduced_tc_suite`` package — this entry composes (a) CLI / option
 resolution and path wiring, (b) the auto-bootstrap of ``tc_data.h5``,
 (c) the optional bbox filter, (d) the per-mode output sub-directory
 routing, and (e) the mode dispatch into ``workflows.rtcs_selection`` or
 ``workflows.growth_evaluation``. None of that logic lives in the launcher;
-``run_reduced_storm_suite.py`` holds only the operator-edited options and a
+``run_reduced_tc_suite.py`` holds only the operator-edited options and a
 single call to ``launch``.
 
 Public API
@@ -61,7 +61,7 @@ def run(
     Returns
     -------
     Whatever the dispatched workflow returns (see
-    ``reduced_storm_suite.workflows.rtcs_selection.run_rtcs_selection`` /
+    ``reduced_tc_suite.workflows.rtcs_selection.run_rtcs_selection`` /
     ``...growth_evaluation.run_growth_evaluation``).
     """
     if mode not in ("fixed", "optimal"):
@@ -81,17 +81,17 @@ def run(
         _apply_bbox(cfg, bbox_config)
 
     if mode == "fixed":
-        from reduced_storm_suite.workflows.rtcs_selection import run_rtcs_selection
+        from reduced_tc_suite.workflows.rtcs_selection import run_rtcs_selection
         return run_rtcs_selection(cfg)
 
-    from reduced_storm_suite.workflows.growth_evaluation import run_growth_evaluation
+    from reduced_tc_suite.workflows.growth_evaluation import run_growth_evaluation
     return run_growth_evaluation(cfg)
 
 
 def _apply_bbox(cfg: Dict[str, Any], bbox_config: Mapping[str, Any]) -> None:
     """Run the geographic bounding-box filter; write the diagnostic map."""
-    from reduced_storm_suite.geo.bbox_filter import apply_bbox_filter
-    from reduced_storm_suite.geo.track_map   import plot_bbox_map
+    from reduced_tc_suite.geo.bbox_filter import apply_bbox_filter
+    from reduced_tc_suite.geo.track_map   import plot_bbox_map
 
     result = apply_bbox_filter(
         bbox_config,
@@ -119,7 +119,7 @@ def _apply_bbox(cfg: Dict[str, Any], bbox_config: Mapping[str, Any]) -> None:
 
 # ===========================================================================
 # Launcher-side logic  (path wiring, bootstrap, CLI) — moved out of the
-# operator-facing run_reduced_storm_suite.py so the launcher holds only
+# operator-facing run_reduced_tc_suite.py so the launcher holds only
 # user options. All functions take the launcher's declarative data as
 # explicit arguments; none read module globals.
 # ===========================================================================
@@ -187,7 +187,7 @@ def _ensure_h5_exists(
     print(f"\n[bootstrap] {h5.name} not found for dataset '{dataset}'.")
     print(f"[bootstrap] Building it via the preprocessor ...\n")
 
-    from reduced_storm_suite.workflows.ingest import Preprocessor
+    from reduced_tc_suite.workflows.ingest import Preprocessor
     Preprocessor(_build_preprocess_config(
         root, dataset, raw_files, preprocess_metadata,
         track_file_patterns, h5_path)).run()
@@ -215,7 +215,7 @@ def _build_bbox_config(
 
 
 def _parse_args(default_mode: str, default_scope: str) -> argparse.Namespace:
-    p = argparse.ArgumentParser(prog="run_reduced_storm_suite.py")
+    p = argparse.ArgumentParser(prog="run_reduced_tc_suite.py")
     p.add_argument(
         "--mode", choices=["fixed", "optimal"], default=default_mode,
         help=f"Selection mode (default: {default_mode}, set by MODE constant).")

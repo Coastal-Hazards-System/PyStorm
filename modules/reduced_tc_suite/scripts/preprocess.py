@@ -1,16 +1,16 @@
-"""reduced_storm_suite — standalone preprocessing entry point.
+"""reduced_tc_suite — standalone preprocessing entry point.
 
 Author / POC : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
 
 Builds the canonical ``tc_data.h5`` store from the raw .mat / .csv source
 files using the dataset, raw-filename, and MATLAB-variable settings
-defined at the top of ``run_reduced_storm_suite.py``. That launcher is the
+defined at the top of ``run_reduced_tc_suite.py``. That launcher is the
 single source of truth for these values; this script just exposes a
 standalone entry point so the preprocessor can be invoked without running
 the full RTCS selection workflow.
 
 To configure: edit ``DATASET``, ``RAW_FILES``, and ``PREPROCESS_METADATA``
-in ``run_reduced_storm_suite.py``.
+in ``run_reduced_tc_suite.py``.
 
 Usage
 -----
@@ -41,11 +41,11 @@ if str(_MODULE_ROOT) not in sys.path:
 
 def main():
     # noinspection PyUnresolvedReferences
-    from reduced_storm_suite.io.store import export_to_csv
+    from reduced_tc_suite.io.store import export_to_csv
     # noinspection PyUnresolvedReferences
-    from reduced_storm_suite.workflows.ingest import Preprocessor
+    from reduced_tc_suite.workflows.ingest import Preprocessor
     # noinspection PyUnresolvedReferences
-    from reduced_storm_suite.config.loader import PREPROCESS_CONFIG_YAML
+    from reduced_tc_suite.config.loader import PREPROCESS_CONFIG_YAML
 
     parser = argparse.ArgumentParser(prog="preprocess.py")
     parser.add_argument("--generate-config", action="store_true")
@@ -68,7 +68,7 @@ def main():
     # Pull DATASET, RAW_FILES, PREPROCESS_METADATA from the launcher so both
     # entry points share one source of truth.
     # noinspection PyUnresolvedReferences
-    from run_reduced_storm_suite import _build_preprocess_config, DATASET
+    from run_reduced_tc_suite import _build_preprocess_config, DATASET
     print(f"\n[preprocess] Active dataset: {DATASET}")
     Preprocessor(_build_preprocess_config()).run()
 
