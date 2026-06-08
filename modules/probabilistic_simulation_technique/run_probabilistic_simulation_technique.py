@@ -214,7 +214,7 @@ BAND_CEILING_PCT = 99.0       # nor above this one (guardrail; floor usually bin
 
 # A candidate μ must keep at least this many exceedances to be selectable —
 # prevents the QDO search from over-fitting the sparse tail.
-MIN_EXCEEDANCES = 20
+MIN_EXCEEDANCES = 10
 
 # Accept set = in-band candidates whose WMSE is within this fraction of the climb
 # from the best fit (the floor, min WMSE) up to a robust ceiling: the highest
