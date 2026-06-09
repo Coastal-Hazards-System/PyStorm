@@ -1,0 +1,30 @@
+# Downloaded raw HURDAT2 / EBTRK files and generated outputs (reproducible, not versioned)
+hurdat2-*.txt
+EBTRK_*.txt
+data/inputs/*.txt
+data/outputs/*.csv
+data/outputs/*.parquet
+
+# Keep the empty data dirs tracked
+!data/inputs/.gitkeep
+!data/outputs/.gitkeep
+
+# Compiled C++ engine artifacts (built locally per machine via build.py)
+*.pyd
+*.so
+*.dylib
+*.o
+backend/engines/cpp/_build/
+
+# Archived MATLAB sources (kept locally, not on GitHub)
+archive/
+*.mat
+*.asv
+
+# White paper (local document, not versioned)
+GP_Metamodel_Whitepaper.md
+
+# Python caches
+__pycache__/
+*.pyc
+.pytest_cache/

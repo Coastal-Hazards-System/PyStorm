@@ -1,0 +1,57 @@
+# CyHAN v2.0 — structured manifest for the Augmented Hurricane Database module.
+#
+# Author / POC : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
+
+[module]
+name              = "augmented_hurricane_database"
+short_tag         = "ahd"
+cyhan_version     = "v2.0"
+launcher          = "run_augmented_hurricane_database.py"
+orchestrator      = "backend/python/main_augmented_hurricane_database.py"
+python_package    = "augmented_hurricane_database"
+cmake_flag        = ""                          # pure Python; no C++ engine
+
+[engine]
+# Optional C++ kernel accelerating the GP-metamodel correlation (prediction +
+# per-evaluation R build). Parsing/geodesics remain pure Python (numpy + pyproj).
+# Built on first GPM run via backend/engines/cpp/build.py; NumPy fallback if absent.
+binding_module    = "_gpm"
+sources           = ["gpm_kernel.hpp", "bindings.cpp"]
+classes           = []                              # header-only; functions in namespace gpm::
+acceleration      = "OpenMP power-exponential correlation kernel (~10-34x over NumPy)"
+install_dir       = "backend/python/augmented_hurricane_database/gp_metamodel/"
+
+[orchestrator_entry]
+config_model      = "augmented_hurricane_database.config:AHDConfig"
+runner            = "augmented_hurricane_database.orchestrator:AHDOrchestrator"
+entry             = "main_augmented_hurricane_database:run"
+
+[stages]
+# Linear pass per basin; "ebtrk_rmax" is opt-in (append_ebtrk_rmax).
+order             = ["resolve", "parse", "motion", "ebtrk_rmax", "write"]
+resolve           = "discover + download the newest NHC HURDAT2 file, or use a local one (sources.resolve_source)"
+parse             = "HURDAT2 best-track text -> tidy track points, unit conversion, sentinel -> NaN (parser.HURDAT2)"
+motion            = "derive translation speed + heading from consecutive geodesic fixes (parser.Storm.compute_motion)"
+ebtrk_rmax        = "OPTIONAL: backfill missing rmax_km from EBTRK, joined per storm on (nhc_id, synoptic time) (ebtrk.fill_missing_rmax)"
+write             = "write one HURDAT-like CSV per basin (writer.write_csv)"
+
+[sources]
+# NHC best-track directory and per-basin canonical filename patterns.
+directory_url     = "https://www.nhc.noaa.gov/data/hurdat/"
+atlantic_pattern  = "hurdat2-1851-<endyr>-<MMDDYY|MMDDYYYY>.txt"
+pacific_pattern   = "hurdat2-nepac-1949-<endyr>-<MMDDYY|MMDDYYYY>.txt"
+
+[ebtrk]
+# Extended Best Track - optional Rmax backfill (late 1980s through 2021).
+url_base          = "https://rammb2.cira.colostate.edu/wp-content/uploads/2020/11/"
+atlantic_files    = ["EBTRK_AL_final_1851-2021_new_format_02-Sep-2022-1.txt"]
+pacific_files     = ["EBTRK_EP_final_1949-2021_new_format_02-Sep-2022.txt", "EBTRK_CP_final_1950-2021_new_format_02-Sep-2022-1.txt"]
+basins            = ["atlantic", "pacific"]
+join_key          = "(nhc_id, YYYYMMDDHH)"
+ported_from       = "ebtrk/CHS_TC_HURDAT_Atlantic_with_ebtrk_Rm_append_v3.m"
+
+[outputs]
+# Paths set by the launcher (relative to the module root).
+input_dir         = "data/inputs/<downloaded hurdat2-*.txt>"
+basin_csv         = "data/outputs/hurdat2_<basin>_<end_year>.csv"
+basin_parquet     = "data/outputs/hurdat2_<basin>_<end_year>.parquet"   # optional (WRITE_PARQUET)
