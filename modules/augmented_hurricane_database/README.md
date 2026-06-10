@@ -85,6 +85,12 @@ python run_augmented_hurricane_database.py --basin both --no-download
   URL overrides (one per cyclone-id code). `None` auto-discovers the newest file
   from the CIRA listing; set a full file URL to fetch that exact file. Honored
   only when `DOWNLOAD = True`; an `EBTRK_FILE` local pin still wins.
+- **`PLOT_IMPUTATION` + `PLOT_ATLANTIC_CP` / `PLOT_ATLANTIC_RMAX` /
+  `PLOT_PACIFIC_CP` / `PLOT_PACIFIC_RMAX`** - per-TC imputation plots (off by
+  default; see below). `PLOT_IMPUTATION` is a master switch (`True` = all four on,
+  `False` = all off, `None` = use the four flags). `PLOT_JOBS` sets plotting
+  worker processes (`None`/`0` = auto, `1` = serial); `PLOT_DIR` sets the output
+  folder.
 - **`WRITE_PARQUET`** - also write a Parquet copy beside each CSV (needs
   `pyarrow`).
 - **`OUTPUT_STEM`** - output filename stem. Substituted from the source file:
@@ -246,6 +252,28 @@ and the calibration-depth discussion are in
 python run_augmented_hurricane_database.py --basin atlantic --ebtrk-rmax --impute-gpm
 ```
 
+## Per-TC imputation plots (optional)
+
+To visually inspect the imputed data along each storm's time history, the module
+can write **one PNG per tropical cyclone**: the GP-metamodel-completed series as a
+line (`GPM`) with the originally observed values as red dots (`Obs`). Two targets:
+central-pressure deficit (`Δp = 1013 − pmin`, hPa) and radius of maximum wind
+(km). `Obs` marks the rows that were known before imputation (HURDAT2, plus EBTRK
+backfill for Rmax); every other point on the line is GP-imputed.
+
+The feature is **off by default**, with four independently switchable groups -
+Atlantic Cp, Atlantic Rmax, Pacific Cp, Pacific Rmax - plus a master switch
+(`PLOT_IMPUTATION = True/False` to flip all four, `None` to use the individual
+flags). It needs `IMPUTE_GPM = True` (the plots show what the GP filled) and
+`matplotlib` (`pip install -e .[plots]`).
+
+A full basin is ~1300-2000 storms, so this writes thousands of PNGs. The renderer
+is built for it (Agg backend, one reused figure, numeric dates, low-compression
+PNGs) and `PLOT_JOBS` spreads the storms over worker processes (`None`/`0` =
+auto). Files land under `PLOT_DIR/imputation_<basin>_<target>/` as
+`DataImputation_{Cp,Rm}_HURDAT_<basin>_<AL|EP|CP><year>_<NN>.png` (the NHC basin,
+year, and storm number, e.g. `..._atlantic_AL1880_02.png`).
+
 ## Layout
 
 ```
@@ -258,6 +286,7 @@ augmented_hurricane_database/
 │       ├── sources.py         # NHC discovery + download
 │       ├── parser.py          # HURDAT2 → tidy DataFrame, motion columns
 │       ├── ebtrk.py           # EBTRK CIRA discovery/download/parse + Rmax backfill
+│       ├── plots.py           # optional per-TC imputation diagnostic plots
 │       ├── writer.py          # CSV / Parquet writers
 │       └── orchestrator.py    # AHDOrchestrator: per-basin resolve → parse → (EBTRK) → write
 ├── tests/                     # pytest smoke tests (offline)

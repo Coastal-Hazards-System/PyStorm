@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import datetime as dt
 import math
 from pathlib import Path
 
@@ -183,6 +184,75 @@ def test_output_stem_augmented_name():
     odd = orch._name_fields("atlantic", Path("my_custom_file.txt"))
     assert _clean_stem(cfg.output_stem.format(**odd)) == \
         "augmented_hurdat2_atlantic_latest"
+
+
+def test_plot_targets_master_switch():
+    # Master None -> the four per-(basin, target) flags decide.
+    c = AHDConfig(plot_atlantic_cp=True, plot_pacific_rmax=True)
+    assert c.plot_targets_for("atlantic") == ["cp"]
+    assert c.plot_targets_for("pacific") == ["rmax"]
+    # Master True -> all four on (both targets, any basin).
+    on = AHDConfig(plot_imputation=True)
+    assert on.plot_targets_for("atlantic") == ["cp", "rmax"]
+    assert on.plot_targets_for("pacific") == ["cp", "rmax"]
+    # Master False overrides an individual True -> none.
+    off = AHDConfig(plot_imputation=False, plot_atlantic_cp=True)
+    assert off.plot_targets_for("atlantic") == []
+
+
+def test_imputation_plots_written(tmp_path):
+    pytest.importorskip("matplotlib")
+    from augmented_hurricane_database import plots
+
+    t0 = dt.datetime(1880, 8, 4, 0, tzinfo=dt.timezone.utc)
+    times = [t0 + dt.timedelta(hours=6 * i) for i in range(3)]
+    df = pd.DataFrame({
+        "tc_no":    [1, 1, 1, 2, 2],
+        "nhc_id":   ["AL021880"] * 3 + ["AL031880"] * 2,
+        "name":     ["UNNAMED"] * 3 + ["TESTSTORM"] * 2,
+        "year":     [1880] * 5,
+        "time_utc": times + times[:2],
+        "pmin_hpa": [990.0, 980.0, np.nan, 1000.0, np.nan],   # some imputed (NaN-free line not required)
+        "rmax_km":  [np.nan] * 5,
+    })
+    obs = df["pmin_hpa"].notna().to_numpy()
+    n = plots.plot_basin_imputation(
+        df, basin="atlantic", target="cp", obs_mask=obs,
+        out_dir=tmp_path, n_jobs=1, verbose=False)
+    assert n == 2
+    # Filenames carry the NHC basin/year/number, not an internal counter.
+    assert (tmp_path / "DataImputation_Cp_HURDAT_atlantic_AL1880_02.png").exists()
+    assert (tmp_path / "DataImputation_Cp_HURDAT_atlantic_AL1880_03.png").exists()
+
+    # A target with no finite values anywhere -> nothing to plot.
+    n_rmax = plots.plot_basin_imputation(
+        df, basin="atlantic", target="rmax", obs_mask=np.zeros(len(df), bool),
+        out_dir=tmp_path, n_jobs=1, verbose=False)
+    assert n_rmax == 0
+
+
+def test_imputation_plot_single_fix_no_xlim_warning(tmp_path):
+    pytest.importorskip("matplotlib")
+    import warnings
+    from augmented_hurricane_database import plots
+
+    # A one-fix storm has t.min() == t.max(); xlim must not go singular.
+    df = pd.DataFrame({
+        "tc_no":   [1],
+        "nhc_id":  ["AL012000"],
+        "name":    ["SOLO"],
+        "year":    [2000],
+        "time_utc": [dt.datetime(2000, 9, 1, 0, tzinfo=dt.timezone.utc)],
+        "pmin_hpa": [995.0],
+        "rmax_km":  [np.nan],
+    })
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        n = plots.plot_basin_imputation(
+            df, basin="atlantic", target="cp", obs_mask=np.array([True]),
+            out_dir=tmp_path, n_jobs=1, verbose=False)
+    assert n == 1
+    assert not any("identical low and high xlims" in str(w.message) for w in caught)
 
 
 def test_find_local_ebtrk_date_aware(tmp_path):

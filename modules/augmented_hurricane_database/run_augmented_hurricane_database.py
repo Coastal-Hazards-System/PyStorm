@@ -248,12 +248,34 @@ GPM_RMAX_NEIGHBORS   = 30
 GPM_RMAX_N_CAL       = 4000
 GPM_RMAX_N_LHS       = 250
 
+# ── Per-TC imputation plots (optional, off by default) ───────────────────────
+# Write one PNG per tropical cyclone to visually inspect the imputed data along
+# each storm's time history: the GP-metamodel-completed series as a line (GPM)
+# with the originally observed values as red dots (Obs). One target per plot:
+#   cp   - central-pressure deficit, 1013 - pmin (hPa)
+#   rmax - radius of maximum wind (km)
+# Needs IMPUTE_GPM = True (the plots show what the GP filled) and matplotlib.
+# A full basin is ~1300-2000 storms, so this writes thousands of PNGs and takes a
+# while; PLOT_JOBS parallelizes it.
+#
+# Master switch (flips all four groups at once):
+#   PLOT_IMPUTATION = True  -> turn ALL four groups ON
+#   PLOT_IMPUTATION = False -> turn ALL four groups OFF
+#   PLOT_IMPUTATION = None  -> defer to the four per-(basin, target) flags below
+PLOT_IMPUTATION    = True
+PLOT_ATLANTIC_CP   = False
+PLOT_ATLANTIC_RMAX = False
+PLOT_PACIFIC_CP    = False
+PLOT_PACIFIC_RMAX  = False
+PLOT_DIR  = DATA / "outputs" / "plots"   # folder for the PNGs (per basin/target subfolders)
+PLOT_JOBS = None                          # worker processes: None/0 = auto (cores-1), 1 = serial
+
 # ── Output ────────────────────────────────────────────────────────────────────
 OUTPUT_DIR    = DATA / "outputs"   # folder where the per-basin CSV files are written
 WRITE_PARQUET = False              # True:  also write a Parquet copy beside each CSV
                                    # False: CSV only
 # Output filename stem. These fields are filled in automatically from the source
-# file (e.g. hurdat2-1851-2025-02272026.txt):
+# file (e.g., hurdat2-1851-2025-02272026.txt):
 #   {basin}       - atlantic / pacific
 #   {start_year}  - first record year     (1851 Atlantic, 1949 Pacific)
 #   {end_year}    - last record year      (e.g. 2025)
@@ -316,6 +338,13 @@ CONFIG = {
     "ebtrk_al_url":      EBTRK_AL_URL,
     "ebtrk_ep_url":      EBTRK_EP_URL,
     "ebtrk_cp_url":      EBTRK_CP_URL,
+    "plot_imputation":   PLOT_IMPUTATION,
+    "plot_atlantic_cp":   PLOT_ATLANTIC_CP,
+    "plot_atlantic_rmax": PLOT_ATLANTIC_RMAX,
+    "plot_pacific_cp":    PLOT_PACIFIC_CP,
+    "plot_pacific_rmax":  PLOT_PACIFIC_RMAX,
+    "plot_dir":          PLOT_DIR,
+    "plot_jobs":         PLOT_JOBS,
     "impute_gpm":           IMPUTE_GPM,
     "gpm_model_dir":        MODEL_DIR,
     "gpm_retrain":          GPM_RETRAIN,

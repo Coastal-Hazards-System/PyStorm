@@ -68,6 +68,22 @@ class AHDConfig(BaseModel):
     ebtrk_ep_url: Optional[str] = None
     ebtrk_cp_url: Optional[str] = None
 
+    # Per-TC imputation diagnostic plots (off by default). One PNG per storm: the
+    # GP-metamodel-completed series as a line (GPM) with the observed values as red
+    # dots (Obs), for central pressure (cp) and radius of max wind (rmax). Needs
+    # impute_gpm=True and matplotlib. A master switch can flip all four at once:
+    # plot_imputation=True -> all on, False -> all off, None -> use the four
+    # per-(basin, target) flags below.
+    plot_imputation: Optional[bool] = None
+    plot_atlantic_cp: bool = False
+    plot_atlantic_rmax: bool = False
+    plot_pacific_cp: bool = False
+    plot_pacific_rmax: bool = False
+    # Where plots are written; None -> output_dir / "plots".
+    plot_dir: Optional[Union[str, Path]] = None
+    # Worker processes for plotting; None/0 -> auto (cores-1, capped), 1 -> serial.
+    plot_jobs: Optional[int] = None
+
     # GP-metamodel imputation: fill still-missing pmin_hpa and rmax_km with the
     # Gaussian-process metamodels (self-trained on the observed rows). Runs after
     # any EBTRK backfill.
@@ -144,3 +160,23 @@ class AHDConfig(BaseModel):
     def ebtrk_urls(self) -> dict:
         """Per-code EBTRK URL overrides keyed by cyclone-id code (AL/EP/CP)."""
         return {"AL": self.ebtrk_al_url, "EP": self.ebtrk_ep_url, "CP": self.ebtrk_cp_url}
+
+    def plot_targets_for(self, basin: str) -> List[str]:
+        """Which targets ('cp'/'rmax') to plot for a basin.
+
+        The master ``plot_imputation`` switch, when not None, overrides the four
+        per-(basin, target) flags (True -> both targets, False -> none).
+        """
+        flags = {
+            ("atlantic", "cp"): self.plot_atlantic_cp,
+            ("atlantic", "rmax"): self.plot_atlantic_rmax,
+            ("pacific", "cp"): self.plot_pacific_cp,
+            ("pacific", "rmax"): self.plot_pacific_rmax,
+        }
+        out: List[str] = []
+        for target in ("cp", "rmax"):
+            on = (self.plot_imputation if self.plot_imputation is not None
+                  else flags.get((basin, target), False))
+            if on:
+                out.append(target)
+        return out

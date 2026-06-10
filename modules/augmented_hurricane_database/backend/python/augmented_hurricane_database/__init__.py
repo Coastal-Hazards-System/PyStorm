@@ -6,6 +6,7 @@ CSV per basin.
 """
 
 from augmented_hurricane_database import ebtrk
+from augmented_hurricane_database import plots
 from augmented_hurricane_database.config import AHDConfig
 from augmented_hurricane_database.orchestrator import (
     BasinResult,
@@ -39,4 +40,5 @@ __all__ = [
     "EBTRK_BASINS",
     "discover_latest_ebtrk",
     "resolve_ebtrk_sources",
+    "plots",
 ]

@@ -59,3 +59,4 @@ ported_from       = "ebtrk/CHS_TC_HURDAT_Atlantic_with_ebtrk_Rm_append_v3.m"
 input_dir         = "data/inputs/<downloaded hurdat2-*.txt>"
 basin_csv         = "data/outputs/augmented_hurdat2_<basin>_<start_year>-<end_year>_<created>.csv"
 basin_parquet     = "data/outputs/augmented_hurdat2_<basin>_<start_year>-<end_year>_<created>.parquet"   # optional (WRITE_PARQUET)
+imputation_plots  = "data/outputs/plots/imputation_<basin>_<cp|rmax>/DataImputation_<Cp|Rm>_HURDAT_<basin>_<AL|EP|CP><year>_<NN>.png"   # optional (PLOT_* + IMPUTE_GPM)

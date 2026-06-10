@@ -109,7 +109,12 @@ class AHDOrchestrator:
 
         n_pmin_gpm = n_rmax_gpm = 0
         gpm_reports = None
+        obs_masks = None
         if cfg.impute_gpm:
+            # Capture which rows were observed BEFORE imputation (for the plots'
+            # red Obs dots); the GP fills the rest. Order is preserved by impute.
+            obs_masks = {"cp": df["pmin_hpa"].notna().to_numpy(),
+                         "rmax": df["rmax_km"].notna().to_numpy()}
             df, n_pmin_gpm, n_rmax_gpm, gpm_reports = self._impute_gpm(df, basin)
 
         stem = _clean_stem(cfg.output_stem.format(**self._name_fields(basin, source)))
@@ -126,6 +131,10 @@ class AHDOrchestrator:
             parquet_path = write_parquet(df, cfg.output_dir / f"{stem}.parquet")
             print(f"[ahd] {basin}: wrote Parquet -> {parquet_path}")
 
+        plot_targets = cfg.plot_targets_for(basin)
+        if plot_targets:
+            self._render_plots(df, basin, plot_targets, obs_masks)
+
         return BasinResult(
             basin=basin,
             source_file=source,
@@ -138,6 +147,25 @@ class AHDOrchestrator:
             n_pmin_gpm=n_pmin_gpm,
             n_rmax_gpm=n_rmax_gpm,
         )
+
+    def _render_plots(self, df: pd.DataFrame, basin: str, targets: List[str],
+                      obs_masks) -> None:
+        """Write per-TC imputation diagnostic plots for the enabled targets."""
+        cfg = self.cfg
+        if not cfg.impute_gpm or obs_masks is None:
+            print(f"[ahd] {basin}: imputation plots need IMPUTE_GPM = True; skipped.")
+            return
+        from . import plots
+        base = Path(cfg.plot_dir) if cfg.plot_dir else (cfg.output_dir / "plots")
+        for target in targets:
+            out_dir = base / f"imputation_{basin}_{target}"
+            try:
+                n = plots.plot_basin_imputation(
+                    df, basin=basin, target=target, obs_mask=obs_masks[target],
+                    out_dir=out_dir, n_jobs=cfg.plot_jobs)
+                print(f"[ahd] {basin}: wrote {n:,} {target} imputation plots -> {out_dir}")
+            except RuntimeError as exc:                    # e.g. matplotlib missing
+                print(f"[ahd] {basin}: {target} imputation plots skipped ({exc})")
 
     def _backfill_rmax(self, df: pd.DataFrame, basin: str) -> tuple[Path | None, int]:
         """Fill missing rmax_km in ``df`` (in place) from EBTRK.
