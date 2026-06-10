@@ -113,7 +113,7 @@ def _ebtrk_line(nhc_id, month, day, hour, year, rmax) -> str:
 
 
 def test_ebtrk_parse_and_fill(tmp_path):
-    # Two EBTRK rows at the SAME synoptic time but DIFFERENT storms — the per-id
+    # Two EBTRK rows at the SAME synoptic time but DIFFERENT storms - the per-id
     # join must pick AL071988's 46 nm, not AL081988's 30 nm.
     ebtrk_txt = "\n".join([
         _ebtrk_line("AL071988", 9, 8, 12, 1988, 46),

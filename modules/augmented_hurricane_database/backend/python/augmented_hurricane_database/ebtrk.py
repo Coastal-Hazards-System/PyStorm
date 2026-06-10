@@ -1,4 +1,4 @@
-"""EBTRK Rmax backfill — fill missing HURDAT2 radius-of-maximum-wind.
+"""EBTRK Rmax backfill - fill missing HURDAT2 radius-of-maximum-wind.
 
 Author / POC : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
 

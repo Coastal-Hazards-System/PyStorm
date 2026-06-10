@@ -6,25 +6,25 @@ Python re-implementation of the Taflanidis-group GP surrogate used by the CHS
 HURDAT data-imputation codes (``calibration_GP.m`` / ``sur_model_GP.m``), with
 three optional upgrades over the original:
 
-  * universal kriging — a configurable polynomial / physical trend ``b·β`` plus a
+  * universal kriging - a configurable polynomial / physical trend ``b·β`` plus a
     zero-mean GP with an anisotropic **power-exponential** correlation
         R_ij = exp( -Σ_k θ_k |x_ik - x_jk|^p )
     (one shared exponent ``p``, a per-dimension weight θ_k), a **nugget** on the
     diagonal, and standardized inputs/outputs.
-  * hyperparameters (θ, p, nugget) by **maximum likelihood** — the concentrated
+  * hyperparameters (θ, p, nugget) by **maximum likelihood** - the concentrated
     negative log-likelihood ``log(σ̂²) + (1/n)·log det R`` minimized with an LHS
     scan polished by **analytic-gradient** L-BFGS-B (multi-start).
   * predictions reproduce ``sur_model_GP``:  f = (b·β + γ·r)·sY + mY.
 
 Trend (physical mean). ``trend_linear`` / ``trend_quad`` select input columns
 that enter the kriging trend linearly / quadratically (on standardized inputs).
-For central pressure, [vmax, vmax²] gives the GP a wind–pressure mean to model
-the residual around — better tail extrapolation than a constant mean.
+For central pressure, [vmax, vmax²] gives the GP a wind-pressure mean to model
+the residual around - better tail extrapolation than a constant mean.
 
-Scalability — two regimes:
-  * ``vecchia=False`` — exact GP on a capped, response-stratified SUPPORT SET
+Scalability - two regimes:
+  * ``vecchia=False`` - exact GP on a capped, response-stratified SUPPORT SET
     (``max_support`` points); prediction sums over the support.
-  * ``vecchia=True`` (default) — NNGP / nearest-neighbour kriging: hyperparameters
+  * ``vecchia=True`` (default) - NNGP / nearest-neighbour kriging: hyperparameters
     and the trend β are estimated on the support set, but every prediction
     conditions on its ``n_neighbors`` nearest points among ALL training fixes.
     This uses the whole dataset (not just the support) at O(n·m³) cost and is
@@ -113,7 +113,7 @@ class GPModel:
     C: Optional[np.ndarray] = None        # Cholesky (variance, optional)
     Ft: Optional[np.ndarray] = None
     G: Optional[np.ndarray] = None
-    # nngp mode — all training data
+    # nngp mode - all training data
     Xn_all: Optional[np.ndarray] = None   # every training input (N×d), normalized
     resid_all: Optional[np.ndarray] = None  # y_all_norm − B_all·β (N,)
     n_neighbors: int = 30
@@ -242,7 +242,7 @@ def _select_support(y: np.ndarray, m: int, rng) -> np.ndarray:
     """Pick m support indices stratified across the response distribution.
 
     Half spread uniformly over the sorted response (covering both tails), half a
-    random draw (preserving density) — better tail accuracy than random alone.
+    random draw (preserving density) - better tail accuracy than random alone.
     """
     n = len(y)
     m = min(m, n)
@@ -266,7 +266,9 @@ def _gls(R: np.ndarray, B: np.ndarray, y: np.ndarray):
     Ft = solve_triangular(C, B, lower=True)
     Q, G = qr(Ft, mode="economic")
     Yt = solve_triangular(C, y, lower=True)
-    beta = solve_triangular(G, Q.T @ Yt)
+    # least-squares solve of Ft @ beta = Yt (the GLS estimate); robust to a
+    # rank-deficient trend basis, where G would be singular
+    beta = np.linalg.lstsq(Ft, Yt, rcond=None)[0]
     rho = Yt - Ft @ beta
     return C, Ft, G, beta, rho
 
@@ -292,7 +294,9 @@ def _objective(params, Xn, B, y, *, want_grad=False):
     logdet = 2.0 * np.sum(np.log(np.abs(np.diag(C))))
     Rinv_B = cho_solve(cf, B, check_finite=False)
     Rinv_y = cho_solve(cf, y, check_finite=False)
-    beta = np.linalg.solve(B.T @ Rinv_B, B.T @ Rinv_y)
+    # least-squares (not solve) so a rank-deficient trend basis, e.g. a near
+    # collinear feature, degrades gracefully instead of raising Singular matrix
+    beta = np.linalg.lstsq(B.T @ Rinv_B, B.T @ Rinv_y, rcond=None)[0]
     r = y - B @ beta
     alpha = cho_solve(cf, r, check_finite=False)
     sigma2 = float(r @ alpha) / n
@@ -330,6 +334,39 @@ def _loocv(R, B, y):
     gamma = Rinv @ (y - B @ beta)
     err = -gamma / np.diag(Rinv)
     return y + err
+
+
+def _nngp_loocv(model, chunk: int = 2000):
+    """Leave-one-out prediction for the NNGP: each training fix predicted from its
+    ``n_neighbors`` nearest OTHER fixes. Returns predictions in response units, or
+    None if there are too few points. This is the deployed predictor's own skill,
+    not the support-set diagnostic."""
+    Xn = model.Xn_all
+    n = len(Xn)
+    m = min(model.n_neighbors, n - 1)
+    if m < 1:
+        return None
+    tree = model._tree()
+    scale = model._scale
+    theta, p, nug = model.theta, model.p, model.nugget
+    resid = model.resid_all
+    eye = np.eye(m)
+    out = np.empty(n)
+    for s in range(0, n, chunk):
+        e = min(s + chunk, n)
+        xq = Xn[s:e]
+        _, idx = tree.query(xq * scale, k=m + 1)
+        idx = np.atleast_2d(idx)[:, 1:m + 1]            # drop self (nearest, distance 0)
+        Xg = Xn[idx]
+        rg = resid[idx]
+        Cgg = np.exp(-np.einsum("k,cijk->cij", theta,
+                                np.abs(Xg[:, :, None, :] - Xg[:, None, :, :]) ** p)) + nug * eye
+        cq = np.exp(-np.einsum("k,cik->ci", theta, np.abs(xq[:, None, :] - Xg) ** p))
+        w = np.linalg.solve(Cgg, rg[..., None])[..., 0]
+        rhat = np.einsum("ci,ci->c", cq, w)
+        b = _make_basis(xq, model.trend_lin, model.trend_quad)
+        out[s:e] = model._inv((b @ model.beta + rhat) * model.sY + model.mY)
+    return out
 
 
 def fit_gp(
@@ -436,11 +473,12 @@ def fit_gp(
     gamma = solve_triangular(C, rho, lower=True, trans="T")
     sigma2 = float(rho @ rho) / ns
 
-    # LOOCV diagnostics on the support set (back-transformed to real units).
-    # Optional: the leave-one-out solve is O(n^3) on the support, so it can be
-    # skipped (e.g. for benchmarking a large-support build).
+    # LOOCV (back-transformed to real units), reported as the DEPLOYED predictor's
+    # skill: the support-set leave-one-out for the full GP (below), or the
+    # nearest-neighbour leave-one-out over all data for the NNGP (after the model
+    # is built). Optional: it can be skipped (e.g. for benchmarking).
     loocv_r2 = loocv_rmse = np.nan
-    if loocv:
+    if loocv and not vecchia:
         yhat_t = _loocv(R, Bs, ys) * sY + mY
         if transform == "log":
             yhat = np.exp(yhat_t) - offset_trans
@@ -470,4 +508,13 @@ def fit_gp(
         model.mode = "nngp"
         model.Xn_all = Xn_all
         model.resid_all = yn_all - B_all @ beta
+        if loocv:
+            # Deployed-predictor leave-one-out: each fix predicted from its m
+            # nearest OTHER fixes (the metric the NNGP actually achieves).
+            pred = _nngp_loocv(model)
+            if pred is not None:
+                yreal = model._inv(yn_all * sY + mY)
+                ss = float(np.sum((yreal - yreal.mean()) ** 2))
+                model.loocv_r2 = float(1.0 - np.sum((yreal - pred) ** 2) / ss) if ss > 0 else np.nan
+                model.loocv_rmse = float(np.sqrt(np.mean((yreal - pred) ** 2)))
     return model

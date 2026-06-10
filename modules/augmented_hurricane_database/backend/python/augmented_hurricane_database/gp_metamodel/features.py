@@ -5,14 +5,14 @@ Author / POC : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usa
 Mirrors the predictor sets of GPM_Cp.m / the DI scripts:
 
   Central pressure (response = 1013 - pmin, the deficit):
-    Cp6  [lat, lon, vmax, Vf, sin Hd, cos Hd]   — fixes with known motion
-    Cp3  [lat, lon, vmax]                        — fixes lacking Vf/Hd
+    Cp6  [lat, lon, vmax, Vf, sin Hd, cos Hd]   - fixes with known motion
+    Cp3  [lat, lon, vmax]                        - fixes lacking Vf/Hd
   Radius of maximum wind (response = rmax):
     Rm7  [lat, lon, vmax, Cp-deficit, Vf, sin Hd, cos Hd]
     Rm4  [lat, lon, vmax, Cp-deficit]
 
 A fix is routed to the smaller model when its translation speed OR heading is
-missing — i.e. single-point TCs, the first fix (no motion), and stationary
+missing - i.e. single-point TCs, the first fix (no motion), and stationary
 fixes (Vf=0 was set to NaN). sin/cos make the heading sign-wrap irrelevant.
 """
 

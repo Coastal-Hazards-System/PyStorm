@@ -1,4 +1,4 @@
-"""augmented_hurricane_database — NHC HURDAT2 best-track ingest.
+"""augmented_hurricane_database - NHC HURDAT2 best-track ingest.
 
 Downloads the Atlantic and/or NE-Pacific HURDAT2 best-track files from NHC,
 parses them, derives translation speed and heading, and writes a HURDAT-like

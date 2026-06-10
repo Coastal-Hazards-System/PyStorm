@@ -1,4 +1,4 @@
-"""HURDAT2 parser — best-track records into tidy track points.
+"""HURDAT2 parser - best-track records into tidy track points.
 
 Author / POC : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
 
@@ -7,8 +7,8 @@ Object-oriented re-implementation of the CHS hurricane track pre-processor
 ``Storm`` objects, each holding a list of ``TrackPoint`` snapshots, then derives
 the two motion columns the house format adds on top of raw HURDAT2:
 
-  * trans_kmh   — translation (forward) speed, km/h
-  * heading_deg — heading (forward azimuth), degrees in (-180, 180]
+  * trans_kmh   - translation (forward) speed, km/h
+  * heading_deg - heading (forward azimuth), degrees in (-180, 180]
 
 Unit conventions (matching the legacy MATLAB house format):
   * maximum sustained wind : knots -> km/h        (x 1.852)

@@ -1,4 +1,4 @@
-"""HURDAT2 source resolution — basin registry, NHC discovery, download.
+"""HURDAT2 source resolution - basin registry, NHC discovery, download.
 
 Author / POC : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
 
@@ -26,7 +26,7 @@ import requests
 NHC_DIR_URL = "https://www.nhc.noaa.gov/data/hurdat/"
 
 # Per-basin canonical filename pattern. The "atl"/"nepac"-without-year variants
-# NHC also hosts are intentionally excluded — only the full-record files match.
+# NHC also hosts are intentionally excluded - only the full-record files match.
 _BASIN_PATTERN = {
     "atlantic": re.compile(r"hurdat2-1851-(\d{4})-(\d{6,8})\.txt"),
     "pacific":  re.compile(r"hurdat2-nepac-1949-(\d{4})-(\d{6,8})\.txt"),
@@ -134,11 +134,11 @@ def resolve_source(
     """Resolve the local HURDAT2 path to parse for ``basin``.
 
     Policy (first match wins):
-      1. ``explicit_file`` — an operator-pinned path (absolute, or relative to
+      1. ``explicit_file`` - an operator-pinned path (absolute, or relative to
          ``input_dir``).
-      2. ``download_latest`` — discover and fetch the newest NHC file into
+      2. ``download_latest`` - discover and fetch the newest NHC file into
          ``input_dir``.
-      3. otherwise — newest matching file already under ``input_dir`` (or any
+      3. otherwise - newest matching file already under ``input_dir`` (or any
          ``extra_search_dirs``).
     """
     basin = _validate_basin(basin)

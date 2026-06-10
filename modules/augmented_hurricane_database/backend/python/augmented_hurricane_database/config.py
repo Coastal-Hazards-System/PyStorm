@@ -55,18 +55,38 @@ class AHDConfig(BaseModel):
     # any EBTRK backfill.
     impute_gpm: bool = False
     # GP-metamodel quality/speed upgrades (all on by default):
-    gpm_vecchia: bool = True          # NNGP: predict from all data, not just the support
-    gpm_physical_mean: bool = True    # wind–pressure / lat·deficit kriging trend
+    gpm_physical_mean: bool = True    # wind-pressure / lat·deficit kriging trend
     gpm_log_rmax: bool = True         # fit the Rmax models in log space (lognormal target)
     gpm_parallel: bool = True         # train the two models per target concurrently
-    # Per-target method settings (empirically tuned — Cp is smooth/long-range and
+    # Per-MODEL solver: True = nearest-neighbour GP (NNGP, predict from all data);
+    # False = exact full GP over the support (denser/slower, needs deeper
+    # calibration). Set per model so, e.g., Cp6 can use the full GP while Cp3 uses
+    # the NNGP. The NNGP default is recommended for cost and generalization.
+    gpm_cp6_vecchia: bool = True      # central pressure, full-feature model
+    gpm_cp3_vecchia: bool = True      # central pressure, reduced model
+    gpm_rm7_vecchia: bool = True      # radius of max wind, full-feature model
+    gpm_rm4_vecchia: bool = True      # radius of max wind, reduced model
+    # Per-target method settings (empirically tuned - Cp is smooth/long-range and
     # wants more calibration support; Rmax is short-range/noisy and wants a small
     # conditioning set). The physical-mean trend leaves a short-range residual, so
-    # neither target benefits from a large NNGP neighbour set.
+    # neither target benefits from a large NNGP neighbour set. n_cal is the
+    # hyperparameter-calibration subset size; n_lhs the Latin-hypercube budget for
+    # that search. The exact full GP needs a deeper n_cal (about 4000) and a larger
+    # n_lhs to reach its best accuracy; the NNGP is fine at the defaults.
     gpm_cp_max_support: int = 6000    # Cp: support points for θ / trend-β calibration
     gpm_cp_neighbors: int = 30        # Cp: NNGP conditioning-set size
-    gpm_rmax_max_support: int = 3000  # Rmax: support points
-    gpm_rmax_neighbors: int = 10      # Rmax: NNGP conditioning-set size
+    gpm_cp_n_cal: int = 4000          # Cp: calibration-subset size (deep: lifts Cp6 above the MATLAB)
+    gpm_cp_n_lhs: int = 250           # Cp: Latin-hypercube budget (>=250 converges Cp6 calibration)
+    gpm_rmax_max_support: int = 8000  # Rmax: support points (large; the EBTRK-augmented set is ~15k)
+    gpm_rmax_neighbors: int = 30      # Rmax: NNGP conditioning-set size
+    gpm_rmax_n_cal: int = 4000        # Rmax: calibration-subset size (deep: lifts Rm7/Rm4 above the MATLAB)
+    gpm_rmax_n_lhs: int = 250         # Rmax: Latin-hypercube budget for calibration
+    # Trained-model cache. When gpm_model_dir is set, each fitted model is saved
+    # there as a compressed .npz keyed by basin, model, and a signature of the
+    # settings and training data. gpm_retrain=False reuses a matching cached model
+    # and skips training; gpm_retrain=True retrains regardless and overwrites.
+    gpm_model_dir: Optional[Union[str, Path]] = None
+    gpm_retrain: bool = False
 
     @field_validator("basins", mode="before")
     @classmethod

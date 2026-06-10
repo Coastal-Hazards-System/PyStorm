@@ -4,6 +4,10 @@ EBTRK_*.txt
 data/inputs/*.txt
 data/outputs/*.csv
 data/outputs/*.parquet
+data/outputs/*_gpm_metrics.json
+
+# Trained GP-metamodel cache (reproducible, not versioned)
+data/models/*.npz
 
 # Keep the empty data dirs tracked
 !data/inputs/.gitkeep

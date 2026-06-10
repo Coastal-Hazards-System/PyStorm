@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-"""build.py — standalone build helper for the _gpm pybind11 extension.
+"""build.py - standalone build helper for the _gpm pybind11 extension.
 
 Author / POC : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
 
@@ -49,8 +49,8 @@ def _build_setuptools() -> None:
         include_dirs=[pybind11.get_include(), str(HERE)],
         language="c++",
     )
-    # OpenMP-parallel + fast-math: the kernel is the hot loop of prediction and
-    # the per-evaluation R build. The GP releases the GIL during the C++ compute,
+    # OpenMP-parallel + fast-math: the kernel is the performance-critical inner
+    # loop of prediction and the per-evaluation R build. The GP releases the GIL,
     # so threads scale freely (measured ~10-34x over the NumPy broadcast).
     if sys.platform == "win32":
         ext.extra_compile_args = ["/std:c++17", "/O2", "/EHsc", "/openmp", "/fp:fast"]
@@ -106,7 +106,7 @@ def _build_direct() -> None:
         # DLL directly. "-static" pulls libgcc/libstdc++/libgomp/winpthread into
         # the .pyd so it has no external mingw-runtime DLL dependency at import.
         # (The GIL is released during compute, so the static OpenMP runtime does
-        # not conflict — the earlier crash was a GIL-misuse bug, now fixed.)
+        # not conflict - the earlier crash was a GIL-misuse bug, now fixed.)
         import os
         ver = f"{sys.version_info.major}{sys.version_info.minor}"
         py_dll = os.path.join(sys.base_prefix, f"python{ver}.dll")

@@ -152,10 +152,10 @@ support count). Full reasoning and the file-by-file MATLAB-to-Python map are in
 **Per-target settings** (empirically tuned). Cp is smooth and long-range, Rmax is
 short-range and noisy, so they use different defaults:
 
-| target | `..._MAX_SUPPORT` | `..._NEIGHBORS` |
-|---|---|---|
-| Cp (`GPM_CP_*`) | 6000 | 30 |
-| Rmax (`GPM_RMAX_*`) | 3000 | 10 |
+| target | `..._MAX_SUPPORT` | `..._NEIGHBORS` | `..._N_CAL` / `..._N_LHS` |
+|---|---|---|---|
+| Cp (`GPM_CP_*`) | 6000 | 30 | 4000 / 250 |
+| Rmax (`GPM_RMAX_*`) | 8000 | 30 | 4000 / 250 |
 
 **Acceleration.** An analytic likelihood gradient (about 3x faster calibration,
 better hyperparameters), a smaller calibration subset, a response-stratified
@@ -167,24 +167,25 @@ real Atlantic Cp: training about 240 s to about 40 s, prediction of 55k rows abo
 
 ### Validation against the MATLAB
 
-The table pairs the Python 85/15 hold-out with the MATLAB's reported leave-one-out
-(LOOCV). The two columns use different protocols (see the note below):
+The primary comparison is the recommended (default) configuration against the
+MATLAB on the IDENTICAL data (the same HURDAT file, and for Rmax the same
+EBTRK-augmented training set), both scored by leave-one-out on the deployed
+predictor, the metric the MATLAB reports:
 
-| model | Python (hold-out) R^2 / RMSE | MATLAB (LOOCV) R^2 / RMSE |
+| model | recommended NNGP (LOOCV) R^2 / RMSE | MATLAB (LOOCV) R^2 / RMSE |
 |---|---|---|
-| Cp6 | 0.923 / 5.27 hPa | 0.932 / 4.97 hPa |
-| Cp3 | 0.923 / 5.37 hPa | 0.918 / 5.49 hPa |
-| Rm7 | 0.832 / 29.1 km  | 0.603 / 36.0 km  |
-| Rm4 | 0.768 / 34.0 km  | 0.401 / 44.3 km  |
+| Cp6 | 0.937 / 4.81 hPa | 0.932 / 4.97 hPa |
+| Cp3 | 0.920 / 5.45 hPa | 0.918 / 5.49 hPa |
+| Rm7 | 0.607 / 35.2 km  | 0.603 / 36.0 km  |
+| Rm4 | 0.447 / 41.8 km  | 0.401 / 44.3 km  |
 
-The apparent Cp6 gap above is a metric mismatch (Python hold-out vs MATLAB LOOCV),
-not a skill deficit. In a fully controlled comparison on the identical HURDAT file
-the MATLAB used, with the MATLAB's own LOOCV metric, the Python full GP with the
-physical-mean trend reaches R^2 0.934, slightly above the MATLAB's 0.932; a
-constant-trend Python full GP reaches 0.919, the difference being calibration
-depth (MATLAB calibrates on all fixes, Python on a subset). Rmax is better in
-Python (log transform, physics trend, NNGP). The controlled comparison, the
-full-GP-vs-NNGP head-to-head, and the hold-out-vs-LOOCV discussion are in
+The recommended configuration beats the MATLAB on all four models. Two levers
+drive it: a deep calibration (n_cal=4000, n_lhs=250), which lifts Cp6 to 0.937,
+and a large enough support set, which for Rmax (about 15k training fixes) had to
+be 8000 rather than 3000. Rmax follows the MATLAB workflow: it is trained on
+observed pressure (before central-pressure imputation) and predicts the missing
+Rmax with the completed pressure. The full head-to-head, the per-target sweeps,
+and the calibration-depth discussion are in
 `backend/python/augmented_hurricane_database/gp_metamodel/README.md`.
 
 ```bash

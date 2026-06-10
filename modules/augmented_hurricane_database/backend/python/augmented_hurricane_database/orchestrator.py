@@ -1,4 +1,4 @@
-"""Orchestrator — resolve sources, parse, and write one CSV per basin.
+"""Orchestrator - resolve sources, parse, and write one CSV per basin.
 
 Author / POC : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
 """
@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass, field
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Dict, List
 
@@ -16,7 +17,7 @@ from augmented_hurricane_database import ebtrk as _ebtrk
 from augmented_hurricane_database.config import AHDConfig
 from augmented_hurricane_database.parser import HURDAT2
 from augmented_hurricane_database.sources import resolve_source
-from augmented_hurricane_database.writer import write_csv, write_parquet
+from augmented_hurricane_database.writer import write_csv, write_metrics, write_parquet
 
 # Recover the record's end year from an NHC filename (…-<startyr>-<endyr>-<stamp>.txt).
 _END_YEAR = re.compile(r"-(\d{4})-(\d{4})-\d{6,8}\.txt$")
@@ -77,12 +78,18 @@ class AHDOrchestrator:
             ebtrk_source, n_filled = self._backfill_rmax(df, basin)
 
         n_pmin_gpm = n_rmax_gpm = 0
+        gpm_reports = None
         if cfg.impute_gpm:
-            df, n_pmin_gpm, n_rmax_gpm = self._impute_gpm(df, basin)
+            df, n_pmin_gpm, n_rmax_gpm, gpm_reports = self._impute_gpm(df, basin)
 
         stem = cfg.output_stem.format(basin=basin, end_year=self._end_year(source))
         csv_path = write_csv(df, cfg.output_dir / f"{stem}.csv")
         print(f"[ahd] {basin}: wrote {len(df):,} rows / {n_storms:,} storms -> {csv_path}")
+
+        if gpm_reports is not None:
+            metrics = self._gpm_metrics(basin, source.name, len(df), n_storms, gpm_reports)
+            metrics_path = write_metrics(metrics, cfg.output_dir / f"{stem}_gpm_metrics.json")
+            print(f"[ahd] {basin}: wrote GP-metamodel LOOCV metrics -> {metrics_path}")
 
         parquet_path = None
         if cfg.write_parquet:
@@ -134,20 +141,62 @@ class AHDOrchestrator:
         print(f"[ahd] {basin}: filled {n_filled:,} Rmax values from EBTRK")
         return sources[0] if sources else None, n_filled
 
-    def _impute_gpm(self, df: pd.DataFrame, basin: str) -> tuple[pd.DataFrame, int, int]:
-        """Fill remaining missing pmin_hpa and rmax_km with the GP metamodels."""
+    def _gpm_metrics(self, basin, source_name, n_rows, n_storms, reports) -> dict:
+        """Build the per-run GP-metamodel metrics record (LOOCV scores + settings)."""
+        cfg = self.cfg
+
+        def target_block(rep, full, small):
+            def model(name, n_train):
+                lc = rep.loocv.get(name, {})
+                return {"n_train": int(n_train),
+                        "loocv_r2": lc.get("r2"), "loocv_rmse": lc.get("rmse")}
+            return {"n_missing": int(rep.n_missing), "n_filled": int(rep.n_filled),
+                    "models": {full: model(full, rep.n_train_full),
+                               small: model(small, rep.n_train_small)}}
+
+        return {
+            "basin": basin,
+            "source_file": source_name,
+            "n_rows": int(n_rows),
+            "n_storms": int(n_storms),
+            "central_pressure": target_block(reports["pmin"], "Cp6", "Cp3"),
+            "radius_max_wind": target_block(reports["rmax"], "Rm7", "Rm4"),
+            "settings": {
+                "physical_mean": cfg.gpm_physical_mean, "log_rmax": cfg.gpm_log_rmax,
+                "cp6_vecchia": cfg.gpm_cp6_vecchia, "cp3_vecchia": cfg.gpm_cp3_vecchia,
+                "rm7_vecchia": cfg.gpm_rm7_vecchia, "rm4_vecchia": cfg.gpm_rm4_vecchia,
+                "cp_max_support": cfg.gpm_cp_max_support, "cp_neighbors": cfg.gpm_cp_neighbors,
+                "cp_n_cal": cfg.gpm_cp_n_cal, "cp_n_lhs": cfg.gpm_cp_n_lhs,
+                "rmax_max_support": cfg.gpm_rmax_max_support, "rmax_neighbors": cfg.gpm_rmax_neighbors,
+                "rmax_n_cal": cfg.gpm_rmax_n_cal, "rmax_n_lhs": cfg.gpm_rmax_n_lhs,
+                "retrain": cfg.gpm_retrain,
+            },
+            "generated_utc": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        }
+
+    def _impute_gpm(self, df: pd.DataFrame, basin: str):
+        """Fill remaining missing pmin_hpa and rmax_km with the GP metamodels.
+
+        Returns (df, n_pmin_filled, n_rmax_filled, reports). ``reports`` carries the
+        per-model LOOCV scores, written next to the output as a metrics JSON.
+        """
         from .gp_metamodel import impute_all
         cfg = self.cfg
         print(f"[ahd] {basin}: GP-metamodel imputation "
               f"(pmin missing={int(df['pmin_hpa'].isna().sum()):,}, "
               f"rmax missing={int(df['rmax_km'].isna().sum()):,})")
         df, reports = impute_all(
-            df, vecchia=cfg.gpm_vecchia, physical_mean=cfg.gpm_physical_mean,
+            df, physical_mean=cfg.gpm_physical_mean,
             log_rmax=cfg.gpm_log_rmax, parallel=cfg.gpm_parallel,
+            cp6_vecchia=cfg.gpm_cp6_vecchia, cp3_vecchia=cfg.gpm_cp3_vecchia,
+            rm7_vecchia=cfg.gpm_rm7_vecchia, rm4_vecchia=cfg.gpm_rm4_vecchia,
             cp_max_support=cfg.gpm_cp_max_support, cp_neighbors=cfg.gpm_cp_neighbors,
+            cp_n_cal=cfg.gpm_cp_n_cal, cp_n_lhs=cfg.gpm_cp_n_lhs,
             rmax_max_support=cfg.gpm_rmax_max_support,
-            rmax_neighbors=cfg.gpm_rmax_neighbors)
-        return df, int(reports["pmin"].n_filled), int(reports["rmax"].n_filled)
+            rmax_neighbors=cfg.gpm_rmax_neighbors,
+            rmax_n_cal=cfg.gpm_rmax_n_cal, rmax_n_lhs=cfg.gpm_rmax_n_lhs,
+            basin=basin, model_dir=cfg.gpm_model_dir, retrain=cfg.gpm_retrain)
+        return df, int(reports["pmin"].n_filled), int(reports["rmax"].n_filled), reports
 
     def run(self) -> AHDResult:
         result = AHDResult()

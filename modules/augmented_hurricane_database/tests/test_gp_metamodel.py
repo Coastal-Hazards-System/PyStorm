@@ -17,7 +17,7 @@ def test_gp_recovers_smooth_function():
     # smooth target
     f = lambda Z: 30 + 5 * np.sin(Z[:, 0] / 5) + 0.2 * (Z[:, 1] + 60)
     y = f(X)
-    # global (support) mode — also exercises the predictive variance path
+    # global (support) mode - also exercises the predictive variance path
     gp = fit_gp(X, y, vecchia=False, max_support=300, n_lhs=60, n_polish=2,
                 seed=1, store_variance=True)
 
@@ -106,7 +106,7 @@ def test_impute_fills_missing():
     # Rmax clamped to the physical band
     assert out["rmax_km"].between(8, 600).all()
 
-    # imputed pmin tracks truth (loose) — recovered within a few hPa on average
+    # imputed pmin tracks truth (loose) - recovered within a few hPa on average
     err = (out.loc[miss_p, "pmin_hpa"].to_numpy()
            - truth.loc[miss_p, "pmin_hpa"].to_numpy())
     assert np.sqrt(np.mean(err ** 2)) < 8.0
@@ -127,3 +127,23 @@ def test_first_fix_routed_to_small_model():
                                        verbose=False)
     val = out.loc[out.tc_no == 999, "pmin_hpa"].iloc[0]
     assert np.isfinite(val) and 850 < val < 1015
+
+
+def test_model_cache_reuse(tmp_path):
+    # With model_dir set, models are saved and a second run reuses them, yielding
+    # identical output; retrain=True overwrites. Different settings -> new cache.
+    rng = np.random.default_rng(7)
+    df = _synthetic_storms(rng, n_storms=40, per=10)
+    df.loc[rng.random(len(df)) < 0.3, "pmin_hpa"] = np.nan
+    df.loc[rng.random(len(df)) < 0.3, "rmax_km"] = np.nan
+    kw = dict(basin="test", model_dir=tmp_path,
+              gp_kwargs={"max_support": 300, "n_lhs": 40}, verbose=False)
+
+    out1, _ = impute_all(df, **kw)
+    saved = sorted(p.name for p in tmp_path.glob("*.npz"))
+    assert {n.split("_")[1] for n in saved} == {"Cp6", "Cp3", "Rm7", "Rm4"}
+
+    # reuse: identical results, and no error loading the cached models
+    out2, _ = impute_all(df, retrain=False, **kw)
+    assert np.allclose(out1["pmin_hpa"], out2["pmin_hpa"], equal_nan=True)
+    assert np.allclose(out1["rmax_km"], out2["rmax_km"], equal_nan=True)
