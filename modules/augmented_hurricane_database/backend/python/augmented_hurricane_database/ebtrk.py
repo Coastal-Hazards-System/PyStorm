@@ -18,34 +18,72 @@ Join key. The original MATLAB matched EBTRK to HURDAT on synoptic datetime alone
 which is ambiguous when two storms share a synoptic time. The EBTRK record's
 first eight characters are exactly the HURDAT cyclone id (e.g. ``AL071988``), so
 here the join is on (nhc_id, synoptic datetime), exact per storm.
+
+Latest-file discovery. Like the HURDAT2 source resolver, this module finds the
+newest published EBTRK file rather than pinning a fixed name. CIRA lists the
+files on a landing page (``EBTRK_LIST_URL``) with names that carry the record
+END YEAR and a DD-Mon-YYYY publish stamp, e.g.
+
+    EBTRK_AL_final_1851-2021_new_format_02-Sep-2022-1.txt
+
+``discover_latest_ebtrk`` fetches that listing and returns the newest "new
+format" file URL for a code (AL/EP/CP), ranking by end year then stamp. If the
+listing cannot be reached or parsed it falls back to the known default file.
 """
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 from typing import Optional, Tuple
+from urllib.parse import urljoin
 
 import numpy as np
 import pandas as pd
 import requests
 
-# CIRA EBTRK download location.
+# CIRA EBTRK landing page (lists the files) and the uploads directory the files
+# live under (used to build the fallback default URL).
+EBTRK_LIST_URL = ("https://rammb2.cira.colostate.edu/research/tropical-cyclones/"
+                  "tc_extended_best_track_dataset/")
 EBTRK_URL_BASE = "https://rammb2.cira.colostate.edu/wp-content/uploads/2020/11/"
 
-# Per-basin EBTRK sources: (default filename, local-search glob). The HURDAT
-# nepac ("pacific") record contains both East Pacific (EP) and Central Pacific
-# (CP) storms, each with its own EBTRK file, so the Pacific basin needs both.
-# The cyclone-id prefixes (AL / EP / CP) match HURDAT directly.
-EBTRK_SOURCES = {
-    "atlantic": [
-        ("EBTRK_AL_final_1851-2021_new_format_02-Sep-2022-1.txt", "EBTRK_AL_*.txt"),
-    ],
-    "pacific": [
-        ("EBTRK_EP_final_1949-2021_new_format_02-Sep-2022.txt", "EBTRK_EP_*.txt"),
-        ("EBTRK_CP_final_1950-2021_new_format_02-Sep-2022-1.txt", "EBTRK_CP_*.txt"),
-    ],
+# Per-code EBTRK file metadata, keyed by the cyclone-id prefix (which matches
+# HURDAT directly): the known default filename (a last-resort fallback when
+# discovery is unavailable), a local-search glob, and a discovery regex that
+# matches only the canonical "new format" file and captures (end_year, stamp).
+# "stamp" is the DD-Mon-YYYY publish date; an optional "-N" duplicate suffix is
+# allowed. The "old format" files NHC also hosts are intentionally excluded.
+def _ebtrk_re(code: str) -> "re.Pattern[str]":
+    return re.compile(
+        rf"EBTRK_{code}_final_\d{{4}}-(\d{{4}})_new_format_"
+        r"(\d{2}-[A-Za-z]{3}-\d{4})(?:-\d+)?\.txt")
+
+
+_EBTRK_CODE = {
+    "AL": {"default": "EBTRK_AL_final_1851-2021_new_format_02-Sep-2022-1.txt",
+           "glob": "EBTRK_AL_*.txt", "re": _ebtrk_re("AL")},
+    "EP": {"default": "EBTRK_EP_final_1949-2021_new_format_02-Sep-2022.txt",
+           "glob": "EBTRK_EP_*.txt", "re": _ebtrk_re("EP")},
+    "CP": {"default": "EBTRK_CP_final_1950-2021_new_format_02-Sep-2022-1.txt",
+           "glob": "EBTRK_CP_*.txt", "re": _ebtrk_re("CP")},
 }
-EBTRK_BASINS = tuple(EBTRK_SOURCES)
+
+# Which EBTRK file code(s) each HURDAT basin needs. The HURDAT nepac ("pacific")
+# record contains both East Pacific (EP) and Central Pacific (CP) storms, each
+# with its own EBTRK file, so the Pacific basin needs both.
+EBTRK_BASIN_CODES = {
+    "atlantic": ["AL"],
+    "pacific":  ["EP", "CP"],
+}
+EBTRK_BASINS = tuple(EBTRK_BASIN_CODES)
+
+# href="..." extractor for the listing page (handles relative or absolute URLs).
+_HREF_RE = re.compile(r'href=["\']([^"\']+)["\']', re.IGNORECASE)
+
+_MONTHS = {m: i for i, m in enumerate(
+    ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
+     "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"], start=1)}
 
 _NM2KM = 1.852
 _RMAX_BAD = -99
@@ -63,15 +101,77 @@ _SLICES = {
 }
 
 
-def download_ebtrk(dest_dir: Path, *, filename: str,
-                   overwrite: bool = False) -> Path:
-    """Download an EBTRK file from CIRA into ``dest_dir`` (skip if present)."""
+def _stamp_key(stamp: str) -> tuple:
+    """Normalize an EBTRK publish stamp (DD-Mon-YYYY) to (yyyy, mm, dd)."""
+    try:
+        dd, mon, yyyy = stamp.split("-")
+        return (int(yyyy), _MONTHS.get(mon[:3].title(), 0), int(dd))
+    except (ValueError, AttributeError):
+        return (0, 0, 0)
+
+
+def list_remote_ebtrk(code: str, *, html: Optional[str] = None) -> list[str]:
+    """All "new format" EBTRK file URLs for ``code`` (AL/EP/CP) in the listing.
+
+    ``html`` may be supplied to parse a pre-fetched listing (used in tests);
+    otherwise the live CIRA landing page is fetched. Relative hrefs are resolved
+    against ``EBTRK_LIST_URL``.
+    """
+    if code not in _EBTRK_CODE:
+        raise ValueError(f"Unknown EBTRK code '{code}'. Expected one of "
+                         f"{tuple(_EBTRK_CODE)}.")
+    if html is None:
+        resp = requests.get(EBTRK_LIST_URL, timeout=_TIMEOUT)
+        resp.raise_for_status()
+        html = resp.text
+    pat = _EBTRK_CODE[code]["re"]
+    urls = {}
+    for href in _HREF_RE.findall(html):
+        if pat.search(href):
+            urls[urljoin(EBTRK_LIST_URL, href)] = None
+    return sorted(urls)
+
+
+def discover_latest_ebtrk(code: str, *, html: Optional[str] = None) -> str:
+    """URL of the newest published "new format" EBTRK file for ``code``."""
+    pat = _EBTRK_CODE[code]["re"]
+
+    def key(url: str) -> tuple:
+        m = pat.search(url)
+        end_year, stamp = m.groups()
+        return (int(end_year), _stamp_key(stamp))
+
+    urls = list_remote_ebtrk(code, html=html)
+    if not urls:
+        raise RuntimeError(
+            f"No {code} new-format EBTRK file found at {EBTRK_LIST_URL} "
+            f"(pattern {pat.pattern}).")
+    return max(urls, key=key)
+
+
+def _latest_url(code: str) -> str:
+    """Discovered newest URL for ``code``, or the known default on any failure."""
+    try:
+        return discover_latest_ebtrk(code)
+    except Exception as exc:                                   # noqa: BLE001
+        default = EBTRK_URL_BASE + _EBTRK_CODE[code]["default"]
+        print(f"[ahd] EBTRK {code}: discovery failed ({exc}); "
+              f"falling back to default {default}")
+        return default
+
+
+def download_ebtrk(url: str, dest_dir: Path, *, overwrite: bool = False) -> Path:
+    """Download an EBTRK file ``url`` into ``dest_dir`` (skip if present).
+
+    The local filename is the URL basename.
+    """
     dest_dir = Path(dest_dir)
     dest_dir.mkdir(parents=True, exist_ok=True)
+    filename = url.rstrip("/").rsplit("/", 1)[-1]
     dest = dest_dir / filename
     if dest.exists() and not overwrite:
         return dest
-    resp = requests.get(EBTRK_URL_BASE + filename, timeout=_TIMEOUT)
+    resp = requests.get(url, timeout=_TIMEOUT)
     resp.raise_for_status()
     dest.write_bytes(resp.content)
     return dest
@@ -147,23 +247,52 @@ def parse_ebtrk_files(paths) -> pd.DataFrame:
     return pd.concat(frames, ignore_index=True)
 
 
-def _resolve_one(filename: str, glob_pat: str, *, download: bool,
-                 input_dir: Path, extra_search_dirs, overwrite: bool) -> Path:
-    """Resolve one EBTRK file: download it, or find it locally by name or glob."""
-    if download:
-        return download_ebtrk(input_dir, filename=filename, overwrite=overwrite)
-    for d in (input_dir, *extra_search_dirs):
+def find_local_ebtrk(code: str, *search_dirs: Path) -> Optional[Path]:
+    """Newest "new format" EBTRK file for ``code`` already on disk (or None).
+
+    Mirrors the HURDAT2 resolver: rank matching files by (end year, publish
+    stamp). Falls back to the broadest glob (newest by name) if nothing matches
+    the canonical new-format pattern, so legacy local copies still resolve.
+    """
+    pat = _EBTRK_CODE[code]["re"]
+    glob_pat = _EBTRK_CODE[code]["glob"]
+    matched: list[tuple[tuple, Path]] = []
+    glob_hits: list[Path] = []
+    for d in search_dirs:
         d = Path(d)
-        cand = d / filename
-        if cand.is_file():
-            return cand
-        if d.is_dir():
-            hits = sorted(d.glob(glob_pat))
-            if hits:
-                return hits[-1]
+        if not d.is_dir():
+            continue
+        for p in d.glob(glob_pat):
+            glob_hits.append(p)
+            m = pat.fullmatch(p.name)
+            if m:
+                end_year, stamp = m.groups()
+                matched.append(((int(end_year), _stamp_key(stamp)), p))
+    if matched:
+        return max(matched, key=lambda kv: kv[0])[1]
+    if glob_hits:
+        return sorted(glob_hits)[-1]
+    return None
+
+
+def _resolve_one(code: str, *, download: bool, input_dir: Path,
+                 extra_search_dirs, overwrite: bool,
+                 url: Optional[str] = None) -> Path:
+    """Resolve one EBTRK file (by code): URL/discovery download, or find locally.
+
+    On the download path an operator-supplied ``url`` overrides discovery;
+    otherwise the newest file is discovered from the CIRA listing. When
+    ``download`` is False the newest matching local file is used.
+    """
+    if download:
+        target = url or _latest_url(code)
+        return download_ebtrk(target, input_dir, overwrite=overwrite)
+    local = find_local_ebtrk(code, input_dir, *extra_search_dirs)
+    if local is not None:
+        return local
     raise FileNotFoundError(
-        f"No local EBTRK file ({filename} or {glob_pat}) found and downloading "
-        f"is disabled.")
+        f"No local EBTRK {code} file (glob {_EBTRK_CODE[code]['glob']}) found "
+        f"and downloading is disabled.")
 
 
 def resolve_ebtrk_sources(
@@ -172,14 +301,18 @@ def resolve_ebtrk_sources(
     download: bool,
     input_dir: Path,
     explicit_files=None,
+    code_urls: Optional[dict] = None,
     extra_search_dirs: tuple[Path, ...] = (),
     overwrite: bool = False,
 ) -> list[Path]:
     """Resolve the EBTRK file path(s) for ``basin`` (one for Atlantic, two for Pacific).
 
-    ``explicit_files`` (a path or list of paths) overrides automatic resolution.
-    Otherwise each of the basin's files is downloaded (``download``) or found in
-    ``input_dir`` / ``extra_search_dirs`` by exact name or glob.
+    ``explicit_files`` (a path or list of paths) overrides automatic resolution
+    with operator-pinned local files. Otherwise each of the basin's files is, on
+    the download path, fetched from its per-code ``code_urls[code]`` override (if
+    given) or the newest file discovered from the CIRA listing; with downloading
+    off, the newest matching local file is used. ``code_urls`` is keyed by EBTRK
+    code (AL/EP/CP) and is honored only when ``download`` is True.
     """
     input_dir = Path(input_dir)
     if explicit_files:
@@ -195,10 +328,12 @@ def resolve_ebtrk_sources(
             out.append(p)
         return out
 
-    if basin not in EBTRK_SOURCES:
+    if basin not in EBTRK_BASIN_CODES:
         raise ValueError(f"No EBTRK source defined for basin '{basin}'.")
+    code_urls = code_urls or {}
     return [
-        _resolve_one(fn, pat, download=download, input_dir=input_dir,
-                     extra_search_dirs=extra_search_dirs, overwrite=overwrite)
-        for fn, pat in EBTRK_SOURCES[basin]
+        _resolve_one(code, download=download, input_dir=input_dir,
+                     extra_search_dirs=extra_search_dirs, overwrite=overwrite,
+                     url=code_urls.get(code))
+        for code in EBTRK_BASIN_CODES[basin]
     ]

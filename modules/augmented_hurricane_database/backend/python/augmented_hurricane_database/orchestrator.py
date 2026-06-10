@@ -19,8 +19,25 @@ from augmented_hurricane_database.parser import HURDAT2
 from augmented_hurricane_database.sources import resolve_source
 from augmented_hurricane_database.writer import write_csv, write_metrics, write_parquet
 
-# Recover the record's end year from an NHC filename (…-<startyr>-<endyr>-<stamp>.txt).
-_END_YEAR = re.compile(r"-(\d{4})-(\d{4})-\d{6,8}\.txt$")
+# Parse an NHC HURDAT2 filename: …-<startyr>-<endyr>-<stamp>.txt, where <stamp>
+# is the NHC file date as MMDDYY or MMDDYYYY (e.g. hurdat2-1851-2025-02272026.txt).
+_NAME_PARTS = re.compile(r"-(\d{4})-(\d{4})-(\d{6,8})\.txt$")
+
+
+def _nhc_created(stamp: str) -> str:
+    """NHC filename date stamp (MMDDYY or MMDDYYYY) -> YYYYMMDD; '' if unrecognized."""
+    if len(stamp) == 6:
+        mm, dd, yyyy = stamp[0:2], stamp[2:4], "20" + stamp[4:6]
+    elif len(stamp) == 8:
+        mm, dd, yyyy = stamp[0:2], stamp[2:4], stamp[4:8]
+    else:
+        return ""
+    return f"{yyyy}{mm}{dd}"
+
+
+def _clean_stem(stem: str) -> str:
+    """Tidy a formatted stem: collapse separator runs left by empty fields, trim ends."""
+    return re.sub(r"[-_]{2,}", "_", stem).strip("-_")
 
 
 @dataclass
@@ -52,9 +69,21 @@ class AHDOrchestrator:
     def __init__(self, config: AHDConfig) -> None:
         self.cfg = config
 
-    def _end_year(self, source: Path) -> str:
-        m = _END_YEAR.search(source.name)
-        return m.group(2) if m else "latest"
+    def _name_fields(self, basin: str, source: Path) -> Dict[str, str]:
+        """Output-stem substitution fields parsed from the source file name.
+
+        Provides ``basin``, ``start_year``, ``end_year``, and ``created`` (the NHC
+        file date as YYYYMMDD). Unparseable names fall back to ``end_year=latest``
+        with the other vintage fields blank.
+        """
+        m = _NAME_PARTS.search(source.name)
+        if m:
+            start_year, end_year, stamp = m.groups()
+            created = _nhc_created(stamp)
+        else:
+            start_year, end_year, created = "", "latest", ""
+        return {"basin": basin, "start_year": start_year,
+                "end_year": end_year, "created": created}
 
     def _process_basin(self, basin: str) -> BasinResult:
         cfg = self.cfg
@@ -63,6 +92,7 @@ class AHDOrchestrator:
             download_latest=cfg.download,
             input_dir=cfg.input_dir,
             explicit_file=cfg.file_for(basin),
+            url=cfg.url_for(basin),
             # Also look under data/ and beside the module (legacy raw file).
             extra_search_dirs=(cfg.input_dir.parent, cfg.input_dir.parent.parent),
             overwrite=cfg.overwrite,
@@ -82,7 +112,7 @@ class AHDOrchestrator:
         if cfg.impute_gpm:
             df, n_pmin_gpm, n_rmax_gpm, gpm_reports = self._impute_gpm(df, basin)
 
-        stem = cfg.output_stem.format(basin=basin, end_year=self._end_year(source))
+        stem = _clean_stem(cfg.output_stem.format(**self._name_fields(basin, source)))
         csv_path = write_csv(df, cfg.output_dir / f"{stem}.csv")
         print(f"[ahd] {basin}: wrote {len(df):,} rows / {n_storms:,} storms -> {csv_path}")
 
@@ -126,6 +156,7 @@ class AHDOrchestrator:
             download=cfg.download,
             input_dir=cfg.input_dir,
             explicit_files=cfg.ebtrk_file,
+            code_urls=cfg.ebtrk_urls(),
             # data/, module root, and the legacy ebtrk/ reference folder.
             extra_search_dirs=(cfg.input_dir.parent,
                                cfg.input_dir.parent.parent,

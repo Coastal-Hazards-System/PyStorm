@@ -13,9 +13,9 @@ of a full dense GP.
 
 **Recommended configuration (the default).** Use the nearest-neighbor GP with the
 physics-informed trend and the log-transformed Rmax, central pressure with a deep
-calibration (support 6000, 30 neighbours, n_cal=4000, n_lhs=250) and radius of
+calibration (support 6000, 30 neighbors, n_cal=4000, n_lhs=250) and radius of
 maximum wind with a large support and the same deep calibration (support 8000, 30
-neighbours, n_cal=4000, n_lhs=250). On the controlled comparison this beats the
+neighbors, n_cal=4000, n_lhs=250). On the controlled comparison this beats the
 MATLAB on all four models (Cp6 0.937 versus 0.932, Cp3 0.920 versus 0.918, Rm7
 0.607 versus 0.603, Rm4 0.447 versus 0.401), while scaling linearly and forming no
 dense covariance. Two levers drive it: a deep calibration (which lifts Cp6 from
@@ -223,7 +223,7 @@ calibration):
 
 | configuration | fit time | predict time | R-squared (85/15 hold-out) | RMSE (hold-out) | support pts | R matrix |
 |---|---|---|---|---|---|---|
-| NNGP (30 neighbours, support 6000) | 53.0 s | 0.79 s | 0.9222 | 5.29 hPa | 6,000 | 0.29 GB |
+| NNGP (30 neighbors, support 6000) | 53.0 s | 0.79 s | 0.9222 | 5.29 hPa | 6,000 | 0.29 GB |
 | Full GP (support 6000) | 52.7 s | 0.47 s | 0.9144 | 5.55 hPa | 6,000 | 0.29 GB |
 | Full GP (all training data) | 98.7 s | 1.60 s | 0.9197 | 5.37 hPa | 20,581 | 3.39 GB |
 
@@ -236,7 +236,7 @@ Related cost figures:
   30 system (about 7 KB), and the model stores the training inputs (about 1 MB)
   and a KD-tree.
 - **Prediction scaling.** Full GP prediction is `O(n_query * n_support)`; NNGP is
-  `O(n_query * (log n + m^3))` with `m` neighbours.
+  `O(n_query * (log n + m^3))` with `m` neighbors.
 - **Calibration.** The hyperparameter search is identical for both (on the
   `n_cal` subset), which is why the two support-6000 fits take the same time. The
   full-data fit is slower only because of its single large Cholesky.

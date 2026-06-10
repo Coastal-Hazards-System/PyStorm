@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import math
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -12,6 +13,9 @@ from augmented_hurricane_database.config import AHDConfig
 from augmented_hurricane_database.parser import HURDAT2, COLUMNS
 from augmented_hurricane_database import sources
 from augmented_hurricane_database import ebtrk as ebtrk_mod
+from augmented_hurricane_database.orchestrator import (
+    AHDOrchestrator, _nhc_created, _clean_stem,
+)
 
 
 # A two-fix synthetic storm moving due north 1° of latitude (~111 km) over 6 h.
@@ -95,6 +99,99 @@ def test_discover_latest_offline():
         "hurdat2-1851-2025-02272026.txt"
     assert sources.discover_latest("pacific", html=_FAKE_LISTING) == \
         "hurdat2-nepac-1949-2025-02272026.txt"
+
+
+_CIRA_BASE = ("https://rammb2.cira.colostate.edu/wp-content/uploads/2020/11/")
+
+# A CIRA-style listing: per code, an older new-format file, the newest new-format
+# file, and an "old format" file that must be excluded from discovery.
+_EBTRK_LISTING = "\n".join(
+    f'<a href="{_CIRA_BASE}{name}">x</a>' for name in [
+        "EBTRK_AL_final_1851-2019_new_format_01-Jan-2020.txt",
+        "EBTRK_AL_final_1851-2021_new_format_02-Sep-2022-1.txt",   # newest AL
+        "EBTRK_AL_final_1851-2021_old_format_02-Sep-2022.txt",     # excluded
+        "EBTRK_EP_final_1949-2021_new_format_02-Sep-2022.txt",     # newest EP
+        "EBTRK_CP_final_1950-2020_new_format_15-Aug-2021.txt",
+        "EBTRK_CP_final_1950-2021_new_format_02-Sep-2022-1.txt",   # newest CP
+    ]
+)
+
+
+def test_discover_latest_ebtrk_offline():
+    # Newest end-year wins; old-format files are excluded entirely.
+    assert ebtrk_mod.discover_latest_ebtrk("AL", html=_EBTRK_LISTING) == \
+        _CIRA_BASE + "EBTRK_AL_final_1851-2021_new_format_02-Sep-2022-1.txt"
+    assert ebtrk_mod.discover_latest_ebtrk("EP", html=_EBTRK_LISTING) == \
+        _CIRA_BASE + "EBTRK_EP_final_1949-2021_new_format_02-Sep-2022.txt"
+    assert ebtrk_mod.discover_latest_ebtrk("CP", html=_EBTRK_LISTING) == \
+        _CIRA_BASE + "EBTRK_CP_final_1950-2021_new_format_02-Sep-2022-1.txt"
+
+
+def test_discover_latest_ebtrk_relative_href():
+    # Relative hrefs resolve against the listing page URL.
+    html = ('<a href="/wp-content/uploads/2020/11/'
+            'EBTRK_AL_final_1851-2024_new_format_10-Oct-2025.txt">x</a>')
+    assert ebtrk_mod.discover_latest_ebtrk("AL", html=html) == (
+        "https://rammb2.cira.colostate.edu/wp-content/uploads/2020/11/"
+        "EBTRK_AL_final_1851-2024_new_format_10-Oct-2025.txt")
+
+
+def test_resolve_ebtrk_url_override(tmp_path, monkeypatch):
+    # A per-code URL override is fetched verbatim; discovery is bypassed.
+    captured = []
+
+    def fake_dl(url, dest_dir, *, overwrite=False):
+        captured.append(url)
+        return tmp_path / url.rsplit("/", 1)[-1]
+
+    monkeypatch.setattr(ebtrk_mod, "download_ebtrk", fake_dl)
+    # Guard: discovery must NOT run when an override is supplied.
+    monkeypatch.setattr(ebtrk_mod, "discover_latest_ebtrk",
+                        lambda *a, **k: pytest.fail("discovery should be bypassed"))
+
+    override = "https://example.test/custom/EBTRK_AL_custom.txt"
+    out = ebtrk_mod.resolve_ebtrk_sources(
+        "atlantic", download=True, input_dir=tmp_path,
+        code_urls={"AL": override})
+    assert captured == [override]
+    assert out[0].name == "EBTRK_AL_custom.txt"
+
+
+def test_nhc_created_stamp():
+    assert _nhc_created("02272026") == "20260227"   # MMDDYYYY -> YYYYMMDD
+    assert _nhc_created("040822") == "20220408"      # MMDDYY   -> YYYYMMDD
+    assert _nhc_created("nope") == ""                # unrecognized
+
+
+def test_output_stem_augmented_name():
+    cfg = AHDConfig()
+    orch = AHDOrchestrator(cfg)
+
+    # Atlantic: start year, end year, and NHC creation date all from the name.
+    fields = orch._name_fields("atlantic", Path("hurdat2-1851-2025-02272026.txt"))
+    assert fields == {"basin": "atlantic", "start_year": "1851",
+                      "end_year": "2025", "created": "20260227"}
+    assert _clean_stem(cfg.output_stem.format(**fields)) == \
+        "augmented_hurdat2_atlantic_1851-2025_20260227"
+
+    # Pacific nepac name carries its own start year (1949).
+    pac = orch._name_fields("pacific", Path("hurdat2-nepac-1949-2025-02272026.txt"))
+    assert _clean_stem(cfg.output_stem.format(**pac)) == \
+        "augmented_hurdat2_pacific_1949-2025_20260227"
+
+    # Unparseable custom name -> clean fallback, no dangling separators.
+    odd = orch._name_fields("atlantic", Path("my_custom_file.txt"))
+    assert _clean_stem(cfg.output_stem.format(**odd)) == \
+        "augmented_hurdat2_atlantic_latest"
+
+
+def test_find_local_ebtrk_date_aware(tmp_path):
+    # Newest end-year/stamp wins among local new-format files.
+    for name in ["EBTRK_AL_final_1851-2019_new_format_01-Jan-2020.txt",
+                 "EBTRK_AL_final_1851-2021_new_format_02-Sep-2022-1.txt"]:
+        (tmp_path / name).write_text("x", encoding="utf-8")
+    found = ebtrk_mod.find_local_ebtrk("AL", tmp_path)
+    assert found.name == "EBTRK_AL_final_1851-2021_new_format_02-Sep-2022-1.txt"
 
 
 def _ebtrk_line(nhc_id, month, day, hour, year, rmax) -> str:

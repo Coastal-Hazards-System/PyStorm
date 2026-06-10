@@ -33,14 +33,24 @@ class AHDConfig(BaseModel):
     atlantic_file: Optional[Union[str, Path]] = None
     pacific_file: Optional[Union[str, Path]] = None
 
+    # Per-basin HURDAT2 download URL override. When set (and download=True), the
+    # exact URL is fetched instead of auto-discovering the newest NHC file; None
+    # -> discover. Ignored when download=False (no network). A local
+    # atlantic_file/pacific_file pin still wins over the URL.
+    atlantic_url: Optional[str] = None
+    pacific_url: Optional[str] = None
+
     # I/O layout.
     input_dir: Path = Path("data/inputs")
     output_dir: Path = Path("data/outputs")
 
     # Output: write CSV (always) and optionally Parquet alongside it.
     write_parquet: bool = False
-    # Output filename stem per basin; {basin} and {end_year} are substituted.
-    output_stem: str = "hurdat2_{basin}_{end_year}"
+    # Output filename stem per basin. Substituted fields: {basin}, {start_year},
+    # {end_year}, and {created} (the NHC source-file date as YYYYMMDD). Default
+    # marks the file as augmented HURDAT2 and carries the source record span and
+    # NHC vintage, e.g. augmented_hurdat2_atlantic_1851-2025_20260227.csv.
+    output_stem: str = "augmented_hurdat2_{basin}_{start_year}-{end_year}_{created}"
 
     # EBTRK backfill: fill missing rmax_km from the Extended Best Track dataset.
     # Atlantic uses the AL file; Pacific uses both the EP and CP files.
@@ -49,6 +59,14 @@ class AHDConfig(BaseModel):
     # single path or a list of paths (absolute, or relative to input_dir). None
     # resolves the correct file(s) per basin automatically.
     ebtrk_file: Optional[Union[str, Path, list]] = None
+    # Per-file EBTRK download URL overrides, one per cyclone-id code. When set
+    # (and download=True), the exact URL is fetched instead of discovering the
+    # newest file from the CIRA listing; None -> discover. Ignored when
+    # download=False, and superseded by an ebtrk_file local pin. The Atlantic
+    # uses AL; the Pacific uses EP and CP.
+    ebtrk_al_url: Optional[str] = None
+    ebtrk_ep_url: Optional[str] = None
+    ebtrk_cp_url: Optional[str] = None
 
     # GP-metamodel imputation: fill still-missing pmin_hpa and rmax_km with the
     # Gaussian-process metamodels (self-trained on the observed rows). Runs after
@@ -58,7 +76,7 @@ class AHDConfig(BaseModel):
     gpm_physical_mean: bool = True    # wind-pressure / lat·deficit kriging trend
     gpm_log_rmax: bool = True         # fit the Rmax models in log space (lognormal target)
     gpm_parallel: bool = True         # train the two models per target concurrently
-    # Per-MODEL solver: True = nearest-neighbour GP (NNGP, predict from all data);
+    # Per-MODEL solver: True = nearest-neighbor GP (NNGP, predict from all data);
     # False = exact full GP over the support (denser/slower, needs deeper
     # calibration). Set per model so, e.g., Cp6 can use the full GP while Cp3 uses
     # the NNGP. The NNGP default is recommended for cost and generalization.
@@ -69,7 +87,7 @@ class AHDConfig(BaseModel):
     # Per-target method settings (empirically tuned - Cp is smooth/long-range and
     # wants more calibration support; Rmax is short-range/noisy and wants a small
     # conditioning set). The physical-mean trend leaves a short-range residual, so
-    # neither target benefits from a large NNGP neighbour set. n_cal is the
+    # neither target benefits from a large NNGP neighbor set. n_cal is the
     # hyperparameter-calibration subset size; n_lhs the Latin-hypercube budget for
     # that search. The exact full GP needs a deeper n_cal (about 4000) and a larger
     # n_lhs to reach its best accuracy; the NNGP is fine at the defaults.
@@ -118,3 +136,11 @@ class AHDConfig(BaseModel):
     def file_for(self, basin: str) -> Optional[Union[str, Path]]:
         """Operator-pinned file for a basin, if any."""
         return {"atlantic": self.atlantic_file, "pacific": self.pacific_file}.get(basin)
+
+    def url_for(self, basin: str) -> Optional[str]:
+        """Operator-supplied HURDAT2 download URL override for a basin, if any."""
+        return {"atlantic": self.atlantic_url, "pacific": self.pacific_url}.get(basin)
+
+    def ebtrk_urls(self) -> dict:
+        """Per-code EBTRK URL overrides keyed by cyclone-id code (AL/EP/CP)."""
+        return {"AL": self.ebtrk_al_url, "EP": self.ebtrk_ep_url, "CP": self.ebtrk_cp_url}

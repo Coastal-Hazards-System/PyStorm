@@ -107,7 +107,7 @@ def impute_central_pressure(
     """Fill missing ``pmin_hpa`` with GP-metamodel predictions. Returns (df, report).
 
     ``vecchia_full`` / ``vecchia_small`` select the solver per model (Cp6 / Cp3):
-    True is the nearest-neighbour GP, False the exact full GP over the support.
+    True is the nearest-neighbor GP, False the exact full GP over the support.
     When ``model_dir`` is set, trained models are cached there and reused unless
     ``retrain`` is True.
     """

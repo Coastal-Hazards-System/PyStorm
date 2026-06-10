@@ -23,7 +23,7 @@ storm time-snapshot, with these columns:
 | `name` | storm name (`UNNAMED` if none) | |
 | `ymd` / `hhmm` | date `YYYYMMDD` / time `HHMM` | UTC |
 | `time_utc` | exact timestamp | UTC |
-| `lat` / `lon` | centre position (lon wrapped <-180 → +360) | ° |
+| `lat` / `lon` | center position (lon wrapped <-180 → +360) | ° |
 | `landflag` | record-identifier code (L=4 landfall, …) | |
 | `status` | system status code (HU=3 hurricane, …) | |
 | `vmax_kmh` | maximum sustained wind | km/h |
@@ -61,16 +61,37 @@ python run_augmented_hurricane_database.py --basin both --no-download
   ranked by record end-year then date-stamp. `False` uses the newest
   `hurdat2-*.txt` already on disk (no network).
 - **`OVERWRITE`** - re-download even if the dated file is already local.
-- **`ATLANTIC_FILE` / `PACIFIC_FILE`** - set an explicit input file path
-  (absolute, or relative to `data/inputs/`) to skip discovery.
+- **`ATLANTIC_FILE` / `PACIFIC_FILE`** - pin an explicit local HURDAT2 file per
+  basin (absolute, or relative to `data/inputs/`). Bypasses **both** discovery
+  and download: the named file is used as-is, with no network even when
+  `DOWNLOAD = True`, and it overrides `ATLANTIC_URL` / `PACIFIC_URL`. `None`
+  resolves automatically.
+- **`ATLANTIC_URL` / `PACIFIC_URL`** - per-basin HURDAT2 download URL override.
+  `None` auto-discovers the newest NHC file; set a full file URL to fetch that
+  exact file instead (mirror/proxy/moved file). Honored only when
+  `DOWNLOAD = True`; a local `ATLANTIC_FILE` / `PACIFIC_FILE` pin still wins.
 - **`APPEND_EBTRK_RMAX`** - backfill missing `rmax_km` from the Extended Best
   Track dataset (see below).
-- **`EBTRK_FILE`** - explicit local EBTRK file(s) to use instead of automatic
-  resolution; `None` selects the correct file(s) per basin automatically.
+- **`EBTRK_FILE`** - pin explicit local EBTRK file(s). EBTRK ships as **three**
+  files, one per cyclone-id basin: AL (Atlantic), EP (East Pacific), CP (Central
+  Pacific); the Atlantic build needs AL, the Pacific build needs EP and CP. Give
+  a single path or a **list** (absolute, or relative to `data/inputs/`). Files
+  are pooled and matched to HURDAT storms by cyclone id, so order is irrelevant
+  and unused files are harmless - for `BASIN = "both"` just list all three.
+  Bypasses **both** discovery and download (no network, overrides the
+  `EBTRK_*_URL` options). `None` selects the correct file(s) per basin
+  automatically.
+- **`EBTRK_AL_URL` / `EBTRK_EP_URL` / `EBTRK_CP_URL`** - per-file EBTRK download
+  URL overrides (one per cyclone-id code). `None` auto-discovers the newest file
+  from the CIRA listing; set a full file URL to fetch that exact file. Honored
+  only when `DOWNLOAD = True`; an `EBTRK_FILE` local pin still wins.
 - **`WRITE_PARQUET`** - also write a Parquet copy beside each CSV (needs
   `pyarrow`).
-- **`OUTPUT_STEM`** - output filename stem; `{basin}` and `{end_year}` are
-  substituted.
+- **`OUTPUT_STEM`** - output filename stem. Substituted from the source file:
+  `{basin}`, `{start_year}`, `{end_year}`, and `{created}` (the NHC file date as
+  `YYYYMMDD`). The default marks the file as augmented HURDAT2 and carries the
+  record span and NHC vintage, e.g.
+  `augmented_hurdat2_atlantic_1851-2025_20260227.csv`.
 
 ## EBTRK Rmax backfill (optional)
 
@@ -84,6 +105,13 @@ Both basins are supported. The Atlantic uses the `EBTRK_AL` file. The HURDAT
 nepac (`pacific`) record contains both East Pacific (EP) and Central Pacific (CP)
 storms, which have separate EBTRK files, so the Pacific basin uses both
 (`EBTRK_EP` and `EBTRK_CP`).
+
+Like the HURDAT2 resolver, the EBTRK file is **discovered**, not pinned: when
+`DOWNLOAD = True` the module reads the CIRA listing page, selects the newest
+"new format" file per code (ranked by record end-year then `DD-Mon-YYYY` publish
+stamp), and fetches it. If the listing cannot be reached it falls back to the
+last-known default file. Per-file URL overrides (`EBTRK_AL_URL` / `EBTRK_EP_URL`
+/ `EBTRK_CP_URL`) bypass discovery for a specific file.
 
 This ports `ebtrk/CHS_TC_HURDAT_Atlantic_with_ebtrk_Rm_append_v3.m`. One
 improvement: the original matched EBTRK to HURDAT on synoptic **datetime alone**,
@@ -126,7 +154,7 @@ Observed values are kept; only the missing rows are filled.
 
 | flag | what it does |
 |---|---|
-| `GPM_VECCHIA` | **NNGP** - each prediction conditions on its nearest neighbours among *all* training fixes (not just the capped support set), using the whole dataset at O(n·m³) cost. |
+| `GPM_VECCHIA` | **NNGP** - each prediction conditions on its nearest neighbors among *all* training fixes (not just the capped support set), using the whole dataset at O(n·m³) cost. |
 | `GPM_PHYSICAL_MEAN` | **Physics-informed trend**: Cp uses a wind-pressure mean `[vmax, lat, vmax²]` (Δp ∝ V²); Rmax uses `[lat, Cp-deficit, vmax]` (size grows with latitude, shrinks with intensity). The GP models the residual around it - better extrapolation than a constant mean. |
 | `GPM_LOG_RMAX` | Fit the **Rmax** models in **log space** - Rmax is positive and ~lognormal, so this matches the log-linear size physics and stabilizes the intensity-dependent scatter. (Cp is left untransformed - its `vmax²` basis already captures the curvature and the deficit is near-homoscedastic.) |
 | `GPM_PARALLEL` | Train the two models per target concurrently (speed only; the C++ kernel releases the GIL). |
@@ -139,11 +167,11 @@ the imputed central pressure matches the MATLAB to r=0.98, MAE ~2 hPa, zero bias
 **Why nearest-neighbor GP, not a dense GP.** The training sets reach 15k to 24k
 fixes, where an exact dense GP is a roughly 4.7 GB covariance and is infeasible to
 refit during calibration. Instead each prediction conditions on its nearest
-neighbours among all training fixes (NNGP), at O(n*m^3) cost. This is preferred
+neighbors among all training fixes (NNGP), at O(n*m^3) cost. This is preferred
 over the MATLAB's sparse-Cholesky route: central pressure is smooth and
 long-range, so its correlation matrix is not sparse and sparse Cholesky also fills
 in badly in 6-7 dimensions. The physics-informed trend absorbs the long-range
-structure, leaving a short-range residual that a small neighbour set captures, so
+structure, leaving a short-range residual that a small neighbor set captures, so
 NNGP reaches the dense-GP accuracy ceiling for central pressure while scaling
 linearly. The full GP capability remains (set `GPM_VECCHIA=False` with a large
 support count). Full reasoning and the file-by-file MATLAB-to-Python map are in
@@ -165,6 +193,29 @@ fallback). The cubic-cost Cholesky and solves stay in LAPACK through SciPy. Net 
 real Atlantic Cp: training about 240 s to about 40 s, prediction of 55k rows about
 36 s to about 4 s, accuracy improving at the same time.
 
+### Model cache
+
+Training is the expensive step, so fitted models are cached and reused. With
+`MODEL_DIR` set (default `data/models/`), each model is written there as a
+compressed `.npz` named `{basin}_{model}_{signature}.npz`, e.g.
+`pacific_Rm7_458253b9be.npz`:
+
+- **`{basin}`** - `atlantic` or `pacific`.
+- **`{model}`** - which of the four: `Cp6` / `Cp3` (central pressure, full /
+  reduced) or `Rm7` / `Rm4` (radius of max wind, full / reduced).
+- **`{signature}`** - the first 10 hex digits of an MD5 over the model's settings
+  **and** a fingerprint of its training data (row count + target sum). It is a
+  cache-invalidation key, not a readable label: change any `GPM_*` setting or the
+  underlying data (a newer HURDAT vintage, EBTRK toggled) and the signature
+  changes → a new filename → a guaranteed cache miss → retrain. An identical
+  config on identical data reproduces the signature, so the cached model is
+  reused.
+
+`GPM_RETRAIN = False` (default) reuses a model whose signature matches and
+otherwise trains and caches one; `GPM_RETRAIN = True` always retrains and
+overwrites. The files are safe to delete - you just pay one retrain to
+regenerate them.
+
 ### Validation against the MATLAB
 
 The primary comparison is the recommended (default) configuration against the
@@ -181,8 +232,11 @@ predictor, the metric the MATLAB reports:
 
 The recommended configuration beats the MATLAB on all four models. Two levers
 drive it: a deep calibration (n_cal=4000, n_lhs=250), which lifts Cp6 to 0.937,
-and a large enough support set, which for Rmax (about 15k training fixes) had to
-be 8000 rather than 3000. Rmax follows the MATLAB workflow: it is trained on
+and a support set scaled to each target's signal (not its raw fix count). Cp is
+smooth and high-skill, so 6000 (about 25% of its ~24k fixes) saturates it; Rmax
+has fewer fixes (~15k) but is noisier and low-skill, so it needs a larger
+fraction - 8000 rather than the earlier 3000. Rmax follows the MATLAB workflow:
+it is trained on
 observed pressure (before central-pressure imputation) and predicts the missing
 Rmax with the completed pressure. The full head-to-head, the per-target sweeps,
 and the calibration-depth discussion are in
@@ -203,7 +257,7 @@ augmented_hurricane_database/
 │       ├── config.py          # AHDConfig (pydantic)
 │       ├── sources.py         # NHC discovery + download
 │       ├── parser.py          # HURDAT2 → tidy DataFrame, motion columns
-│       ├── ebtrk.py           # EBTRK download/parse + Rmax backfill (Atlantic)
+│       ├── ebtrk.py           # EBTRK CIRA discovery/download/parse + Rmax backfill
 │       ├── writer.py          # CSV / Parquet writers
 │       └── orchestrator.py    # AHDOrchestrator: per-basin resolve → parse → (EBTRK) → write
 ├── tests/                     # pytest smoke tests (offline)

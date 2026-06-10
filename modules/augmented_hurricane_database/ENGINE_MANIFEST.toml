@@ -43,6 +43,10 @@ pacific_pattern   = "hurdat2-nepac-1949-<endyr>-<MMDDYY|MMDDYYYY>.txt"
 
 [ebtrk]
 # Extended Best Track - optional Rmax backfill (late 1980s through 2021).
+# The newest "new format" file per code is discovered from the CIRA listing
+# (ranked by record end-year then DD-Mon-YYYY publish stamp); the default_files
+# below are the last-known fallback used only if discovery is unavailable.
+listing_url       = "https://rammb2.cira.colostate.edu/research/tropical-cyclones/tc_extended_best_track_dataset/"
 url_base          = "https://rammb2.cira.colostate.edu/wp-content/uploads/2020/11/"
 atlantic_files    = ["EBTRK_AL_final_1851-2021_new_format_02-Sep-2022-1.txt"]
 pacific_files     = ["EBTRK_EP_final_1949-2021_new_format_02-Sep-2022.txt", "EBTRK_CP_final_1950-2021_new_format_02-Sep-2022-1.txt"]
@@ -53,5 +57,5 @@ ported_from       = "ebtrk/CHS_TC_HURDAT_Atlantic_with_ebtrk_Rm_append_v3.m"
 [outputs]
 # Paths set by the launcher (relative to the module root).
 input_dir         = "data/inputs/<downloaded hurdat2-*.txt>"
-basin_csv         = "data/outputs/hurdat2_<basin>_<end_year>.csv"
-basin_parquet     = "data/outputs/hurdat2_<basin>_<end_year>.parquet"   # optional (WRITE_PARQUET)
+basin_csv         = "data/outputs/augmented_hurdat2_<basin>_<start_year>-<end_year>_<created>.csv"
+basin_parquet     = "data/outputs/augmented_hurdat2_<basin>_<start_year>-<end_year>_<created>.parquet"   # optional (WRITE_PARQUET)

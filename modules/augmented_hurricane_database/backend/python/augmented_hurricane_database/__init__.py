@@ -18,6 +18,11 @@ from augmented_hurricane_database.sources import (
     discover_latest,
     resolve_source,
 )
+from augmented_hurricane_database.ebtrk import (
+    EBTRK_BASINS,
+    discover_latest_ebtrk,
+    resolve_ebtrk_sources,
+)
 
 __all__ = [
     "AHDConfig",
@@ -31,4 +36,7 @@ __all__ = [
     "discover_latest",
     "resolve_source",
     "ebtrk",
+    "EBTRK_BASINS",
+    "discover_latest_ebtrk",
+    "resolve_ebtrk_sources",
 ]

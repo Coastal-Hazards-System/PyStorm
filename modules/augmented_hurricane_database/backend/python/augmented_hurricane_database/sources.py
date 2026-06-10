@@ -92,12 +92,22 @@ def download(filename: str, dest_dir: Path, *, overwrite: bool = False) -> Path:
     Returns the local path. Skips the network when the file already exists and
     ``overwrite`` is False.
     """
+    return download_url(NHC_DIR_URL + filename, dest_dir, overwrite=overwrite)
+
+
+def download_url(url: str, dest_dir: Path, *, overwrite: bool = False) -> Path:
+    """Download an explicit ``url`` into ``dest_dir`` (filename = URL basename).
+
+    Used to honor an operator-supplied per-basin URL that overrides discovery.
+    Skips the network when the file already exists and ``overwrite`` is False.
+    """
     dest_dir = Path(dest_dir)
     dest_dir.mkdir(parents=True, exist_ok=True)
+    filename = url.rstrip("/").rsplit("/", 1)[-1] or "hurdat2.txt"
     dest = dest_dir / filename
     if dest.exists() and not overwrite:
         return dest
-    resp = requests.get(NHC_DIR_URL + filename, timeout=_TIMEOUT)
+    resp = requests.get(url, timeout=_TIMEOUT)
     resp.raise_for_status()
     dest.write_bytes(resp.content)
     return dest
@@ -128,18 +138,24 @@ def resolve_source(
     download_latest: bool,
     input_dir: Path,
     explicit_file: Optional[Path] = None,
+    url: Optional[str] = None,
     extra_search_dirs: tuple[Path, ...] = (),
     overwrite: bool = False,
 ) -> Path:
     """Resolve the local HURDAT2 path to parse for ``basin``.
 
     Policy (first match wins):
-      1. ``explicit_file`` - an operator-pinned path (absolute, or relative to
-         ``input_dir``).
-      2. ``download_latest`` - discover and fetch the newest NHC file into
+      1. ``explicit_file`` - an operator-pinned local path (absolute, or relative
+         to ``input_dir``); no network.
+      2. ``download_latest`` with ``url`` - fetch that exact operator-supplied
+         URL (overrides discovery).
+      3. ``download_latest`` - discover and fetch the newest NHC file into
          ``input_dir``.
-      3. otherwise - newest matching file already under ``input_dir`` (or any
+      4. otherwise - newest matching file already under ``input_dir`` (or any
          ``extra_search_dirs``).
+
+    ``url`` is honored only on the download path; when ``download_latest`` is
+    False (the network is off) it is ignored and a local file is used.
     """
     basin = _validate_basin(basin)
     input_dir = Path(input_dir)
@@ -153,6 +169,8 @@ def resolve_source(
         return p
 
     if download_latest:
+        if url:
+            return download_url(url, input_dir, overwrite=overwrite)
         return download(discover_latest(basin), input_dir, overwrite=overwrite)
 
     local = find_local_latest(basin, input_dir, *extra_search_dirs)

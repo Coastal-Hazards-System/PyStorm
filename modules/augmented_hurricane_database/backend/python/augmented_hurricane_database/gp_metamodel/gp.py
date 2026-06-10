@@ -24,7 +24,7 @@ the residual around - better tail extrapolation than a constant mean.
 Scalability - two regimes:
   * ``vecchia=False`` - exact GP on a capped, response-stratified SUPPORT SET
     (``max_support`` points); prediction sums over the support.
-  * ``vecchia=True`` (default) - NNGP / nearest-neighbour kriging: hyperparameters
+  * ``vecchia=True`` (default) - NNGP / nearest-neighbor kriging: hyperparameters
     and the trend β are estimated on the support set, but every prediction
     conditions on its ``n_neighbors`` nearest points among ALL training fixes.
     This uses the whole dataset (not just the support) at O(n·m³) cost and is
@@ -141,7 +141,7 @@ class GPModel:
 
     def _tree(self) -> cKDTree:
         if self._tree_cache is None:
-            # scale by sqrt(theta) so Euclidean nearest-neighbours approximate the
+            # scale by sqrt(theta) so Euclidean nearest-neighbors approximate the
             # anisotropic kernel metric (better-conditioned conditioning sets)
             self._scale = np.sqrt(self.theta)
             self._tree_cache = cKDTree(self.Xn_all * self._scale)
@@ -180,7 +180,7 @@ class GPModel:
         return (f, std) if return_std else f
 
     def _predict_nngp(self, X, *, chunk):
-        """NNGP: condition each query on its nearest neighbours among all data."""
+        """NNGP: condition each query on its nearest neighbors among all data."""
         tree = self._tree()
         m = min(self.n_neighbors, self.Xn_all.shape[0])
         theta, p, nug = self.theta, self.p, self.nugget
@@ -193,11 +193,11 @@ class GPModel:
             idx = np.atleast_2d(idx)
             Xg = self.Xn_all[idx]                             # (c,m,d)
             rg = self.resid_all[idx]                          # (c,m)
-            # local correlation among neighbours
+            # local correlation among neighbors
             dgg = np.abs(Xg[:, :, None, :] - Xg[:, None, :, :])  # (c,m,m,d)
             Cgg = np.exp(-np.einsum("k,cijk->cij", theta, dgg ** p))
             Cgg += nug * eye
-            # query-to-neighbour correlation
+            # query-to-neighbor correlation
             dq = np.abs(xq[:, None, :] - Xg)                  # (c,m,d)
             cq = np.exp(-np.einsum("k,cik->ci", theta, dq ** p))
             w = np.linalg.solve(Cgg, rg[..., None])[..., 0]   # (c,m)
@@ -392,7 +392,7 @@ def fit_gp(
 
     Hyperparameters and the trend β are estimated on a capped support set; with
     ``vecchia`` the predictive model conditions on all training data via nearest
-    neighbours (NNGP), otherwise predictions sum over the support set.
+    neighbors (NNGP), otherwise predictions sum over the support set.
     """
     X = np.atleast_2d(np.asarray(X, float))
     y = np.asarray(y, float).ravel()
@@ -475,7 +475,7 @@ def fit_gp(
 
     # LOOCV (back-transformed to real units), reported as the DEPLOYED predictor's
     # skill: the support-set leave-one-out for the full GP (below), or the
-    # nearest-neighbour leave-one-out over all data for the NNGP (after the model
+    # nearest-neighbor leave-one-out over all data for the NNGP (after the model
     # is built). Optional: it can be skipped (e.g. for benchmarking).
     loocv_r2 = loocv_rmse = np.nan
     if loocv and not vecchia:
