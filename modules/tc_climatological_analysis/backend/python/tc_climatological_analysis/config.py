@@ -49,6 +49,8 @@ class TCAConfig(BaseModel):
     # ── GKF / selection parameters (defaults match the CHS MATLAB) ─────────────
     k_size: float = 200.0          # distance Gaussian kernel size (km)
     dir_kernel: float = 30.0       # directional (heading) Gaussian kernel size (deg)
+    day_kernel: float = 14.0       # daily (day-of-year) Gaussian kernel size (days)
+                                   # for the continuous daily SRR seasonal cycle
     max_dist: float = 600.0        # storm-selection cutoff distance (km)
     max_cp: float = 1005.0         # drop fixes with central pressure above this (hPa)
     ref_pressure: float = 1013.0   # sea-level reference for the deficit dp = 1013 - Cp
@@ -73,6 +75,7 @@ class TCAConfig(BaseModel):
     # ── Per-CRL selected-TC maps (optional, off by default) ────────────────────
     plot_selection: bool = False     # one annual map per CRL
     plot_monthly: bool = False       # one map per CRL and month (Jan-Dec); high volume
+    plot_daily: bool = False         # one daily-SRR curve plot per CRL (day 1..365)
     plot_dir: Optional[Union[str, Path]] = None       # None -> output_dir / "plots"
     plot_jobs: Optional[int] = None                   # None/0 -> auto, 1 -> serial
     # Natural Earth basemap resolution for the maps: "10m", "50m", or "110m".

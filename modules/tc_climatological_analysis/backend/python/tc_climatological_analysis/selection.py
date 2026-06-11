@@ -22,10 +22,25 @@ _EARTH_R_KM = 6371.0   # matches the MATLAB distance()/deg2km default sphere
 
 # Output columns of the selection table (one row per selected TC at a CRL).
 SELECT_COLUMNS = [
-    "crl_id", "year", "storm_no", "name", "genesis_yyyymm", "month",
+    "crl_id", "year", "storm_no", "name", "genesis_yyyymm", "month", "doy",
     "lat", "lon", "dist_rep", "trans_kmh", "heading_deg", "vmax_kmh",
     "cp_gauss", "cp_mindist", "gaussW", "dist", "rmax_km", "dp",
 ]
+
+# Cumulative days before each month on a fixed 365-day (non-leap) calendar; used
+# to map a YYYYMMDD closest-approach date to a day-of-year in [1, 365].
+_CUM_DAYS = np.array([0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334])
+
+
+def ymd_to_doy(ymd: np.ndarray) -> np.ndarray:
+    """Day-of-year in [1, 365] for an array of YYYYMMDD integers (fixed 365-day
+    calendar; a Feb-29 closest approach folds onto its non-leap ordinal)."""
+    ymd = np.asarray(ymd, dtype=np.int64)
+    month = ((ymd // 100) % 100).astype(int)
+    day = (ymd % 100).astype(int)
+    month = np.clip(month, 1, 12)
+    doy = _CUM_DAYS[month - 1] + day
+    return np.clip(doy, 1, 365).astype(int)
 
 
 def gaussian_weights(k_size: float, dist_km: np.ndarray) -> np.ndarray:
@@ -118,6 +133,7 @@ def select_storms(
         cols["name"].append(np.full(nhit, name, dtype=object))
         cols["genesis_yyyymm"].append(np.full(nhit, genesis_yyyymm))
         cols["month"].append(((tymd[idm] // 100) % 100).astype(int))
+        cols["doy"].append(ymd_to_doy(tymd[idm]))
         cols["lat"].append(tlat[iw])
         cols["lon"].append(tlon[iw])
         cols["dist_rep"].append(dh[rows, iw])

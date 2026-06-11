@@ -8,9 +8,12 @@ import pytest
 
 from tc_climatological_analysis.config import TCAConfig
 from tc_climatological_analysis.crls import load_crls
-from tc_climatological_analysis.selection import select_storms, gaussian_weights, _haversine_km
+from tc_climatological_analysis.selection import (
+    select_storms, gaussian_weights, _haversine_km, ymd_to_doy,
+)
 from tc_climatological_analysis.gkf import (
-    azimuth_diff, heading_zero_degree_adj, compute_rates, HEADINGS, MONTHS,
+    azimuth_diff, heading_zero_degree_adj, compute_rates, doy_diff,
+    HEADINGS, MONTHS, DOYS,
 )
 
 
@@ -111,6 +114,60 @@ def test_select_storms_within_and_beyond():
     assert select_storms(far, crls, max_dist=600.0).empty
 
 
+def test_ymd_to_doy():
+    # Jan 1 -> 1, Dec 31 -> 365, and a Sep 2 closest approach -> 245.
+    assert ymd_to_doy(np.array([20000101]))[0] == 1
+    assert ymd_to_doy(np.array([20001231]))[0] == 365
+    assert ymd_to_doy(np.array([20000902]))[0] == 245   # 243 (Aug end) + 2
+
+
+def test_doy_diff_wraps_circularly():
+    d = doy_diff(DOYS, np.array([1.0]))                  # (1, 365)
+    # zero at day 1; near a full half-period from mid-year; wraps so Dec 31 is 1 day off.
+    assert d[0, 0] == pytest.approx(0.0)
+    assert d[0, np.argmin(np.abs(DOYS - 365))] == pytest.approx(1.0)  # Dec31 ~ 1 day from Jan1
+
+
+def test_select_storms_records_doy():
+    crls = pd.DataFrame({"id": [1], "lat": [25.0], "lon": [-90.0]})
+    sel = select_storms(_one_storm_hurdat(month=9, pmin=980.0), crls)
+    assert sel["doy"].iloc[0] == 245                     # Sep 2 closest approach
+
+
+def test_compute_rates_daily_additivity():
+    crls = pd.DataFrame({"id": [1], "lat": [25.0], "lon": [-90.0]})
+    sel = select_storms(_one_storm_hurdat(month=9, pmin=980.0), crls)
+    rates = compute_rates(sel, crls, k_size=200.0, dir_kernel=30.0, day_kernel=15.0,
+                          start_year=2000, end_year=2000, min_dp=8.0,
+                          dp_low=28.0, dp_med=48.0)
+    b = rates["all"]
+    # Daily SRR spans the full year and integrates (sums) to the annual rate.
+    assert b["srr_daily"].shape == (1, 365)
+    assert b["srr_daily"][0].sum() == pytest.approx(b["srr"][0], rel=1e-6)
+    # The seasonal peak sits on the storm's closest-approach day-of-year (Sep 2 -> 245).
+    assert int(np.argmax(b["srr_daily"][0])) + 1 == 245
+    # Daily mass tracks the Med bin (dp=33); Low/High daily curves are flat zero.
+    assert rates["med"]["srr_daily"][0].sum() == pytest.approx(b["srr"][0], rel=1e-6)
+    assert rates["low"]["srr_daily"][0].sum() == pytest.approx(0.0)
+
+
+def test_srr_daily_table(tmp_path):
+    from tc_climatological_analysis import writer
+    crls = pd.DataFrame({"id": [1], "lat": [25.0], "lon": [-90.0]})
+    sel = select_storms(_one_storm_hurdat(month=9, pmin=980.0), crls)
+    rates = compute_rates(sel, crls, k_size=200.0, dir_kernel=30.0, day_kernel=15.0,
+                          start_year=2000, end_year=2000, min_dp=8.0,
+                          dp_low=28.0, dp_med=48.0)
+    p = writer.write_srr_daily_table(rates, crls, tmp_path / "srr_daily_atlantic.csv")
+    d = pd.read_csv(p)
+    # Long form: 365 rows for the single CRL, days 1..365.
+    assert len(d) == 365
+    assert d["doy"].tolist() == list(range(1, 366))
+    assert (d["crl_id"] == 1).all()
+    # The daily column sums to the annual SRR.
+    assert d["srr_daily_all"].sum() == pytest.approx(rates["all"]["srr"][0], rel=1e-6)
+
+
 def test_select_storms_drops_high_pressure():
     crls = pd.DataFrame({"id": [1], "lat": [25.0], "lon": [-90.0]})
     # pmin above max_cp -> all fixes dropped -> nothing selected.
@@ -120,7 +177,7 @@ def test_select_storms_drops_high_pressure():
 def test_compute_rates_monthly_additivity():
     crls = pd.DataFrame({"id": [1], "lat": [25.0], "lon": [-90.0]})
     sel = select_storms(_one_storm_hurdat(month=9, pmin=980.0), crls)
-    rates = compute_rates(sel, crls, k_size=200.0, dir_kernel=30.0,
+    rates = compute_rates(sel, crls, k_size=200.0, dir_kernel=30.0, day_kernel=15.0,
                           start_year=2000, end_year=2000, min_dp=8.0,
                           dp_low=28.0, dp_med=48.0)
     assert rates["_meta"]["nyrs"] == 1
@@ -150,7 +207,7 @@ def test_srr_radius_table(tmp_path):
     from tc_climatological_analysis import writer
     crls = pd.DataFrame({"id": [1], "lat": [25.0], "lon": [-90.0]})
     sel = select_storms(_one_storm_hurdat(month=9, pmin=980.0), crls)
-    rates = compute_rates(sel, crls, k_size=200.0, dir_kernel=30.0,
+    rates = compute_rates(sel, crls, k_size=200.0, dir_kernel=30.0, day_kernel=15.0,
                           start_year=2000, end_year=2000, min_dp=8.0,
                           dp_low=28.0, dp_med=48.0)
     p = writer.write_srr_radius_table(rates, crls, 200.0, tmp_path / "srr200km_atlantic.csv")
@@ -168,7 +225,7 @@ def test_srr_units_value():
     crls = pd.DataFrame({"id": [1], "lat": [25.0], "lon": [-90.0]})
     sel = select_storms(
         _one_storm_hurdat(lat=(25.0, 25.0), lon=(-90.0, -90.0)), crls)
-    rates = compute_rates(sel, crls, k_size=200.0, dir_kernel=30.0,
+    rates = compute_rates(sel, crls, k_size=200.0, dir_kernel=30.0, day_kernel=15.0,
                           start_year=2000, end_year=2000, min_dp=8.0,
                           dp_low=28.0, dp_med=48.0)
     assert rates["all"]["srr"][0] == pytest.approx(

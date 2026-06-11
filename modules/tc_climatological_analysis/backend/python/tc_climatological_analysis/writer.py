@@ -10,7 +10,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from tc_climatological_analysis.gkf import MONTHS
+from tc_climatological_analysis.gkf import MONTHS, DOYS
 
 
 def write_selection(selection: pd.DataFrame, path) -> Path:
@@ -43,6 +43,36 @@ def write_srr_table(rates: dict, crls: pd.DataFrame, path, *,
         for j, mon in enumerate(MONTHS):
             out[f"{prefix}_{name}_{mon}"] = b["srr_monthly"][:, j] * scale
     out.to_csv(path, index=False)
+    return path
+
+
+def write_srr_daily_table(rates: dict, crls: pd.DataFrame, path, *,
+                          scale: float = 1.0, prefix: str = "srr_daily") -> Path:
+    """Continuous daily SRR CSV (long form): one row per CRL x day-of-year.
+
+    Columns: crl_id, lat, lon, doy (1..365), then ``<prefix>_<bin>`` for each
+    intensity bin. Values are the kernel-smoothed seasonal rate density in TC/km/yr per
+    day-of-year (the annual SRR spread across the calendar); summing a CRL's 365 days
+    recovers its annual SRR. ``scale`` (and ``prefix``) produce the SRR_<R>km variant
+    (TC/yr within R, per day-of-year).
+    """
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    crl_id = crls["id"].to_numpy()
+    lat = crls["lat"].to_numpy()
+    lon = crls["lon"].to_numpy()
+    ncrl = len(crl_id)
+    ndoy = DOYS.size
+    doy_int = DOYS.astype(int)
+    cols = {
+        "crl_id": np.repeat(crl_id, ndoy),
+        "lat": np.repeat(lat, ndoy),
+        "lon": np.repeat(lon, ndoy),
+        "doy": np.tile(doy_int, ncrl),
+    }
+    for name in rates["_meta"]["bins"]:
+        cols[f"{prefix}_{name}"] = (rates[name]["srr_daily"] * scale).reshape(-1)
+    pd.DataFrame(cols).to_csv(path, index=False)
     return path
 
 
@@ -82,12 +112,14 @@ def write_dsrr_arrays(rates: dict, crls: pd.DataFrame, path) -> Path:
         "lon": crls["lon"].to_numpy(),
         "headings": meta["headings"],
         "months": np.array(meta["months"]),
+        "doys": meta["doys"],
         "nyrs": np.array(meta["nyrs"]),
     }
     for name in meta["bins"]:
         b = rates[name]
         arrays[f"srr_{name}"] = b["srr"]
         arrays[f"srr_monthly_{name}"] = b["srr_monthly"]
+        arrays[f"srr_daily_{name}"] = b["srr_daily"]
         arrays[f"dsrr_rate_{name}"] = b["dsrr_rate"]
         arrays[f"dsrr_rate_monthly_{name}"] = b["dsrr_rate_monthly"]
         arrays[f"dsrr_pdf_{name}"] = b["pdf"]

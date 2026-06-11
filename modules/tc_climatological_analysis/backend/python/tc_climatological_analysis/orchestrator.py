@@ -30,11 +30,13 @@ class BasinResult:
     nyrs: int
     selection_path: Path
     srr_path: Path
+    srr_daily_path: Path
     dsrr_summary_path: Path
     dsrr_arrays_path: Path
     srr_radius_path: Optional[Path] = None
     n_maps: int = 0
     n_monthly_maps: int = 0
+    n_daily_plots: int = 0
 
 
 @dataclass
@@ -89,8 +91,8 @@ class TCAOrchestrator:
 
         rates = compute_rates(
             selection, crls, k_size=cfg.k_size, dir_kernel=cfg.dir_kernel,
-            start_year=start_year, end_year=end_year, min_dp=cfg.min_dp,
-            dp_low=cfg.dp_low, dp_med=cfg.dp_med)
+            day_kernel=cfg.day_kernel, start_year=start_year, end_year=end_year,
+            min_dp=cfg.min_dp, dp_low=cfg.dp_low, dp_med=cfg.dp_med)
 
         # Tag every non-plot output with the rate period and the NHC HURDAT file
         # date, e.g. ..._1938-2025_20260227.csv (start year = the rate start).
@@ -101,9 +103,11 @@ class TCAOrchestrator:
         out = cfg.output_dir
         sel_path = writer.write_selection(selection, out / f"selection_{basin}{suf}.csv")
         srr_path = writer.write_srr_table(rates, crls, out / f"srr_{basin}{suf}.csv")
+        srr_daily_path = writer.write_srr_daily_table(
+            rates, crls, out / f"srr_daily_{basin}{suf}.csv")
         dsrr_sum = writer.write_dsrr_summary(rates, crls, out / f"dsrr_{basin}{suf}.csv")
         dsrr_arr = writer.write_dsrr_arrays(rates, crls, out / f"dsrr_{basin}{suf}.npz")
-        print(f"[tca] {basin}: wrote SRR/DSRR (annual + monthly) -> {out}")
+        print(f"[tca] {basin}: wrote SRR/DSRR (annual + monthly + daily) -> {out}")
 
         srr_radius_path = None
         if cfg.srr_radial:
@@ -113,17 +117,18 @@ class TCAOrchestrator:
                 rates, crls, cfg.srr_radius_km, rad_dir / f"srr_{r}km_{basin}{suf}.csv")
             print(f"[tca] {basin}: wrote SRR_{r}km (within {r} km; TC/yr) -> {rad_dir}")
 
-        n_maps = n_monthly = 0
-        if cfg.plot_selection or cfg.plot_monthly:
-            n_maps, n_monthly = self._render_maps(selection, crls, rates, basin)
+        n_maps = n_monthly = n_daily = 0
+        if cfg.plot_selection or cfg.plot_monthly or cfg.plot_daily:
+            n_maps, n_monthly, n_daily = self._render_maps(selection, crls, rates, basin)
 
         return BasinResult(
             basin=basin, crl_file=crl_path, hurdat_file=hurdat_path,
             n_crls=len(crls), n_selected=len(selection), nyrs=nyrs,
             selection_path=sel_path, srr_path=srr_path,
+            srr_daily_path=srr_daily_path,
             dsrr_summary_path=dsrr_sum, dsrr_arrays_path=dsrr_arr,
             srr_radius_path=srr_radius_path,
-            n_maps=n_maps, n_monthly_maps=n_monthly)
+            n_maps=n_maps, n_monthly_maps=n_monthly, n_daily_plots=n_daily)
 
     def _render_maps(self, selection, crls, rates, basin: str):
         cfg = self.cfg
@@ -134,14 +139,22 @@ class TCAOrchestrator:
                       resolution=cfg.basemap_resolution, cache_dir=cache_dir,
                       n_jobs=cfg.plot_jobs)
         r = int(round(cfg.srr_radius_km))
-        # (folder tag, SRR scale, SRR label). The radius variant is opt-in.
-        variants = [(None, 1.0, "SRR (TC/km/yr)")]
+        # (folder tag, SRR scale, map SRR-box label, daily y-axis label, daily note).
+        # The radius variant is opt-in. The daily y-axis is a rate density over
+        # day-of-year (the 365 values sum to the annual SRR); the note spells that out.
+        daily_note = ("Daily rate density over day-of-year:\n"
+                      "the 365 values sum to the annual SRR.\n"
+                      "(\"per day\" = per day-of-year, not a 2nd time axis)")
+        variants = [(None, 1.0, "SRR (TC/km/yr)",
+                     "Daily SRR (TC/km/yr, per day-of-year)", daily_note)]
         if cfg.srr_radial:
-            variants.append((f"{r}km", 2.0 * cfg.srr_radius_km, f"SRR_{r}km (TC/yr)"))
+            variants.append((f"{r}km", 2.0 * cfg.srr_radius_km, f"SRR_{r}km (TC/yr)",
+                             f"Daily SRR_{r}km (TC/yr within {r}km, per day-of-year)",
+                             daily_note))
 
-        n_annual = n_monthly = 0
+        n_annual = n_monthly = n_daily = 0
         try:
-            for tag, scale, label in variants:
+            for tag, scale, label, daily_label, daily_note_v in variants:
                 vkw = dict(srr_scale=scale, srr_label=label, **common)
                 pre = f"SRR_{tag} " if tag else ""
                 if cfg.plot_selection:
@@ -157,9 +170,17 @@ class TCAOrchestrator:
                         selection, crls, rates, basin=basin, out_dir=od, **vkw)
                     print(f"[tca] {basin}: wrote {nm:,} {pre}monthly CRL maps -> {od}")
                     n_monthly += nm
+                if cfg.plot_daily:
+                    od = base / (f"daily_{tag}_{basin}" if tag else f"daily_{basin}")
+                    nd = plots.plot_daily_srr(
+                        selection, crls, rates, basin=basin, out_dir=od,
+                        srr_scale=scale, srr_label=daily_label, srr_note=daily_note_v,
+                        n_jobs=cfg.plot_jobs)
+                    print(f"[tca] {basin}: wrote {nd:,} {pre}daily SRR plots -> {od}")
+                    n_daily += nd
         except RuntimeError as exc:                            # e.g. matplotlib missing
-            print(f"[tca] {basin}: CRL maps skipped ({exc})")
-        return n_annual, n_monthly
+            print(f"[tca] {basin}: CRL plots skipped ({exc})")
+        return n_annual, n_monthly, n_daily
 
     def run(self) -> TCAResult:
         result = TCAResult()
