@@ -1,0 +1,46 @@
+# CyHAN engine manifest - tc_climatological_analysis
+# CRL-based tropical-cyclone storm recurrence rates (SRR/DSRR).
+
+[module]
+name        = "tc_climatological_analysis"
+version     = "0.1.0"
+launcher    = "run_tc_climatological_analysis.py"
+entry       = "backend/python/main_tc_climatological_analysis.py:run"
+ported_from = ["matlab/CHS_Atlantic_StormSelection.m", "matlab/CHS_SRR_GKF.m"]
+
+[pipeline]
+# Linear pass per basin (Atlantic only by default; Pacific off until CRLs exist).
+order        = ["load", "select", "rates", "write", "plots"]
+load         = "load the CRL set (ID,lat,lon) and the augmented HURDAT2 best-track (crls.load_crls, hurdat_source.load_augmented_hurdat)"
+select       = "per CRL, pick each TC within max_dist; representative point maximizes GaussianWeights(K)*dp (selection.select_storms)"
+rates        = "GKF omnidirectional SRR + directional DSRR, annual and monthly, per intensity bin (gkf.compute_rates)"
+write        = "selection table + SRR/DSRR tables (CSV) and full DSRR arrays (NPZ) (writer)"
+plots        = "OPTIONAL per-CRL selected-TC maps over a Natural Earth basemap (plots.plot_selected_storms)"
+
+[source]
+# The augmented HURDAT2 best-track comes from the sibling AHD module.
+augmented_hurdat = "../augmented_hurricane_database/data/outputs/augmented_hurdat2_<basin>_*.csv (newest; or pinned)"
+crl_atlantic     = "data/inputs/CHS_Atl_CRLs_v1.6.csv (ID,lat,lon)"
+crl_pacific      = "none yet (Pacific disabled)"
+
+[parameters]
+k_size       = 200.0   # distance Gaussian kernel (km)
+dir_kernel   = 30.0    # heading Gaussian kernel (deg)
+max_dist     = 600.0   # storm-selection cutoff (km)
+max_cp       = 1005.0  # central-pressure ceiling (hPa)
+ref_pressure = 1013.0  # deficit reference (hPa)
+start_year   = 1938
+min_dp       = 8.0
+dp_low       = 28.0
+dp_med       = 48.0
+intensity_bins = ["all", "low", "med", "high"]
+
+[outputs]
+# Non-plot files carry the HURDAT vintage <v> = <start>-<end>_<created> (NHC file
+# date), matching the AHD source, e.g. srr_atlantic_1851-2025_20260227.csv.
+selection    = "data/outputs/selection_<basin>_<v>.csv"
+srr          = "data/outputs/srr_<basin>_<v>.csv"     # annual + monthly, per bin (storms/km/yr)
+dsrr_summary = "data/outputs/dsrr_<basin>_<v>.csv"    # heading mean/stdv per bin
+dsrr_arrays  = "data/outputs/dsrr_<basin>_<v>.npz"    # rate/pdf/cdf, annual + monthly, per bin
+srr_radius   = "data/outputs/srr_<R>km/srr_<R>km_<basin>_<v>.csv"   # optional SRR_<R>km (TC/yr)
+maps         = "data/outputs/plots/selection_<basin>/CHS_<Basin>_CRL_<NNNN>.png"   # optional
