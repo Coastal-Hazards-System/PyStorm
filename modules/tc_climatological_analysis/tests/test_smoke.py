@@ -138,12 +138,12 @@ def test_compute_rates_monthly_additivity():
     assert rates["high"]["srr"][0] == pytest.approx(0.0)
 
 
-def test_vintage_tag_from_ahd_name():
-    from tc_climatological_analysis.hurdat_source import vintage_tag
-    assert vintage_tag("augmented_hurdat2_atlantic_1851-2025_20260227.csv") == \
-        "1851-2025_20260227"
-    assert vintage_tag("augmented_hurdat2_pacific_1949-2025_20260227.csv") == \
-        "1949-2025_20260227"
+def test_created_date_from_ahd_name():
+    from tc_climatological_analysis.hurdat_source import created_date
+    # The NHC file date is parsed from the AHD filename; the output tag's start/end
+    # years come from the rate period, not the source filename.
+    assert created_date("augmented_hurdat2_atlantic_1851-2025_20260227.csv") == "20260227"
+    assert created_date("augmented_hurdat2_pacific_1949-2025_20260227.csv") == "20260227"
 
 
 def test_srr_radius_table(tmp_path):

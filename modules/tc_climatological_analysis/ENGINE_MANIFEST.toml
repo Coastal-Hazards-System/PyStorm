@@ -36,8 +36,9 @@ dp_med       = 48.0
 intensity_bins = ["all", "low", "med", "high"]
 
 [outputs]
-# Non-plot files carry the HURDAT vintage <v> = <start>-<end>_<created> (NHC file
-# date), matching the AHD source, e.g. srr_atlantic_1851-2025_20260227.csv.
+# Non-plot files are tagged <v> = <start>-<end>_<created>: the effective rate
+# start year (START_YEAR), the last season, and the NHC HURDAT file date.
+# E.g. srr_atlantic_1938-2025_20260227.csv.
 selection    = "data/outputs/selection_<basin>_<v>.csv"
 srr          = "data/outputs/srr_<basin>_<v>.csv"     # annual + monthly, per bin (storms/km/yr)
 dsrr_summary = "data/outputs/dsrr_<basin>_<v>.csv"    # heading mean/stdv per bin

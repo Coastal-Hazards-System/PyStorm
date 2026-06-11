@@ -52,7 +52,9 @@ class TCAConfig(BaseModel):
     max_dist: float = 600.0        # storm-selection cutoff distance (km)
     max_cp: float = 1005.0         # drop fixes with central pressure above this (hPa)
     ref_pressure: float = 1013.0   # sea-level reference for the deficit dp = 1013 - Cp
-    start_year: int = 1938         # first season counted in the rate
+    # First season counted in the rate. None -> the entire HURDAT record (each
+    # basin's first season). Otherwise clamped up to the basin's record start.
+    start_year: Optional[int] = 1938
     end_year: Optional[int] = None # last season; None -> max year present in the data
     min_dp: float = 8.0            # overall intensity floor (hPa) for the rate
     # Intensity-bin deficit thresholds (hPa): Low [min_dp, dp_low), Med [dp_low,

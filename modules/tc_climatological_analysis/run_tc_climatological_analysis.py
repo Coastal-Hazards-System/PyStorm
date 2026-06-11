@@ -24,9 +24,9 @@ both ANNUALLY and per CALENDAR MONTH (Jan-Dec; the twelve monthly rates sum to
 the annual rate), for four intensity bins by deficit dp = 1013 - Cp:
   All (dp >= MIN_DP) | Low [MIN_DP, DP_LOW) | Med [DP_LOW, DP_MED) | High [DP_MED, inf)
 
-Outputs (data/outputs/). Non-plot files carry the HURDAT vintage <v> =
-<start>-<end>_<created> (NHC file date), matching the AHD source, e.g.
-srr_atlantic_1851-2025_20260227.csv:
+Outputs (data/outputs/). Non-plot files are tagged <v> = <start>-<end>_<created>:
+the effective rate start year (START_YEAR), the last season, and the NHC HURDAT
+file date. E.g. srr_atlantic_1938-2025_20260227.csv:
   selection_<basin>_<v>.csv  - per-CRL selected TCs (representative point + closest approach)
   srr_<basin>_<v>.csv        - annual + monthly omnidirectional SRR per bin
   dsrr_<basin>_<v>.csv       - directional mean/stdv heading per bin
@@ -91,7 +91,9 @@ DIR_KERNEL   = 30.0     # heading Gaussian kernel size (deg)
 MAX_DIST     = 600.0    # storm-selection cutoff distance (km)
 MAX_CP       = 1005.0   # drop fixes with central pressure above this (hPa)
 REF_PRESSURE = 1013.0   # reference for the deficit dp = 1013 - Cp
-START_YEAR   = 1938     # first season counted in the rate
+START_YEAR   = 1938     # first season counted in the rate; None = entire HURDAT record.
+                        # Clamped up to each basin's record start (Pacific begins 1949).
+                        # This start year (effective) appears in the output filenames.
 END_YEAR     = None     # last season; None -> max year present in the HURDAT data
 MIN_DP       = 8.0      # overall intensity floor (hPa)
 DP_LOW       = 28.0     # Low/Med deficit boundary (hPa)

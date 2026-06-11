@@ -13,7 +13,7 @@ from typing import Dict, List, Optional
 from tc_climatological_analysis.config import TCAConfig
 from tc_climatological_analysis.crls import load_crls
 from tc_climatological_analysis.hurdat_source import (
-    locate_augmented_hurdat, load_augmented_hurdat, vintage_tag,
+    locate_augmented_hurdat, load_augmented_hurdat, created_date,
 )
 from tc_climatological_analysis.selection import select_storms
 from tc_climatological_analysis.gkf import compute_rates
@@ -69,10 +69,12 @@ class TCAOrchestrator:
             input_dir=cfg.input_dir,
             ahd_outputs_dir=cfg.ahd_outputs_dir)
         hurdat = load_augmented_hurdat(hurdat_path)
-        # Effective period of record: never count years before the basin's record
-        # begins (Atlantic ~1851 -> 1938 floor; Pacific record starts 1949).
+        # Effective rate period. START_YEAR = None uses the entire HURDAT record;
+        # otherwise it is clamped up to the basin's first season (Atlantic ~1851 ->
+        # 1938 floor; the Pacific record starts 1949).
         data_min = int(hurdat["year"].min())
-        start_year = max(int(cfg.start_year), data_min)
+        start_year = (data_min if cfg.start_year is None
+                      else max(int(cfg.start_year), data_min))
         end_year = int(cfg.end_year) if cfg.end_year else int(hurdat["year"].max())
         nyrs = end_year - start_year + 1
         print(f"[tca] {basin}: augmented HURDAT {hurdat_path.name} "
@@ -90,10 +92,11 @@ class TCAOrchestrator:
             start_year=start_year, end_year=end_year, min_dp=cfg.min_dp,
             dp_low=cfg.dp_low, dp_med=cfg.dp_med)
 
-        # Tag every non-plot output with the HURDAT vintage, like the AHD files
-        # (e.g. ..._1851-2025_20260227.csv).
-        tag = vintage_tag(hurdat_path, hurdat)
-        suf = f"_{tag}" if tag else ""
+        # Tag every non-plot output with the rate period and the NHC HURDAT file
+        # date, e.g. ..._1938-2025_20260227.csv (start year = the rate start).
+        created = created_date(hurdat_path)
+        span = f"{start_year}-{end_year}"
+        suf = f"_{span}_{created}" if created else f"_{span}"
 
         out = cfg.output_dir
         sel_path = writer.write_selection(selection, out / f"selection_{basin}{suf}.csv")

@@ -80,29 +80,24 @@ def locate_augmented_hurdat(
     return max(candidates, key=lambda p: _rank_key(p.name))
 
 
-def vintage_tag(path, df: Optional[pd.DataFrame] = None) -> str:
-    """HURDAT vintage tag ``<start>-<end>_<created>`` for output filenames.
+def created_date(path) -> str:
+    """The NHC HURDAT file creation date (YYYYMMDD) for output filenames.
 
     Parsed from the AHD filename (e.g. ``augmented_hurdat2_atlantic_1851-2025_
-    20260227.csv`` -> ``1851-2025_20260227``). If the source is not AHD-named, it
-    falls back to the data's year span plus the file's modification date; missing
-    parts are dropped so the tag is never malformed.
+    20260227.csv`` -> ``20260227``). If the source is not AHD-named, it falls back
+    to the file's modification date; returns "" if unavailable. The start/end
+    years of the output tag come from the rate period (the orchestrator), not from
+    the source filename.
     """
     m = _AHD_NAME.search(Path(path).name)
     if m:
-        return f"{m.group(2)}-{m.group(3)}_{m.group('created')}"
-    start = end = ""
-    if df is not None and "year" in getattr(df, "columns", []):
-        start, end = str(int(df["year"].min())), str(int(df["year"].max()))
-    created = ""
+        return m.group("created")
     try:
         import datetime as _dt
         ts = Path(path).stat().st_mtime
-        created = _dt.datetime.fromtimestamp(ts, _dt.timezone.utc).strftime("%Y%m%d")
+        return _dt.datetime.fromtimestamp(ts, _dt.timezone.utc).strftime("%Y%m%d")
     except OSError:
-        pass
-    span = f"{start}-{end}" if start and end else (start or end)
-    return "_".join(p for p in (span, created) if p)
+        return ""
 
 
 def load_augmented_hurdat(path) -> pd.DataFrame:

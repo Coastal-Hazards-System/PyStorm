@@ -3,8 +3,8 @@
 CRL-based tropical-cyclone **storm recurrence rates** for the U.S. Atlantic and
 Pacific coasts. For each CHS **Coastal Reference Location (CRL)**, the module
 selects the tropical cyclones from the augmented HURDAT2 best-track that pass
-within a cutoff distance, then computes — with the **Gaussian Kernel Function
-(GKF)** — the omnidirectional and directional recurrence rates, both annually and
+within a cutoff distance, then computes - with the **Gaussian Kernel Function
+(GKF)** - the omnidirectional and directional recurrence rates, both annually and
 per calendar month, for four intensity bins.
 
 It is a Python port of the CHS MATLAB drivers `CHS_Atlantic_StormSelection.m` and
@@ -13,12 +13,12 @@ It is a Python port of the CHS MATLAB drivers `CHS_Atlantic_StormSelection.m` an
 
 ## What it produces
 
-- **SRR** — omnidirectional storm recurrence rate, `(1/Nyrs) · Σ Wi` with the
+- **SRR** - omnidirectional storm recurrence rate, `(1/Nyrs) · Σ Wi` with the
   distance kernel `Wi = 1/(√(2π)·K)·exp(−½(D/K)²)`. **Units: storms / km / year.**
-- **DSRR** — directional rate `Ld(θ) = (1/Nyrs) · Σ Wd_i(θ)·Wi` with the heading
+- **DSRR** - directional rate `Ld(θ) = (1/Nyrs) · Σ Wd_i(θ)·Wi` with the heading
   kernel (σ = 30°). **Units: storms / degree / year.** The normalized shape is
   recentered on its circular mean into a heading pdf/cdf with a mean and stdv.
-- Both **annually and per calendar month** (Jan–Dec); the twelve monthly rates
+- Both **annually and per calendar month** (Jan-Dec); the twelve monthly rates
   sum exactly to the annual rate (the month is the storm's closest approach).
 - For four intensity bins on the deficit `dp = 1013 − Cp`:
   `All (dp ≥ 8)` · `Low [8, 28)` · `Med [28, 48)` · `High [48, ∞)` hPa.
@@ -28,11 +28,11 @@ set exists).
 
 ## Inputs
 
-- **CRL sets** under `data/inputs/raw/` — the Atlantic CSV
+- **CRL sets** under `data/inputs/raw/` - the Atlantic CSV
   (`CHS_Atl_CRLs_v1.6.csv`: `ID,lat,lon`) and the Pacific tab-delimited file
   (`CHS_PAC_CRLs_v1.2.txt`: `Latitude,Longitude,Region,ID`). The loader
   auto-detects the delimiter and column names.
-- **Augmented HURDAT2** — the `augmented_hurricane_database` (AHD) module output.
+- **Augmented HURDAT2** - the `augmented_hurricane_database` (AHD) module output.
   By default the newest `augmented_hurdat2_<basin>_*.csv` under the sibling AHD
   module's `data/outputs` is linked automatically; set
   `ATLANTIC_HURDAT_FILE` / `PACIFIC_HURDAT_FILE` to pin your own.
@@ -51,21 +51,22 @@ python run_tc_climatological_analysis.py --basin both --plots
 
 ### Key options (USER OPTIONS block)
 
-- **`BASIN`** — `"atlantic"`, `"pacific"`, or `"both"`.
-- **`ATLANTIC_CRL_FILE` / `PACIFIC_CRL_FILE`** — CRL files under `data/inputs/raw/`.
-- **`ATLANTIC_HURDAT_FILE` / `PACIFIC_HURDAT_FILE` / `AHD_OUTPUTS_DIR`** — pin the
+- **`BASIN`** - `"atlantic"`, `"pacific"`, or `"both"`.
+- **`ATLANTIC_CRL_FILE` / `PACIFIC_CRL_FILE`** - CRL files under `data/inputs/raw/`.
+- **`ATLANTIC_HURDAT_FILE` / `PACIFIC_HURDAT_FILE` / `AHD_OUTPUTS_DIR`** - pin the
   augmented-HURDAT source, or let it auto-link to the AHD module.
 - **`K_SIZE` (200 km), `DIR_KERNEL` (30°), `MAX_DIST` (600 km), `MAX_CP`
-  (1005 hPa), `START_YEAR` (1938), `MIN_DP`/`DP_LOW`/`DP_MED`** — GKF/selection
-  parameters (defaults match the CHS MATLAB). The effective start year is clamped
-  to each basin's first season (Atlantic 1938, Pacific 1949).
-- **`PLOT_SELECTION`** — per-CRL selected-TC maps (off by default; see below).
+  (1005 hPa), `START_YEAR` (1938), `MIN_DP`/`DP_LOW`/`DP_MED`** - GKF/selection
+  parameters (defaults match the CHS MATLAB). `START_YEAR = None` uses the entire
+  HURDAT record; otherwise it is clamped up to each basin's first season (Atlantic
+  1938, Pacific 1949). The effective start year appears in the output filenames.
+- **`PLOT_SELECTION`** - per-CRL selected-TC maps (off by default; see below).
 
 ## Per-CRL selected-TC maps (optional)
 
-With `PLOT_SELECTION = True` (or `--plots`) the module writes one map per CRL —
+With `PLOT_SELECTION = True` (or `--plots`) the module writes one map per CRL -
 the selected TCs colored by intensity (High red, Med yellow, Low green) with the
-CRL in blue — over a **Natural Earth** basemap (coastline + country + state/
+CRL in blue - over a **Natural Earth** basemap (coastline + country + state/
 province lines), replacing the legacy low-resolution NOAA coastline. A full basin
 is ~1,000+ CRLs, so it is opt-in and parallelized (`PLOT_JOBS`); the basemap
 downloads once into `data/inputs/raw/naturalearth/`. Needs `matplotlib` + `pyshp`
@@ -73,25 +74,32 @@ downloads once into `data/inputs/raw/naturalearth/`. Needs `matplotlib` + `pyshp
 
 ## Outputs (`data/outputs/`)
 
-Every non-plot output carries the HURDAT vintage `<start>-<end>_<created>` (the
-record start/end years and the NHC file date), matching the AHD source file —
-e.g. `srr_atlantic_1851-2025_20260227.csv`. Below, `<v>` = that tag.
+Every non-plot output is tagged `<start>-<end>_<created>`, where `<start>` is the
+effective rate start year (`START_YEAR`, clamped up to the basin's first season;
+or the full record start when `START_YEAR` is None), `<end>` is the last season,
+and `<created>` is the NHC HURDAT file date (from the AHD source). E.g.
+`srr_atlantic_1938-2025_20260227.csv`. Below, `<v>` = that tag.
 
 | File | Contents |
 |---|---|
 | `selection_<basin>_<v>.csv` | per-CRL selected TCs (representative point + closest approach) |
 | `srr_<basin>_<v>.csv` | annual + monthly omnidirectional SRR per intensity bin (storms/km/yr) |
 | `dsrr_<basin>_<v>.csv` | directional heading mean/stdv per bin (deg) |
-| `dsrr_<basin>_<v>.npz` | full DSRR arrays — rate/pdf/cdf, annual + monthly, per bin |
-| `srr_<R>km/srr_<R>km_<basin>_<v>.csv` | optional **SRR_<R>km** variant — SRR · 2R (TC/yr), separate folder |
+| `dsrr_<basin>_<v>.npz` | full DSRR arrays - rate/pdf/cdf, annual + monthly, per bin |
+| `srr_<R>km/srr_<R>km_<basin>_<v>.csv` | optional **SRR_<R>km** variant - SRR · 2R (TC/yr), separate folder |
 | `plots/selection_<basin>/…` | optional annual per-CRL maps (SRR box) |
 | `plots/selection_monthly_<basin>/…` | optional per-CRL × month maps |
 | `plots/selection_<R>km_<basin>/…` | optional SRR_<R>km map variants (separate folders) |
 
+In the SRR CSVs each row is one CRL, and the data columns hold the SRR for each
+of the four intensity levels (All, High, Med, Low) as both an **annual** value and
+the **twelve monthly** values (Jan-Dec, which sum to the annual). Units are
+**TC/km/yr** for `srr_<basin>` and **TC/yr** for the `srr_<R>km` variant.
+
 ### SRR_<R>km variant (within a radius)
 
 A second variant of the **SRR results only** (not DSRR), off by default
-(`SRR_RADIAL`): **SRR_<R>km = SRR · (2·R)** — the rate (storms/km/yr) times the
+(`SRR_RADIAL`): **SRR_<R>km = SRR · (2·R)** - the rate (storms/km/yr) times the
 2R-km diameter, giving the **expected storms / year within `SRR_RADIUS_KM` of each
 CRL** (TC/yr). The radius is user-set (default **200 km** → ×400). It is written to
 its own `srr_<R>km/` folder and, when maps are enabled, plotted in separate
