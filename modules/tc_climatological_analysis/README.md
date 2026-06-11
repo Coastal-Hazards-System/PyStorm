@@ -127,6 +127,5 @@ tc_climatological_analysis/
 │       ├── writer.py        # SRR/DSRR table + array writers
 │       └── orchestrator.py  # TCAOrchestrator: per-basin pipeline
 ├── data/{inputs/{raw,processed},outputs}/
-├── matlab/                  # CHS MATLAB reference scripts
 └── tests/
 ```

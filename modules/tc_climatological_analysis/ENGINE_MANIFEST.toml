@@ -6,7 +6,7 @@ name        = "tc_climatological_analysis"
 version     = "0.1.0"
 launcher    = "run_tc_climatological_analysis.py"
 entry       = "backend/python/main_tc_climatological_analysis.py:run"
-ported_from = ["matlab/CHS_Atlantic_StormSelection.m", "matlab/CHS_SRR_GKF.m"]
+ported_from = ["CHS_Atlantic_StormSelection.m", "CHS_SRR_GKF.m"]   # CHS MATLAB (not bundled)
 
 [pipeline]
 # Linear pass per basin (Atlantic only by default; Pacific off until CRLs exist).
