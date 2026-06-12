@@ -24,9 +24,10 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 
-# ── Canonical Wave Maker design palette (see pystorm_palette) ───────────────
-from .pystorm_palette import (
+# ── Canonical Wave Maker design palette (see pystorm_common) ────────────────
+from pystorm_common import (
     WAVE_MAKER, EMPIRICAL, EMPHASIS, EMPH_DARK, BAND, REF_DASH, GRID, INK, MUTED, C,
+    style_ax, save_figure,
 )
 
 _C = {
@@ -42,17 +43,6 @@ _C = {
     "spine":   INK,
     "muted":   MUTED,
 }
-
-
-def _style_ax(ax) -> None:
-    """Apply the shared clean axes styling (despined, light grid)."""
-    for side in ("top", "right"):
-        ax.spines[side].set_visible(False)
-    for side in ("left", "bottom"):
-        ax.spines[side].set_color(_C["spine"])
-    ax.grid(True, color=_C["grid"], linewidth=0.8)
-    ax.set_axisbelow(True)
-    ax.tick_params(colors="#333333", labelsize=10)
 
 
 def _on(series, name: str) -> bool:
@@ -152,7 +142,7 @@ class HazardCurvePlotter:
         self.ax.set_ylabel(ylabel, fontsize=12)
         self.ax.set_title("PyStorm — Probabilistic Simulation Technique (PST)",
                           fontsize=13, fontweight="bold")
-        _style_ax(self.ax)
+        style_ax(self.ax)
         self.ax.grid(True, which="both", color=_C["grid"], linewidth=0.6, alpha=0.7)
         leg = self.ax.legend(frameon=True, framealpha=0.95, edgecolor=_C["grid"],
                              fontsize=9)
@@ -162,7 +152,7 @@ class HazardCurvePlotter:
         if output_path is not None:
             output_path = Path(output_path)
             output_path.parent.mkdir(parents=True, exist_ok=True)
-            self.ax.figure.savefig(output_path, dpi=150, bbox_inches="tight")
+            save_figure(self.ax.figure, output_path)
 
 
 def _shade_runs(ax, x, mask, **kw) -> None:
@@ -212,14 +202,14 @@ def _plot_mrl_diagnostics(qdo, output_path: Path, ylabel: str = "Response") -> N
     a0.set_ylabel(f"mean excess e(u)")
     a0.set_title("PyStorm — automated mean-residual-life (μ) selection [mrl]",
                  fontsize=12, fontweight="bold")
-    _style_ax(a0)
+    style_ax(a0)
     leg = a0.legend(fontsize=8, frameon=True, framealpha=0.95, edgecolor=_C["grid"])
     leg.get_frame().set_linewidth(0.8)
 
     # (2) weighted MSE of the linear fit; μ* is its lowest in-band local minimum.
     a1.plot(u, wm, "-o", color=_C["count"], ms=3.5, lw=1.4, label="fit weighted MSE")
     a1.set_ylabel("fit weighted MSE")
-    _style_ax(a1)
+    style_ax(a1)
     leg1 = a1.legend(fontsize=8, frameon=True, framealpha=0.95, edgecolor=_C["grid"])
     leg1.get_frame().set_linewidth(0.8)
 
@@ -231,12 +221,12 @@ def _plot_mrl_diagnostics(qdo, output_path: Path, ylabel: str = "Response") -> N
         a2.legend(fontsize=8, frameon=True, framealpha=0.95, edgecolor=_C["grid"])
     a2.set_ylabel("# exceedances > u")
     a2.set_xlabel(f"threshold u  ({ylabel})", fontsize=11)
-    _style_ax(a2)
+    style_ax(a2)
 
     fig.tight_layout()
     output_path = Path(output_path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    fig.savefig(output_path, dpi=150)
+    save_figure(fig, output_path)
     plt.close(fig)
 
 
@@ -276,7 +266,7 @@ def _plot_gof_diagnostics(qdo, output_path: Path, ylabel: str = "Response") -> N
     a0.set_ylabel(f"{stt} GoF statistic")
     a0.set_title("PyStorm — GoF failure-to-reject (μ) selection [gof]",
                  fontsize=12, fontweight="bold")
-    _style_ax(a0)
+    style_ax(a0)
     leg = a0.legend(fontsize=8, frameon=True, framealpha=0.95, edgecolor=_C["grid"])
     leg.get_frame().set_linewidth(0.8)
 
@@ -284,7 +274,7 @@ def _plot_gof_diagnostics(qdo, output_path: Path, ylabel: str = "Response") -> N
     a1.plot(mu, qdo.shape, "-o", color=_C["shape"], ms=4, lw=1.6)
     a1.axhline(0.0, color=_C["muted"], linewidth=0.9)
     a1.set_ylabel("GPD shape ξ")
-    _style_ax(a1)
+    style_ax(a1)
 
     # (3) data richness.
     a2.plot(mu, qdo.n_exceed, "-o", color=_C["count"], ms=4, lw=1.6)
@@ -294,12 +284,12 @@ def _plot_gof_diagnostics(qdo, output_path: Path, ylabel: str = "Response") -> N
         a2.legend(fontsize=8, frameon=True, framealpha=0.95, edgecolor=_C["grid"])
     a2.set_ylabel("# exceedances > μ")
     a2.set_xlabel(f"GPD location μ candidate  ({ylabel})", fontsize=11)
-    _style_ax(a2)
+    style_ax(a2)
 
     fig.tight_layout()
     output_path = Path(output_path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    fig.savefig(output_path, dpi=150)
+    save_figure(fig, output_path)
     plt.close(fig)
 
 
@@ -383,7 +373,7 @@ def plot_qdo_diagnostics(qdo, output_path: Path, ylabel: str = "Response") -> No
     a0.set_ylabel("WMSE")
     a0.set_title("PyStorm — QDO GPD-location (μ) selection diagnostics  "
                  f"[{method}]", fontsize=12, fontweight="bold")
-    _style_ax(a0)
+    style_ax(a0)
     leg = a0.legend(fontsize=8, frameon=True, framealpha=0.95, edgecolor=_C["grid"])
     leg.get_frame().set_linewidth(0.8)
 
@@ -394,7 +384,7 @@ def plot_qdo_diagnostics(qdo, output_path: Path, ylabel: str = "Response") -> No
                 label=f"{set_lbl} · pick: {getattr(qdo, 'tiebreak', '')}")
     a1.axhline(0.0, color=_C["muted"], linewidth=0.9)
     a1.set_ylabel("GPD shape ξ")
-    _style_ax(a1)
+    style_ax(a1)
     if sset.size:
         leg1 = a1.legend(fontsize=8, frameon=True, framealpha=0.95,
                          edgecolor=_C["grid"])
@@ -414,7 +404,7 @@ def plot_qdo_diagnostics(qdo, output_path: Path, ylabel: str = "Response") -> No
             a2.axhline(d_min + stab_tol, color=_C["above"], linestyle="--",
                        linewidth=1.3, zorder=3, label=f"plateau tol (+{stab_tol:g})")
     a2.set_ylabel("robust ξ dispersion (↓ = stable)")
-    _style_ax(a2)
+    style_ax(a2)
     leg2 = a2.legend(fontsize=8, frameon=True, framealpha=0.95, edgecolor=_C["grid"])
     leg2.get_frame().set_linewidth(0.8)
 
@@ -426,10 +416,10 @@ def plot_qdo_diagnostics(qdo, output_path: Path, ylabel: str = "Response") -> No
         a3.legend(fontsize=8, frameon=True, framealpha=0.95, edgecolor=_C["grid"])
     a3.set_ylabel("# exceedances > μ")
     a3.set_xlabel(f"GPD location μ candidate  ({ylabel})", fontsize=11)
-    _style_ax(a3)
+    style_ax(a3)
 
     fig.tight_layout()
     output_path = Path(output_path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    fig.savefig(output_path, dpi=150)
+    save_figure(fig, output_path)
     plt.close(fig)

@@ -1,4 +1,4 @@
-"""run_probabilistic_simulation_technique — PST launcher (CyHAN v2.0 §5.3).
+"""run_probabilistic_simulation_technique — PST launcher (CyHAN v2.1 §5.3).
 
 Author / POC : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
 
@@ -333,7 +333,7 @@ PLOTS_DIR  = ROOT / "data" / "outputs" / "plots"
 # ===========================================================================
 
 
-# ── Launcher plumbing (CyHAN v2.0 §A.5 path anchoring; no user options) ─────
+# ── Launcher plumbing (CyHAN v2.1 §A.5 path anchoring; no user options) ─────
 import os
 import sys
 
@@ -341,8 +341,10 @@ import sys
 os.environ.setdefault("MPLBACKEND", "Agg")
 
 _BACKEND_PY = ROOT / "backend" / "python"
-if str(_BACKEND_PY) not in sys.path:
-    sys.path.insert(0, str(_BACKEND_PY))
+_COMMON_PY  = ROOT.parents[1] / "common" / "python"   # shared CyHAN common library (§5.2)
+for _p in (_BACKEND_PY, _COMMON_PY):
+    if _p.is_dir() and str(_p) not in sys.path:
+        sys.path.insert(0, str(_p))
 
 
 def _ensure_cpp_extension() -> None:

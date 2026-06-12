@@ -36,12 +36,14 @@ import matplotlib.pyplot as plt
 
 ROOT     = Path(__file__).resolve().parents[1]          # PST module root
 _BACKEND = ROOT / "backend" / "python"
-if str(_BACKEND) not in sys.path:
-    sys.path.insert(0, str(_BACKEND))
+_COMMON  = ROOT.parents[1] / "common" / "python"       # shared CyHAN common library (§5.2)
+for _p in (_BACKEND, _COMMON):
+    if _p.is_dir() and str(_p) not in sys.path:
+        sys.path.insert(0, str(_p))
 
 from probabilistic_simulation_technique.config import PSTConfig
 from probabilistic_simulation_technique.orchestrator import PSTOrchestrator
-from probabilistic_simulation_technique.postproc.pystorm_palette import (
+from pystorm_common import (
     WAVE_MAKER, EMPHASIS, C, EMPIRICAL, GRID,
 )
 

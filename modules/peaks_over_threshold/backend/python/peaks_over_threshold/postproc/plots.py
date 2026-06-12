@@ -6,7 +6,7 @@ Draws the original time series, the selected peaks, and the chosen threshold.
 Long gaps in the input (default > 48 h) are split into separate line segments
 so matplotlib does not draw horizontal "bridges" across them.
 
-Colors come from the canonical Wave Maker design palette (``pystorm_palette``),
+Colors come from the canonical Wave Maker design palette (``pystorm_common``),
 shared with the PST module for a consistent, publication-grade look.
 """
 
@@ -14,7 +14,7 @@ from typing import Optional
 
 import pandas as pd
 
-from .pystorm_palette import WAVE_MAKER, EMPHASIS, EMPH_DARK, INK, MUTED, GRID, C
+from pystorm_common import WAVE_MAKER, EMPHASIS, EMPH_DARK, INK, MUTED, GRID, C, style_ax
 
 # Semantic roles for POT figures, mapped to the canonical palette tokens per
 # the design handoff's figure-type conventions.
@@ -29,17 +29,6 @@ PALETTE = {
     "grid":      GRID,
     "spine":     INK,
 }
-
-
-def _style_ax(ax) -> None:
-    """Apply the shared clean axes styling (despined, light grid)."""
-    for side in ("top", "right"):
-        ax.spines[side].set_visible(False)
-    for side in ("left", "bottom"):
-        ax.spines[side].set_color(PALETTE["spine"])
-    ax.grid(True, color=PALETTE["grid"], linewidth=0.8)
-    ax.set_axisbelow(True)
-    ax.tick_params(colors="#333333", labelsize=10)
 
 
 class TimeSeriesPlotter:
@@ -110,7 +99,7 @@ class TimeSeriesPlotter:
         self.ax.set_xlabel(xlabel, fontsize=12)
         self.ax.set_ylabel(self.ylabel, fontsize=12)
         self.ax.set_title(self.title, fontsize=13, fontweight="bold")
-        _style_ax(self.ax)
+        style_ax(self.ax)
         leg = self.ax.legend(loc="upper left", frameon=True, framealpha=0.95,
                              edgecolor=PALETTE["grid"], fontsize=9)
         leg.get_frame().set_linewidth(0.8)

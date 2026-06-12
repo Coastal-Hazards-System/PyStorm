@@ -24,6 +24,7 @@ import pandas as pd
 from ..config   import PreprocessConfig
 from ..io       import read_time_series_csv, write_series_csv
 from ..postproc import TimeSeriesPlotter, PALETTE
+from pystorm_common import save_figure
 from .detrend   import detrend_time_series, ntde_midpoint_timestamp
 from .ntr       import estimate_ntr
 from .noaa_download import download_noaa_wl_data
@@ -140,7 +141,7 @@ class PreprocessOrchestrator:
 
         p.finalize()
         out = plots_dir / f"dwl_{sid}.png"
-        fig.savefig(out, dpi=300); plt.close(fig)
+        save_figure(fig, out, close=True)
         print(f"[preprocess] plot saved: {out}")
 
     def _plot_ntr(self, ntr_full, units, plots_dir, sid):
@@ -151,5 +152,5 @@ class PreprocessOrchestrator:
         p.plot(ntr_full, label="NTR", color=PALETTE["series"])
         p.finalize()
         out = plots_dir / f"ntr_{sid}.png"
-        fig.savefig(out, dpi=300); plt.close(fig)
+        save_figure(fig, out, close=True)
         print(f"[preprocess] plot saved: {out}")

@@ -1,10 +1,12 @@
-"""pystorm_palette.py — named colors for PyStorm figures.
+"""pystorm_common.palette — named colors for PyStorm figures.
 
 Anchored on Toyota "Wave Maker" 0796 (#06ABC4), sampled from vehicle paint.
 Designed for light backgrounds; categorical cycle is hero-first and
 lightness-interleaved so neighbouring colors separate in grayscale.
 
-Canonical design-handoff palette — values are final; use verbatim.
+Canonical design-handoff palette - values are final; use verbatim. This is the
+single source of truth shared across modules via the CyHAN common library (5.2);
+do not fork per-module copies.
 """
 from cycler import cycler
 from matplotlib.colors import LinearSegmentedColormap, ListedColormap
@@ -62,3 +64,12 @@ def apply(style_cycle: bool = False):
 def band(ax, x, lo, hi, **kw):
     """Confidence-band helper using the Wave Maker tint."""
     return ax.fill_between(x, lo, hi, color=BAND, lw=0, **kw)
+
+
+__all__ = [
+    "WAVE_MAKER", "RAMP", "CYCLE", "NAMES", "C",
+    "INK", "BODY", "MUTED", "EMPIRICAL", "GRID", "BAND", "PANEL", "PAPER",
+    "EMPHASIS", "EMPH_DARK", "EMPH_TINT", "REF_DASH",
+    "STYLE_CYCLE", "WAVE_MAKER_CMAP", "CYCLE_CMAP",
+    "apply", "band",
+]

@@ -31,6 +31,7 @@ import pandas as pd
 from .config                import POTConfig
 from .io                    import read_time_series_csv, write_pot_peaks
 from .postproc              import TimeSeriesPlotter, PALETTE
+from pystorm_common          import save_figure
 from .sampling              import IterativeThresholdSearch, ThresholdSearchResult
 
 
@@ -192,6 +193,5 @@ class POTOrchestrator:
                    label=f"Threshold = {threshold:.2f} {units}")
         plotter.finalize()
 
-        fig.savefig(out_path, dpi=300)
-        plt.close(fig)
+        save_figure(fig, out_path, close=True)
         print(f"[POT] Plot saved: {out_path}")

@@ -1,0 +1,21 @@
+[build-system]
+requires      = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name            = "pystorm_common"
+version         = "0.1.0"
+description     = "Shared cross-module presentation helpers for PyStorm (design palette, axes styling, figure saving). CyHAN v2.1 common library (5.2)."
+readme          = "README.md"
+requires-python = ">=3.10"
+authors = [
+  {name = "Norberto C. Nadal-Caraballo, PhD", email = "norberto.c.nadal-caraballo@usace.army.mil"},
+]
+license = {text = "Public domain (U.S. Government work, 17 U.S.C. §105)"}
+dependencies = [
+  "matplotlib>=3.6",
+]
+
+[tool.setuptools.packages.find]
+where    = ["python"]
+include  = ["pystorm_common*"]
