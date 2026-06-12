@@ -1,0 +1,6 @@
+numpy
+pandas
+pydantic>=2
+scipy
+matplotlib
+pytest
