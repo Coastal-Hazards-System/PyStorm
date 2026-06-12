@@ -139,7 +139,7 @@ PyStorm/
 │
 ├── docs/
 │   ├── CyHAN-Standard-v2.1.md                architecture standard
-│   └── PyStorm-Comment-Standard-v0.2.md      comment and docstring conventions
+│   └── CyHAN-Comment-Standard-v0.3.md        comment and docstring conventions
 │
 ├── backend/   (planned, CyHAN §6.1)          shared API surface above the modules
 ├── common/    (CyHAN §5.2 / §16.10)          shared library: pystorm_common
@@ -216,4 +216,4 @@ module with its own Python orchestration and, where it has performance-critical
 computation, a C++ engine. See
 [docs/CyHAN-Standard-v2.1.md](docs/CyHAN-Standard-v2.1.md). Source comments and
 docstrings follow the
-[Comment and Docstring Standard](docs/PyStorm-Comment-Standard-v0.2.md).
+[Comment and Docstring Standard](docs/CyHAN-Comment-Standard-v0.3.md).
