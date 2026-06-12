@@ -20,6 +20,8 @@ import numpy as np
 
 from storm_surge_hydrograph.hydrograph import UnitHydrograph, scale_to_peak, width_stats
 
+from pystorm_common import save_figure
+
 
 def _pyplot():
     try:
@@ -33,7 +35,7 @@ def _pyplot():
 
 
 def plot_aligned_ensemble(uh: UnitHydrograph, out_path, *, lat=None, lon=None,
-                          dpi: int = 110) -> Path:
+                          dpi: int = 150) -> Path:
     """Every storm's UNNORMALIZED hydrograph (m NAVD88), aligned at its peak.
 
     Each storm's elevation is reconstructed from the peak-aligned normalized stack;
@@ -74,13 +76,13 @@ def plot_aligned_ensemble(uh: UnitHydrograph, out_path, *, lat=None, lon=None,
     sm = ScalarMappable(norm=norm, cmap=cmap)
     sm.set_array([])
     fig.colorbar(sm, ax=ax, label="peak elevation (m NAVD88)", pad=0.01)
-    fig.savefig(out_path, dpi=dpi, pil_kwargs={"compress_level": 1})
-    plt.close(fig)
+    save_figure(fig, out_path, dpi=dpi, bbox_inches=None,
+                pil_kwargs={"compress_level": 1}, close=True)
     return out_path
 
 
 def plot_save_point(uh: UnitHydrograph, out_path, *, lat=None, lon=None,
-                    scale_peaks: Optional[Sequence[float]] = None, dpi: int = 110) -> Path:
+                    scale_peaks: Optional[Sequence[float]] = None, dpi: int = 150) -> Path:
     """Three-panel figure: canonical shape, peak scaling, and duration envelope."""
     plt = _pyplot()
     out_path = Path(out_path)
@@ -148,6 +150,6 @@ def plot_save_point(uh: UnitHydrograph, out_path, *, lat=None, lon=None,
     ax3.legend(loc="upper left", fontsize=8,
                title=f"Equivalent-width envelope (peak = {Pmed:.2f} m)")
 
-    fig.savefig(out_path, dpi=dpi, pil_kwargs={"compress_level": 1})
-    plt.close(fig)
+    save_figure(fig, out_path, dpi=dpi, bbox_inches=None,
+                pil_kwargs={"compress_level": 1}, close=True)
     return out_path

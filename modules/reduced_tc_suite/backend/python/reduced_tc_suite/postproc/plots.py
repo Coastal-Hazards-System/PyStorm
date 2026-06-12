@@ -16,6 +16,8 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
+from pystorm_common import save_figure
+
 
 def plot_growth_history(history, cfg, out_dir):
     df    = pd.DataFrame(history)
@@ -76,7 +78,7 @@ def plot_growth_history(history, cfg, out_dir):
 
     plt.tight_layout()
     fpath = out_dir / "growth_history.png"
-    plt.savefig(fpath, dpi=150, bbox_inches="tight"); plt.close()
+    save_figure(plt.gcf(), fpath, close=True)
     print(f"    Saved: {fpath}")
 
 
@@ -131,7 +133,7 @@ def plot_rmse_vs_k(history_df, tolerance, k_selected, rmse_selected,
 
     plt.tight_layout()
     fpath = Path(out_dir) / "rmse_vs_k.png"
-    plt.savefig(fpath, dpi=150, bbox_inches="tight")
+    save_figure(plt.gcf(), fpath)
     plt.close()
     print(f"    Saved: {fpath}")
 
@@ -200,7 +202,7 @@ def plot_pca_yspace(
     ax.legend(handles=handles, fontsize=9)
 
     fpath = out_dir / filename
-    plt.savefig(fpath, dpi=150, bbox_inches="tight"); plt.close()
+    save_figure(plt.gcf(), fpath, close=True)
     print(f"    Saved: {fpath}")
 
 
@@ -335,7 +337,7 @@ def plot_tc_splom(
                bbox_to_anchor=(0.5, -0.02))
 
     fpath = out_dir / filename
-    plt.savefig(fpath, dpi=150, bbox_inches="tight"); plt.close()
+    save_figure(plt.gcf(), fpath, close=True)
     print(f"    Saved: {fpath}")
 
 
@@ -418,7 +420,7 @@ def _plot_hc_grid(
 
     plt.tight_layout()
     fpath = Path(out_dir) / filename
-    plt.savefig(fpath, dpi=150, bbox_inches="tight"); plt.close()
+    save_figure(plt.gcf(), fpath, close=True)
     print(f"    Saved: {fpath}")
 
 
@@ -541,5 +543,5 @@ def plot_hc_qbm(
 
     plt.tight_layout()
     fpath = out_dir / "hc_comparison_qbm.png"
-    plt.savefig(fpath, dpi=150, bbox_inches="tight"); plt.close()
+    save_figure(plt.gcf(), fpath, close=True)
     print(f"    Saved: {fpath}")

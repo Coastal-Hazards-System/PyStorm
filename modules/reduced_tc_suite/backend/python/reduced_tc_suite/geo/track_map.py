@@ -20,6 +20,8 @@ import urllib.request
 from pathlib import Path
 
 import numpy as np
+
+from pystorm_common import save_figure
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
@@ -196,6 +198,5 @@ def plot_bbox_map(
     ax.grid(True, alpha=0.2)
 
     out_path = output_dir / filename
-    fig.savefig(out_path, dpi=150, bbox_inches="tight")
-    plt.close(fig)
+    save_figure(fig, out_path, close=True)
     print(f"    Map saved -> {out_path}")

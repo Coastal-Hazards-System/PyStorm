@@ -33,6 +33,8 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
+from pystorm_common import save_figure
+
 # Sea-level reference for the central-pressure deficit (matches the GP metamodel).
 _PREF_HPA = 1013.0
 
@@ -104,7 +106,7 @@ def _storm_specs(df, obs, value, tnum, max_storms=None):
     return specs
 
 
-def _render_specs(specs, *, basin, target, out_dir, dpi=110) -> int:
+def _render_specs(specs, *, basin, target, out_dir, dpi=150) -> int:
     """Render a list of storm specs reusing ONE figure. Returns the count written."""
     plt = _pyplot()
     import matplotlib.dates as mdates
@@ -146,7 +148,8 @@ def _render_specs(specs, *, basin, target, out_dir, dpi=110) -> int:
         ax.set_xlim(lo, hi)
         ax.set_ylim(floor_lo, max(floor_hi, float(np.nanmax(v)) * 1.1))
         fname = f"DataImputation_{spec['file']}_HURDAT_{basin}_{_file_id(nhc_id)}.png"
-        fig.savefig(out_dir / fname, dpi=dpi, pil_kwargs={"compress_level": 1})
+        save_figure(fig, out_dir / fname, dpi=dpi, bbox_inches=None,
+                    pil_kwargs={"compress_level": 1})
         written += 1
 
     plt.close(fig)
@@ -175,7 +178,7 @@ def plot_basin_imputation(
     target: str,
     obs_mask,
     out_dir,
-    dpi: int = 110,
+    dpi: int = 150,
     max_storms: int | None = None,
     n_jobs: int | None = None,
     verbose: bool = True,

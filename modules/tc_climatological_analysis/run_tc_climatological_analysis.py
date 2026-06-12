@@ -1,4 +1,4 @@
-"""run_tc_climatological_analysis - TCA launcher (CyHAN v2.0 §5.3).
+"""run_tc_climatological_analysis - TCA launcher (CyHAN v2.1 §5.3).
 
 Author / POC : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
 
@@ -222,8 +222,10 @@ OUTPUT_DIR = DATA / "outputs"
 import sys
 
 _BACKEND_PY = ROOT / "backend" / "python"
-if str(_BACKEND_PY) not in sys.path:
-    sys.path.insert(0, str(_BACKEND_PY))
+_COMMON_PY  = ROOT.parents[1] / "common" / "python"   # shared CyHAN common library (§5.2)
+for _p in (_BACKEND_PY, _COMMON_PY):
+    if _p.is_dir() and str(_p) not in sys.path:
+        sys.path.insert(0, str(_p))
 
 
 CONFIG = {

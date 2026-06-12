@@ -33,6 +33,8 @@ import pandas as pd
 from tc_climatological_analysis import basemap as _basemap
 from tc_climatological_analysis.gkf import MONTHS
 
+from pystorm_common import save_figure
+
 # SRR is always reported in this order.
 _SRR_ORDER = ("all", "high", "med", "low")
 _SRR_LABELS = ("All", "High", "Med", "Low")
@@ -406,7 +408,7 @@ def _render_daily_specs(specs, *, out_dir, doys, srr_scale=1.0,
                         srr_label="Daily SRR (TC/km/yr, per day)",
                         srr_note="The daily curve is the annual SRR spread over the\n"
                                  "calendar: the 365 values sum to the annual SRR.",
-                        dpi=110) -> int:
+                        dpi=150) -> int:
     """Draw the day-of-year SRR curves; one reused figure, restyled per CRL.
 
     ``srr_note`` is a static annotation clarifying the units: the daily value is the
@@ -448,7 +450,8 @@ def _render_daily_specs(specs, *, out_dir, doys, srr_scale=1.0,
                 ymax = max(ymax, float(np.nanmax(y)))
         ax.set_ylim(0.0, ymax * 1.08 if ymax > 0 else 1.0)
         title.set_text(ttl)
-        fig.savefig(out_dir / fname, dpi=dpi, pil_kwargs={"compress_level": 1})
+        save_figure(fig, out_dir / fname, dpi=dpi, bbox_inches=None,
+                    pil_kwargs={"compress_level": 1})
         written += 1
 
     plt.close(fig)
