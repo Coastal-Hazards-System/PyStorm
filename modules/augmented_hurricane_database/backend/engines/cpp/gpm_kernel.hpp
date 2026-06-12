@@ -1,4 +1,4 @@
-// gpm_kernel.hpp — power-exponential correlation kernel for the GP metamodel.
+// gpm_kernel.hpp - power-exponential correlation kernel for the GP metamodel.
 //
 // Author / POC : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
 //

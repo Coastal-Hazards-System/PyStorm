@@ -1,4 +1,4 @@
-// bindings.cpp — pybind11 bindings for the _gpm GP-metamodel kernel engine.
+// bindings.cpp - pybind11 bindings for the _gpm GP-metamodel kernel engine.
 //
 // Author / POC : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
 //
@@ -31,7 +31,7 @@ static py::array_t<double> corr(py::array_t<double, py::array::c_style | py::arr
         throw std::runtime_error("theta length must equal the feature dimension");
 
     auto R = py::array_t<double>({m, n});
-    // Resolve all buffer pointers BEFORE releasing the GIL — buffer_info /
+    // Resolve all buffer pointers BEFORE releasing the GIL - buffer_info /
     // request() are Python C-API calls and must not run without the GIL.
     double* Rptr = static_cast<double*>(R.request().ptr);
     const double* Aptr = static_cast<const double*>(bufA.ptr);
