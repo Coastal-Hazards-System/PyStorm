@@ -1,6 +1,5 @@
-numpy
-pandas
-pydantic>=2
-scipy
-matplotlib
-pytest
+# Dependencies are defined in pyproject.toml. Install with:
+#   pip install -e .[dev]
+# For the per-save-point diagnostic figures only:
+#   pip install -e .[plots]
+-e .[dev]

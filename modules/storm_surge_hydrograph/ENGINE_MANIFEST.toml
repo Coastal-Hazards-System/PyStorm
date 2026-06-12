@@ -1,0 +1,41 @@
+# CyHAN engine manifest - storm_surge_hydrograph
+# Per-save-point unit (scalable) storm-surge hydrographs (SSH).
+# Pure-Python module: no C++ engine (CyHAN v2.1 5.1; no performance-critical kernel).
+
+[module]
+name        = "storm_surge_hydrograph"
+version     = "0.1.0"
+launcher    = "run_storm_surge_hydrograph.py"
+entry       = "backend/python/main_storm_surge_hydrograph.py:run"
+
+[pipeline]
+# Per save point: build one dimensionless surge shape, scale it, write + plot.
+order   = ["load", "build", "scale", "write", "plots"]
+load    = "load the save-point staID table and the per-SP synthetic-TC surge matrix (io.load_staid, io.discover_save_points, io.load_surge_matrix)"
+build   = "peak-align + double-normalize each storm (n = a/peak over dimensionless time s = tau/W) and aggregate into one canonical unit hydrograph; optional rising/falling generalized-Gaussian limb fit (hydrograph.build_unit_hydrograph, fit_limbs)"
+scale   = "example scaled hydrographs at the median/max peak plus a P25/P50/P75 equivalent-width envelope at the median peak (hydrograph.scale_to_peak)"
+write   = "canonical unit-hydrograph CSV, scaled-hydrograph CSVs, and the per-save-point parameter table (writer)"
+plots   = "OPTIONAL per-save-point diagnostic figure + peak-aligned ensemble (plots.plot_save_point, plot_aligned_ensemble)"
+
+[source]
+# Coastal Texas Study (CTXS) save-point delivery (files carry a CTXCS_ prefix).
+staid   = "data/inputs/raw/CTXCS_staID.csv (id,lat,lon,depth; depth positive-down, ground = -depth)"
+surge   = "data/inputs/raw/CTXCS_TP_SYN_Tides_0_SLC_0_surge_SP#####.csv (one column per synthetic TC; m NAVD88; -99999 = dry)"
+time    = "data/inputs/raw/CTXCS_TP_SYN_Tides_0_SLC_0_time.csv (timestamps; confirms the 15-min step)"
+
+[parameters]
+dt_hours                 = 0.25         # input time step (15 min)
+dry_value                = -99999       # dry-node sentinel (below the point's ground)
+depth_is_positive_down   = true         # staID depth is positive-down; ground = -depth
+min_wet_samples          = 5            # skip a storm with fewer above-ground samples
+max_window_hours         = 72.0         # cap on the peak-aligned half-window
+aggregate                = "mean"       # mean or median across a point's storms
+method                   = "double_norm"  # double_norm (peak + equiv width) or amplitude (legacy)
+parametric               = true         # fit rising/falling generalized-Gaussian limbs
+actual_duration_offset_m = 0.30         # actual-duration threshold z0 = max(ground, MHHW) + offset
+
+[outputs]
+unit_hydrograph = "data/outputs/unit_hydrograph_SP#####.csv"       # canonical shape (s, u_empirical, u_parametric)
+scaled          = "data/outputs/scaled/hydrograph_SP#####_peak<P>m.csv | _widthenv_p25/p50/p75.csv"
+parameters      = "data/outputs/ssh_parameters.csv"                # per-SP geometry, widths, actual duration, limb fit
+plots           = "data/outputs/plots/SSH_SP#####.png | SSH_ensemble_SP#####.png"   # optional
