@@ -163,7 +163,7 @@ def test_pca_wet_ratio_floor_drops_below_threshold(capsys):
 
 def test_pca_wet_ratio_floor_small_floor_keeps_partially_wet():
     """A small positive floor drops only fully-dry nodes while retaining
-    nodes wet for even a single storm — matching drop_always_dry node count."""
+    nodes wet for even a single storm - matching drop_always_dry node count."""
     from reduced_tc_suite.sampling.pca import reduce_output
     rng = np.random.default_rng(5)
     Y = rng.standard_normal((10, 5))

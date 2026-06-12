@@ -1,4 +1,4 @@
-"""bootstrap — smoothed bootstrap of descending-sorted POT exceedances.
+"""bootstrap - smoothed bootstrap of descending-sorted POT exceedances.
 
 Author / POC : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
 
@@ -16,11 +16,11 @@ Public API
 
 Algorithm
 ---------
-Step 1 — Verify pot_values is sorted descending (x_1 >= x_2 >= ... >= x_n).
+Step 1 - Verify pot_values is sorted descending (x_1 >= x_2 >= ... >= x_n).
          Pre-compute the order-statistic spacing to the NEXT (i+1, adjacent
          smaller) value:  s = diff(pot) ++ [0], i.e. s[i] = pot[i+1] - pot[i]
          (<= 0); the smallest value (no successor) is padded with 0.
-Step 2 — For each realization j: resample n_pot indices WITH REPLACEMENT and
+Step 2 - For each realization j: resample n_pot indices WITH REPLACEMENT and
          draw n_pot kernel variates z; form column = pot[idx] + s[idx] * z
          (each drawn value is displaced toward its NEXT-smaller neighbour by a
          fraction of its own spacing); sort the column descending; write to

@@ -1,4 +1,4 @@
-"""hazard — hazard-curve assembly: GPD ensemble, empirical tail, AER grids.
+"""hazard - hazard-curve assembly: GPD ensemble, empirical tail, AER grids.
 
 Author / POC : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
 """

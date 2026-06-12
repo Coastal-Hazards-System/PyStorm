@@ -1,4 +1,4 @@
-"""curve — GPD ensemble construction, empirical-tail blending, AER interpolation.
+"""curve - GPD ensemble construction, empirical-tail blending, AER interpolation.
 
 Author / POC : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
 
@@ -9,7 +9,7 @@ the merged curve onto the standard 22-AER reporting grid.
 Public API
 ----------
   make_aer_grids()
-      Return (aer_table, aer_plot) — the standard 22-AER table and the dense
+      Return (aer_table, aer_plot) - the standard 22-AER table and the dense
       plotting grid (log-spaced, 1e-3 .. 10).
 
   fit_gpd_ensemble(boot_matrix, threshold, aer_plot, lambda_mu,
@@ -46,9 +46,9 @@ _MEAN_RETURN_INTERVALS = np.array(
 def make_aer_grids() -> Tuple[np.ndarray, np.ndarray]:
     """Return (aer_table, aer_plot).
 
-    aer_table : (22,) float64 — 1 / MRI (mean return interval); entries past
+    aer_table : (22,) float64 - 1 / MRI (mean return interval); entries past
                 index 12 (>1e-3) are masked to NaN to suppress extrapolation.
-    aer_plot  : (361,) float64 — dense log-decade grid from 10 down to 1e-3.
+    aer_plot  : (361,) float64 - dense log-decade grid from 10 down to 1e-3.
     """
     aer_table = 1.0 / _MEAN_RETURN_INTERVALS
     aer_table[13:] = np.nan
@@ -98,7 +98,7 @@ def fit_gpd_ensemble(
     gpd_be         : (n_aer_gpd,) float64 mean across realizations
     gpd_cb10       : (n_aer_gpd,) float64 10th-percentile bound
     gpd_cb90       : (n_aer_gpd,) float64 90th-percentile bound
-    aer_gpd_mask   : (n_aer_plot,) bool — True where aer_plot < lambda_mu
+    aer_gpd_mask   : (n_aer_plot,) bool - True where aer_plot < lambda_mu
     """
     n_pot, n_sims = boot_matrix.shape
     n_aer         = aer_plot.size
@@ -112,7 +112,7 @@ def fit_gpd_ensemble(
         sample = boot_matrix[:, j]
         try:
             # Shared fit: ξ clipped to [shape_clip_low, shape_clip_high] and σ
-            # refit when ξ is clipped — identical to the QDO objective's model.
+            # refit when ξ is clipped - identical to the QDO objective's model.
             c, _loc, scale = fit_gpd_clipped(
                 sample, threshold, shape_clip_low, shape_clip_high,
                 method=fit_method)

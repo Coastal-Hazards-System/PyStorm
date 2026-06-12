@@ -1,4 +1,4 @@
-"""gpd_fit — the single GPD fitting primitive shared across PST.
+"""gpd_fit - the single GPD fitting primitive shared across PST.
 
 Author / POC : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
 
@@ -10,10 +10,10 @@ predict with the *same* model.
 The fit holds the location at the threshold (``floc``) and clips the shape ξ to
 the admissible band. Two estimators are offered:
 
-  "mle" (default) — maximum likelihood. When clipping bites, the scale σ is
+  "mle" (default) - maximum likelihood. When clipping bites, the scale σ is
       refit with ξ (and the location) held fixed, so the returned (ξ, σ) pair is
       a genuine constrained MLE rather than a clipped ξ paired with the stale σ.
-  "mom"           — method of moments. From the excess mean m and (unbiased)
+  "mom"           - method of moments. From the excess mean m and (unbiased)
       variance v above ``floc``:  ξ = ½(1 − m²/v),  σ = m(1 − ξ); ξ is then
       clipped and σ recomputed at the clipped ξ. More robust for small samples /
       heavy quantization (no optimizer), at some efficiency cost.
@@ -63,7 +63,7 @@ def fit_gpd_clipped(
     Exception
         "mle": propagates a failure of the initial (unconstrained-shape) fit so
         the caller can skip the sample (a failed *constrained* σ-refit is
-        non-fatal — the unconstrained-fit σ is kept). "mom": raises ValueError if
+        non-fatal - the unconstrained-fit σ is kept). "mom": raises ValueError if
         the excess variance is non-positive (degenerate sample).
     """
     if method not in ("mle", "mom"):
@@ -85,7 +85,7 @@ def fit_gpd_clipped(
         c, loc, scale = genpareto.fit(data, floc=floc)
         c_clip = max(min(c, shape_clip_high), shape_clip_low)
         if c_clip != c:
-            # ξ hit a bound — refit σ with ξ and the location held fixed so the
+            # ξ hit a bound - refit σ with ξ and the location held fixed so the
             # returned pair is the constrained MLE, not clipped-ξ / stale-σ.
             try:
                 _c, _loc, scale = genpareto.fit(data, fc=c_clip, floc=floc)

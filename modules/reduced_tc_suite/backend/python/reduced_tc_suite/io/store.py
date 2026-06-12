@@ -148,7 +148,7 @@ def read_store(path: Path) -> StoreData:
         # Y carries two distinct missing markers with different meanings:
         #   -99999.0  node WAS simulated but stayed dry  (valid datum)
         #   NaN       node was NOT simulated for this storm (no calculation)
-        # A storm whose ENTIRE row is NaN was never simulated anywhere — a
+        # A storm whose ENTIRE row is NaN was never simulated anywhere - a
         # failed HPC run. Capture that mask NOW, on the raw values, before the
         # -99999 -> NaN normalisation below; otherwise an all-dry (-99999)
         # storm would be normalised to all-NaN and wrongly flagged as failed.

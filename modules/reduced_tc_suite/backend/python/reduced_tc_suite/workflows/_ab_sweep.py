@@ -2,7 +2,7 @@
 
 Each (α, β) iteration is independent: it builds a joint matrix, runs
 k-medoids with the same forced indices and seed, then evaluates HC metrics.
-Results are deterministic per (α, β) given the same inputs/seed — parallel
+Results are deterministic per (α, β) given the same inputs/seed - parallel
 execution does not change numerics.
 
 Two execution modes:
@@ -49,7 +49,7 @@ def _init_worker(X, Y, Y_r, HC_bench, tbl_aer, k, seed, forced,
 
 
 def _evaluate_ab(ab):
-    """Evaluate a single (α, β) — runs in worker or in-process."""
+    """Evaluate a single (α, β) - runs in worker or in-process."""
     alpha, beta = ab
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", RuntimeWarning)

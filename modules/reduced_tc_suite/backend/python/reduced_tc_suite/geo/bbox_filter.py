@@ -319,7 +319,7 @@ def apply_bbox_filter(
     #   1. store storm_ids (authoritative) when present;
     #   2. else derive from the track filenames: Y row i == the i-th storm by
     #      ascending ID (dataset convention). This is exact for the SACS
-    #      subsets (gom/sa) and reduces to 1..N for contiguous suites — but
+    #      subsets (gom/sa) and reduces to 1..N for contiguous suites - but
     #      only when the file count matches the Y-row count.
     #   3. else fall back to sequential 1..N (load_tc_tracks default).
     if data.storm_ids is not None:
@@ -336,7 +336,7 @@ def apply_bbox_filter(
         else:
             storm_ids = None
             print(f"    WARNING: {len(derived)} track files matched but Y has "
-                  f"{n_storms} rows — cannot align by filename. Falling back to "
+                  f"{n_storms} rows - cannot align by filename. Falling back to "
                   f"sequential 1..N (valid only for a complete contiguous suite).")
 
     tracks = load_tc_tracks(track_dir, n_storms, pattern, storm_ids=storm_ids)

@@ -1,11 +1,11 @@
-# probabilistic_simulation_technique — C++ engine
+# probabilistic_simulation_technique - C++ engine
 
 Header-only truncated-noise bootstrap kernel for the PST inner loop, plus the
 `_pst` pybind11 binding.
 
 | Artifact                | Role                                                            |
 |-------------------------|-----------------------------------------------------------------|
-| `PSTBootstrap.hpp`      | `pst::bootstrap()` — descending POT + spacing perturbation     |
+| `PSTBootstrap.hpp`      | `pst::bootstrap()` - descending POT + spacing perturbation     |
 | `pst_bindings.cpp`      | pybind11 module → `_pst.bootstrap_truncated()`                 |
 | `CMakeLists.txt`        | CMake target; installs into `../python/probabilistic_simulation_technique/` |
 | `build.py`              | Standalone build helper (setuptools → CMake → direct compiler) |

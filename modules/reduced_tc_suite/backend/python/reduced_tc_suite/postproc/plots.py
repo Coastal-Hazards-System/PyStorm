@@ -3,7 +3,7 @@
 Author / POC : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
 
 Functions consume structured pipeline outputs (DataFrames, indices), not raw
-engine arrays — this module is part of the orchestration role's post-processing
+engine arrays - this module is part of the orchestration role's post-processing
 responsibility per CyHAN v1.1 §4.2.
 """
 

@@ -1,4 +1,4 @@
-"""orchestrator — end-to-end PST workflow runner.
+"""orchestrator - end-to-end PST workflow runner.
 
 Author / POC : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
 
@@ -13,15 +13,15 @@ Public API
 
 Algorithm
 ---------
-Step 1 — Load the POT column and compute the population intensity (lambda).
-Step 2 — Sort descending; build Weibull-plotting-position empirical AERs.
-Step 3 — Choose the GPD location μ via QDO-WMSE.
-Step 4 — Split values into the GPD tail and the empirical bulk.
-Step 5 — Bootstrap the GPD-tail exceedances (C++ kernel when available).
-Step 6 — Fit GPD per realization and evaluate ICDF on the plot AER grid.
-Step 7 — Splice GPD tail and empirical bulk into one hazard curve;
+Step 1 - Load the POT column and compute the population intensity (lambda).
+Step 2 - Sort descending; build Weibull-plotting-position empirical AERs.
+Step 3 - Choose the GPD location μ via QDO-WMSE.
+Step 4 - Split values into the GPD tail and the empirical bulk.
+Step 5 - Bootstrap the GPD-tail exceedances (C++ kernel when available).
+Step 6 - Fit GPD per realization and evaluate ICDF on the plot AER grid.
+Step 7 - Splice GPD tail and empirical bulk into one hazard curve;
          interpolate to the 22-AER reporting grid.
-Step 8 — Save outputs and render the hazard-curve plot.
+Step 8 - Save outputs and render the hazard-curve plot.
 """
 
 from dataclasses import dataclass
@@ -98,12 +98,12 @@ class PSTOrchestrator:
         print(f"[PST] n_pot = {n_pot}; record_length = "
               f"{record_length:.4f} yr; lambda_u = {lambda_val:.4f} /yr")
 
-        # Step 2 — descending sort, empirical AERs (Weibull plotting positions).
+        # Step 2 - descending sort, empirical AERs (Weibull plotting positions).
         values_pot  = np.sort(values)[::-1]
         n           = values_pot.size
         weibull_aer = (np.arange(1, n + 1) / (n + 1)) * lambda_val
 
-        # Step 3 — GPD location μ via QDO (a threshold re-optimized for the
+        # Step 3 - GPD location μ via QDO (a threshold re-optimized for the
         # distribution fit, distinct from the POT threshold u). Default method
         # gates on WMSE; "stability" (opt-in) gates on the ξ plateau.
         qdo = select_gpd_threshold_qdo(
@@ -145,7 +145,7 @@ class PSTOrchestrator:
         if qdo.selection_warning:
             print(f"[PST] WARNING: {qdo.selection_warning}")
 
-        # Step 4 — split exceedances (> μ) / bulk (<= μ).
+        # Step 4 - split exceedances (> μ) / bulk (<= μ).
         exceed_mask  = values_pot > threshold
         pot_above_th = values_pot[exceed_mask]
         aer_above_th = weibull_aer[exceed_mask]   # empirical WPP above μ
@@ -160,7 +160,7 @@ class PSTOrchestrator:
         # Exceedance rate at μ, λ_μ (drives the GPD-tail AER grid).
         lambda_mu = pot_above_th.size / record_length
 
-        # Step 5 — bootstrap (C++ when available, Python otherwise).
+        # Step 5 - bootstrap (C++ when available, Python otherwise).
         bootstrap = BootstrapGenerator(
             distribution = cfg.bootstrap.distribution,
             truncation   = cfg.bootstrap.truncation,
@@ -172,7 +172,7 @@ class PSTOrchestrator:
               f"{pot_above_th.size} exceedances ...")
         boot_matrix = bootstrap.generate(pot_above_th, cfg.num_simulations)
 
-        # Step 6 — fit GPD per realization, evaluate on the plot AER grid.
+        # Step 6 - fit GPD per realization, evaluate on the plot AER grid.
         aer_table, aer_plot = make_aer_grids()
         ensemble, gpd_be, gpd_cb10, gpd_cb90, aer_gpd_mask = fit_gpd_ensemble(
             boot_matrix     = boot_matrix,
@@ -186,7 +186,7 @@ class PSTOrchestrator:
         valid = int(np.sum(~np.isnan(ensemble).all(axis=1)))
         print(f"[PST] Valid GPD realizations: {valid} / {cfg.num_simulations}")
 
-        # Step 7 — splice GPD tail + empirical bulk; interpolate to table grid.
+        # Step 7 - splice GPD tail + empirical bulk; interpolate to table grid.
         aer_gpd = aer_plot[aer_gpd_mask]
         hc_plot_aer, hc_plot_be, hc_plot_cb10, hc_plot_cb90 = assemble_hazard_curve(
             aer_gpd      = aer_gpd,
@@ -204,7 +204,7 @@ class PSTOrchestrator:
             hc_cb90   = hc_plot_cb90,
         )
 
-        # Step 8 — save and plot.
+        # Step 8 - save and plot.
         base_filename = self._derive_base_filename(cfg.input_csv)
         write_pst_outputs(
             output_dir    = cfg.output_dir,

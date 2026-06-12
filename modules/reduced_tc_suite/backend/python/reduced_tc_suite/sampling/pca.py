@@ -21,7 +21,7 @@ def _prepare_y(
     Strategies
     ----------
     "drop_always_dry" (default)
-        Drop columns (nodes) that are NaN for every storm — they contribute
+        Drop columns (nodes) that are NaN for every storm - they contribute
         zero variance to PCA anyway. Remaining NaN entries are zero-filled.
         Strictly better than "zero" (smaller covariance matrix, identical
         components on the kept columns).
@@ -31,7 +31,7 @@ def _prepare_y(
         Replace each NaN with the mean of the wet (non-NaN) values at that
         same node. Columns with no wet values are dropped.
     "wet_only"
-        Drop any column that has at least one NaN. Aggressive — focuses PCA
+        Drop any column that has at least one NaN. Aggressive - focuses PCA
         on the "always-wet" subset of nodes.
     "wet_ratio_floor"
         Drop any column wet for fewer than "min_wet_fraction" of storms,
@@ -43,7 +43,7 @@ def _prepare_y(
     Parameters
     ----------
     min_wet_fraction : float
-        Only used by "wet_ratio_floor". Minimum fraction of storms (0–1) a
+        Only used by "wet_ratio_floor". Minimum fraction of storms (0-1) a
         node must be wet for to be retained.
     """
     if not np.isnan(Y).any():
@@ -118,7 +118,7 @@ def reduce_output(
         zero-fill remaining NaN. Matches the DSW "dry = 0 surge" convention.
     min_wet_fraction : float
         Only used when dry_strategy == "wet_ratio_floor". Minimum fraction of
-        storms (0–1) a node must be wet for to be retained.
+        storms (0-1) a node must be wet for to be retained.
 
     Returns
     -------

@@ -1,11 +1,11 @@
-"""main_peaks_over_threshold — orchestrator entry (CyHAN v2.1 §5.3).
+"""main_peaks_over_threshold - orchestrator entry (CyHAN v2.1 §5.3).
 
 Author / POC : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
 
 Non-user-facing realization of the Python Orchestration role (§4.2).
 ``run_peaks_over_threshold.py`` at the module root imports ``run`` from this
 file with the operator-edited configuration and invokes it. No user-facing
-options live here — only the stage-dispatch orchestration.
+options live here - only the stage-dispatch orchestration.
 
 A run executes the stages listed in ``config["stages"]`` (canonical order
 ``download -> detrend -> ntr -> pot``):
@@ -39,7 +39,7 @@ from peaks_over_threshold.preprocessing.orchestrator import (
 class PipelineResult:
     """Bundle returned when preprocessing stages run (with or without POT).
 
-    ``pot`` maps each POT target tag to its result — e.g. ``{"dwl": ...,
+    ``pot`` maps each POT target tag to its result - e.g. ``{"dwl": ...,
     "ntr": ...}`` when the chain extracts peaks from both the detrended water
     level and the non-tidal residual.
     """
@@ -156,7 +156,7 @@ def _station_config(config: dict, station: str, data_dir: Optional[Path],
     """Per-station config: derived data folders + per-station resolved values.
 
     Resolves the tidal epoch (``ntde_start``/``ntde_end``) and the optional
-    sea-level slope override (``detrend_slope``) for this station — each may be
+    sea-level slope override (``detrend_slope``) for this station - each may be
     a single value used for all stations or a list parallel to ``station_ids``.
     """
     cfg = dict(config)
@@ -175,8 +175,8 @@ def _station_config(config: dict, station: str, data_dir: Optional[Path],
 def _per_station(config: dict, key: str, idx: int, n_stations: int):
     """Resolve a possibly-per-station config value for the station at ``idx``.
 
-    ``config[key]`` may be a single value — used for every station, including
-    in batch — or a list/tuple parallel to ``station_ids`` giving one value per
+    ``config[key]`` may be a single value - used for every station, including
+    in batch - or a list/tuple parallel to ``station_ids`` giving one value per
     station. A list whose length does not match the station count is a
     configuration error.
     """

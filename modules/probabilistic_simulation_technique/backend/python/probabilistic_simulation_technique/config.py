@@ -1,4 +1,4 @@
-"""config — pydantic models for the PST job request.
+"""config - pydantic models for the PST job request.
 
 Author / POC : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
 
@@ -78,40 +78,40 @@ class PSTConfig(BaseModel):
 
     # ── GPD location selection (Quantile Delta Optimization, QDO-WMSE) ────
     # Selection band = empirical PERCENTILES of the POT values (data quantiles),
-    # not of the magnitude range — robust to outliers. μ is scanned/selected
+    # not of the magnitude range - robust to outliers. μ is scanned/selected
     # between these. The count floor (min_exceedances) is the principled upper
     # cap; the ceiling percentile is a secondary, interpretable guardrail.
     threshold_min_percentile: float = Field(default=50.0, ge=0.0, le=100.0)
     threshold_max_percentile: float = Field(default=95.0, ge=0.0, le=100.0)
     n_threshold_candidates:   int   = Field(default=50,   gt=1)
-    # Legacy WMSE tolerance — DIAGNOSTIC ONLY. WMSE no longer gates selection
+    # Legacy WMSE tolerance - DIAGNOSTIC ONLY. WMSE no longer gates selection
     # (it minimizes in the over-fit sparse tail), so this only affects the
     # reference line on the QDO diagnostics plot.
     wmse_tolerance:           float = Field(default=0.05, ge=0.0)
-    # Minimum exceedances a candidate μ must retain to be selectable — guards
+    # Minimum exceedances a candidate μ must retain to be selectable - guards
     # against over-fitting the sparse tail (absolute-magnitude WMSE → 0 there).
     min_exceedances:          int   = Field(default=30,   ge=1)
     # GPD-location selection method:
-    #   "wmse"      (DEFAULT) — WMSE-tolerance set + tie-break (see wmse_tolerance).
-    #   "stability" (opt-in)  — flat-ξ threshold-stability plateau (robust
+    #   "wmse"      (DEFAULT) - WMSE-tolerance set + tie-break (see wmse_tolerance).
+    #   "stability" (opt-in)  - flat-ξ threshold-stability plateau (robust
     #                           ξ-dispersion), lower-clip guarded.
-    #   "mrl"       (opt-in)  — automated mean-residual-life (Langousis 2016,
+    #   "mrl"       (opt-in)  - automated mean-residual-life (Langousis 2016,
     #                           eqs 4-6): lowest in-band threshold where the
     #                           mean-excess curve goes linear.
-    #   "gof"       (opt-in)  — Choulakian-Stephens failure-to-reject: lowest
+    #   "gof"       (opt-in)  - Choulakian-Stephens failure-to-reject: lowest
     #                           in-band threshold where the GPD fit is not
     #                           rejected by the A²/W² EDF test (Langousis §2.3).
     gpd_selection:    Literal["wmse", "stability", "mrl", "gof"] = "wmse"
     # GPD fit estimator (selection + hazard ensemble): "mle" (default) or "mom"
-    # (method of moments — closed-form, more robust for small/quantized samples).
+    # (method of moments - closed-form, more robust for small/quantized samples).
     gpd_fit_method:   Literal["mle", "mom"] = "mle"
     # GoF-method knobs ("gof" only): EDF statistic and significance level.
     gof_statistic:    Literal["ad", "cvm"] = "ad"
     gof_significance: float = Field(default=0.05, gt=0.0, lt=1.0)
-    #   gpd_tiebreak     — arbiter within the chosen set: "stability" (min robust
+    #   gpd_tiebreak     - arbiter within the chosen set: "stability" (min robust
     #                      ξ-dispersion, ties → lowest μ) or "lowest_mu".
-    #   stability_window — ± candidates for the robust (MAD) ξ-dispersion.
-    #   stability_tol    — ξ-dispersion tolerance defining the stability plateau.
+    #   stability_window - ± candidates for the robust (MAD) ξ-dispersion.
+    #   stability_tol    - ξ-dispersion tolerance defining the stability plateau.
     gpd_tiebreak:     Literal["stability", "lowest_mu"] = "stability"
     stability_window: int   = Field(default=3, ge=1)
     stability_tol:    float = Field(default=0.02, ge=0.0)

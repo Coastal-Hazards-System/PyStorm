@@ -304,7 +304,7 @@ available; HC-dependent stages are skipped automatically when `HC_bench`
 is absent.
 
 ```
-                              [0]–[2]  shared upstream  (§3.1)
+                              [0]-[2]  shared upstream  (§3.1)
                                        │
                                        ▼
 ┌─────────────────────────────────────────────────────────────────────┐
@@ -352,7 +352,7 @@ evaluating PAM + DSW + HC + RMSE at every `k`, then picks the smallest
 `k` whose reconstructed hazard curve meets the tolerance.
 
 ```
-                              [0]–[2]  shared upstream  (§3.1)
+                              [0]-[2]  shared upstream  (§3.1)
                                        │
                                        ▼
 ┌─────────────────────────────────────────────────────────────────────┐

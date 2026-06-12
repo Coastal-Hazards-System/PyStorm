@@ -1,4 +1,4 @@
-"""orchestrator — run the selected NTR-pipeline stages with I/O and plots.
+"""orchestrator - run the selected NTR-pipeline stages with I/O and plots.
 
 Author / POC : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
 
@@ -68,7 +68,7 @@ class PreprocessOrchestrator:
 
         # ── Stage: download ────────────────────────────────────────────────
         if "download" in cfg.stages:
-            print(f"[preprocess] download — station {sid}, {cfg.start_year}–{cfg.end_year}")
+            print(f"[preprocess] download - station {sid}, {cfg.start_year}-{cfg.end_year}")
             years = range(cfg.start_year, cfg.end_year + 1)
             res.raw_wl_csv = download_noaa_wl_data(
                 sid, years, "hourly_height", raw,
@@ -84,7 +84,7 @@ class PreprocessOrchestrator:
 
         # ── Stage: detrend ─────────────────────────────────────────────────
         if "detrend" in cfg.stages:
-            print(f"[preprocess] detrend — method={cfg.detrend_method}")
+            print(f"[preprocess] detrend - method={cfg.detrend_method}")
             wl_df = read_time_series_csv(res.raw_wl_csv, cfg.datetime_col, cfg.wl_value_col)
             wl_detrended_df, trend_df, slope_yr = detrend_time_series(
                 wl_df, method=cfg.detrend_method,
@@ -96,7 +96,7 @@ class PreprocessOrchestrator:
             write_series_csv(trend_df, res.trend_csv,
                              datetime_header=cfg.datetime_col, value_header="Water Level")
             slope_src = "user override" if cfg.detrend_slope is not None else "fitted"
-            print(f"[preprocess] detrend — slope {slope_yr:+.4f} {cfg.units}/yr "
+            print(f"[preprocess] detrend - slope {slope_yr:+.4f} {cfg.units}/yr "
                   f"({slope_src}); wrote {res.detrended_csv.name}")
             self._plot_detrend(wl_df, wl_detrended_df, trend_df, full_units, plots, sid,
                                method=cfg.detrend_method,
@@ -104,7 +104,7 @@ class PreprocessOrchestrator:
 
         # ── Stage: ntr ─────────────────────────────────────────────────────
         if "ntr" in cfg.stages:
-            print("[preprocess] ntr — NTR = detrended WL - interpolated tide")
+            print("[preprocess] ntr - NTR = detrended WL - interpolated tide")
             if wl_detrended_df is None:
                 wl_detrended_df = read_time_series_csv(
                     res.detrended_csv, cfg.datetime_col, "Water Level")
@@ -112,7 +112,7 @@ class PreprocessOrchestrator:
             ntr_full = estimate_ntr(wl_detrended_df, tide_df)
             write_series_csv(ntr_full, res.ntr_csv, value_col="ntr",
                              datetime_header=cfg.datetime_col, value_header="NTR")
-            print(f"[preprocess] ntr — wrote {res.ntr_csv.name}")
+            print(f"[preprocess] ntr - wrote {res.ntr_csv.name}")
             self._plot_ntr(ntr_full, full_units, plots, sid)
 
         return res
@@ -130,14 +130,14 @@ class PreprocessOrchestrator:
         ax.axhline(0, color=PALETTE["ref"], linestyle="--", linewidth=1,
                    label="Reference (0)")
 
-        # NTDE midpoint — the pivot the midpoint-method trend rotates about
+        # NTDE midpoint - the pivot the midpoint-method trend rotates about
         # (the linear trend passes through zero here). Matches detrend.py's
         # centering: midpoint of [NTDE_start-01-01, (NTDE_end+1)-01-01).
         if method == "midpoint":
             midpoint = ntde_midpoint_timestamp(ntde_range)
             ax.axvline(midpoint, color=PALETTE["midpoint"], linestyle=":", linewidth=2,
                        label=f"NTDE midpoint "
-                             f"({_fmt_year(ntde_range[0])}–{_fmt_year(ntde_range[1])})")
+                             f"({_fmt_year(ntde_range[0])}-{_fmt_year(ntde_range[1])})")
 
         p.finalize()
         out = plots_dir / f"dwl_{sid}.png"

@@ -1,4 +1,4 @@
-"""plots — NaN-aware time-series plotter for POT diagnostics.
+"""plots - NaN-aware time-series plotter for POT diagnostics.
 
 Author / POC : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
 

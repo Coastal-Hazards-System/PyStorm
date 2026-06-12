@@ -1,4 +1,4 @@
-"""ntr — non-tidal residual (NTR) estimation.
+"""ntr - non-tidal residual (NTR) estimation.
 
 Author / POC : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
 

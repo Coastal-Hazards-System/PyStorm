@@ -1,4 +1,4 @@
-"""time_series_csv — read input time series, write POT peaks.
+"""time_series_csv - read input time series, write POT peaks.
 
 Author / POC : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
 
@@ -69,7 +69,7 @@ def write_series_csv(
     """Write a normalized series to CSV with human-friendly headers.
 
     Reads ``("datetime", <value_col>)`` from ``df`` and emits a two-column CSV
-    headed ``(datetime_header, value_header)`` — e.g. ``("Date Time", "NTR")``.
+    headed ``(datetime_header, value_header)`` - e.g. ``("Date Time", "NTR")``.
     Blank cells are normalized to ``NaN``. Returns the output path.
     """
     out_path = Path(out_path)

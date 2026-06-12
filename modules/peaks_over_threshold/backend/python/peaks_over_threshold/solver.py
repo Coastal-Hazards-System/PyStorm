@@ -1,4 +1,4 @@
-"""solver — thin wrappers around the _pot pybind11 extension.
+"""solver - thin wrappers around the _pot pybind11 extension.
 
 Author / POC : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
 
@@ -9,7 +9,7 @@ orchestration responsibility. Higher-level dispatch and fallback live in
 
 Public API
 ----------
-  CPP_KERNEL_AVAILABLE                   bool — True iff `_pot` imported
+  CPP_KERNEL_AVAILABLE                   bool - True iff `_pot` imported
   find_threshold_for_target_cpp(...)     direct call into the C++ kernel
 """
 

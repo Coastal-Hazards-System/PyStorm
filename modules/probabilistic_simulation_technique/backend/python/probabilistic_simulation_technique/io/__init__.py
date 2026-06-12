@@ -1,4 +1,4 @@
-"""io — POT CSV reader and PST-result writers.
+"""io - POT CSV reader and PST-result writers.
 
 Author / POC : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
 """

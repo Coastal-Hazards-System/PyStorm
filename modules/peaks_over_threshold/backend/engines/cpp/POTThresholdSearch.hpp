@@ -20,8 +20,8 @@
  *
  * Algorithm
  * ---------
- * Step 1 — Pre-sort values descending (separately) for O(1) percentile lookup.
- * Step 2 — For each iteration `i` of `max_iter`:
+ * Step 1 - Pre-sort values descending (separately) for O(1) percentile lookup.
+ * Step 2 - For each iteration `i` of `max_iter`:
  *           p   = start_percentile + i * step_size
  *           thr = sorted_values[k] where k = floor((1 - p/100) * (n - 1))
  *           Filter exceedances (i: values[i] > thr) preserving time order.
@@ -191,7 +191,7 @@ inline ThresholdSearchResult find_threshold_for_target(
     };
 
     // One-sided search: scan the threshold upward and keep the HIGHEST-threshold
-    // state whose rate is still >= target — the most selective cut that still
+    // state whose rate is still >= target - the most selective cut that still
     // yields at least the needed event count, isolating the genuine extremes.
     // The caller rank-trims the small overshoot down to the exact count. We
     // never break early: the rate-vs-threshold curve can hump (dense

@@ -1,4 +1,4 @@
-"""RTCS Selection (fixed k) — Reduced Tropical Cyclone Suite selection workflow.
+"""RTCS Selection (fixed k) - Reduced Tropical Cyclone Suite selection workflow.
 
 Author / POC : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
 
@@ -198,7 +198,7 @@ def _splom(X, x_cols, forced, new_indices, cfg, out_dir, filename,
 # ---------------------------------------------------------------------------
 
 def run_rtcs_selection(cfg: Optional[dict] = None):
-    """RTCS Selection (fixed k) — Select a fixed-size Reduced Tropical Cyclone Suite.
+    """RTCS Selection (fixed k) - Select a fixed-size Reduced Tropical Cyclone Suite.
 
     Returns
     -------
@@ -310,7 +310,7 @@ def run_rtcs_selection(cfg: Optional[dict] = None):
         step = 4
     else:
         if ab_grid is not None and HC_bench is None:
-            print("\n    [alpha/beta optimization skipped — no HC_bench available]")
+            print("\n    [alpha/beta optimization skipped - no HC_bench available]")
         step = 3
 
     print(f"\n[{step}] Building joint matrix  "
@@ -369,13 +369,13 @@ def run_rtcs_selection(cfg: Optional[dict] = None):
             else:
                 Z_initial = Z[indices]
                 if sub_mode == "within":
-                    print(f"\n[{step}] Sub-RTCS selection — picking {k_sub} from "
+                    print(f"\n[{step}] Sub-RTCS selection - picking {k_sub} from "
                           f"the initial {len(indices)} RTCS (mode='within', PAM) ...")
                     sub_local = select_kmedoids(
                         Z_initial, k_sub, cfg["random_seed"])
                     sub_label = "Sub-RTCS (within)"
                 else:
-                    print(f"\n[{step}] Sub-RTCS selection — picking {k_sub} from "
+                    print(f"\n[{step}] Sub-RTCS selection - picking {k_sub} from "
                           f"the initial {len(indices)} RTCS "
                           f"(mode='within_maximin', greedy farthest-point) ...")
                     sub_local = select_maximin(
@@ -385,7 +385,7 @@ def run_rtcs_selection(cfg: Optional[dict] = None):
         elif sub_mode == "additional":
             n_forced = len(forced) if forced is not None else 0
             k_total_sub = n_forced + k_sub
-            print(f"\n[{step}] Sub-RTCS selection — {n_forced} pre-selected + "
+            print(f"\n[{step}] Sub-RTCS selection - {n_forced} pre-selected + "
                   f"{k_sub} additional (mode='additional', total k={k_total_sub}) ...")
             sub_indices = select_kmedoids(Z, k_total_sub, cfg["random_seed"],
                                           forced_indices=forced)

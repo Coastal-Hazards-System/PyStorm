@@ -70,13 +70,13 @@ class Preprocessor:
         X source carries none.
 
         Priority:
-          1. IDs already read from the X source (e.g. a CSV id column) — kept.
+          1. IDs already read from the X source (e.g. a CSV id column) - kept.
           2. Else, if ``storm_id_track_dir`` is configured, derive integer IDs
              from the TROP filenames. By dataset convention Y row i is the i-th
              storm in ascending ID order, so the sorted filename IDs ARE the
              per-row IDs. This is what gives the SACS subsets (gom/sa) their
              true master IDs; for a contiguous suite it yields 1..N.
-          3. Else — left as-is (empty/None); row order is purely positional.
+          3. Else - left as-is (empty/None); row order is purely positional.
 
         Deriving requires exactly one TROP file per storm: a non-zero file
         count that differs from ``n_storms`` raises (it would silently
@@ -167,8 +167,8 @@ class Preprocessor:
         main_ids = main_ids[sort_order]
 
         print(f"       Keeping {len(indices):,} nodes  "
-              f"(ADCIRC IDs {adcirc_ids.min():,} – {adcirc_ids.max():,}, "
-              f"main IDs {main_ids.min():,} – {main_ids.max():,})")
+              f"(ADCIRC IDs {adcirc_ids.min():,} - {adcirc_ids.max():,}, "
+              f"main IDs {main_ids.min():,} - {main_ids.max():,})")
         return indices, main_ids
 
     def _load_HC(
@@ -176,7 +176,7 @@ class Preprocessor:
     ) -> tuple[Optional[np.ndarray], Optional[np.ndarray], str, str]:
         cfg = self.cfg
         if not cfg.get("HC_source"):
-            print("\n  [HC] HC_source not set — /HC group will be omitted.")
+            print("\n  [HC] HC_source not set - /HC group will be omitted.")
             return None, None, "m NAVD88", ""
 
         path = Path(cfg["HC_source"])
@@ -196,7 +196,7 @@ class Preprocessor:
         aer = cfg.get("HC_aer_levels")
         if aer is None:
             aer = _DEFAULT_AER
-            print(f"       HC_aer_levels not set — using default {len(aer)}-level table.")
+            print(f"       HC_aer_levels not set - using default {len(aer)}-level table.")
         aer = np.asarray(aer, dtype=np.float64)
 
         if len(aer) != n_aer:

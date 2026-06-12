@@ -5,11 +5,11 @@ Author / POC : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usa
 Engine contract: arrays in, index array out.  No config, no I/O.
 
 Dispatch order:
-  1. C++ binding ``reduced_tc_suite._rtcs`` — preferred. Supports forced medoids.
+  1. C++ binding ``reduced_tc_suite._rtcs`` - preferred. Supports forced medoids.
      Installed into this package by ``backend/engines/cpp/build.py`` per
      CyHAN v2.1 §16.2 / §16.5.
-  2. sklearn_extra.cluster.KMedoids — when no forced medoids requested.
-  3. _greedy_kmedoids (built-in fallback — BUILD + SWAP).
+  2. sklearn_extra.cluster.KMedoids - when no forced medoids requested.
+  3. _greedy_kmedoids (built-in fallback - BUILD + SWAP).
 """
 
 from __future__ import annotations
@@ -94,7 +94,7 @@ def select_maximin(
     seed:           int,
     forced_indices: Optional[np.ndarray] = None,
 ) -> np.ndarray:
-    """Greedy farthest-point (maximin) selection — pure BUILD, no SWAP."""
+    """Greedy farthest-point (maximin) selection - pure BUILD, no SWAP."""
     n = Z.shape[0]
     D = cdist(Z, Z)
 
@@ -129,9 +129,9 @@ def select_subset(
 
     method
     ------
-    "kmedoids"  PAM — minimizes total distance to the nearest medoid.
+    "kmedoids"  PAM - minimizes total distance to the nearest medoid.
                 Density-following (medoids concentrate in dense regions).
-    "maximin"   Greedy farthest-point — space-filling, spreads the subset
+    "maximin"   Greedy farthest-point - space-filling, spreads the subset
                 across the feature space and reaches the extremes/tail.
     """
     if method == "kmedoids":

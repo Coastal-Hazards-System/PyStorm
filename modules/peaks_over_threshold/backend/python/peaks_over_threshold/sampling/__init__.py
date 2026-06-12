@@ -1,4 +1,4 @@
-"""sampling — iterative percentile-threshold search.
+"""sampling - iterative percentile-threshold search.
 
 Author / POC : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
 """

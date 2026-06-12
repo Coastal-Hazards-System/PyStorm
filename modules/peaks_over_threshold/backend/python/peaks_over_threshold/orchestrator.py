@@ -1,4 +1,4 @@
-"""orchestrator — end-to-end POT extraction workflow runner.
+"""orchestrator - end-to-end POT extraction workflow runner.
 
 Author / POC : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
 
@@ -13,12 +13,12 @@ Public API
 
 Algorithm
 ---------
-Step 1 — Read the input CSV; sort ascending; canonicalize column names.
-Step 2 — Convert datetimes to Unix epoch seconds (float64).
-Step 3 — Iteratively search for a percentile threshold that yields the
+Step 1 - Read the input CSV; sort ascending; canonicalize column names.
+Step 2 - Convert datetimes to Unix epoch seconds (float64).
+Step 3 - Iteratively search for a percentile threshold that yields the
          target event rate after the configured segmentation method.
-Step 4 — Materialize the peaks DataFrame from the chosen indices.
-Step 5 — Save the peaks CSV and render the diagnostic plot.
+Step 4 - Materialize the peaks DataFrame from the chosen indices.
+Step 5 - Save the peaks CSV and render the diagnostic plot.
 """
 
 from dataclasses import dataclass
@@ -83,13 +83,13 @@ class POTOrchestrator:
               f"({n:,} non-NaN hourly steps); target {cfg.target_events_per_year} "
               f"ev/yr -> keep {n_keep} peaks")
 
-        # Step 2 — convert to numpy float arrays for the kernel. Use a
+        # Step 2 - convert to numpy float arrays for the kernel. Use a
         # resolution-independent epoch-seconds cast: pandas datetime64 may be
         # ns or us, so a fixed //1e9 on the raw int64 would misscale times.
         times_sec = df["datetime"].to_numpy("datetime64[s]").astype(np.int64).astype(np.float64)
         values    = df["value"].to_numpy(dtype=np.float64)
 
-        # Step 3 — threshold search (one-sided, rate measured against eff_dur).
+        # Step 3 - threshold search (one-sided, rate measured against eff_dur).
         searcher = IterativeThresholdSearch(
             interevent_sec         = cfg.interevent_hours * 3600.0,
             method                 = cfg.method,
@@ -120,7 +120,7 @@ class POTOrchestrator:
                 f"(>= target {cfg.target_events_per_year}, within +{cfg.tolerance})"
             )
 
-        # Step 4 — rank-trim the (one-sided) peaks to exactly n_keep largest, so
+        # Step 4 - rank-trim the (one-sided) peaks to exactly n_keep largest, so
         # the written count is deterministic: n_pot = round(target * eff_dur).
         peak_idx = np.asarray(r.peak_indices, dtype=np.int64)
         if n_keep >= 1 and peak_idx.size > n_keep:
@@ -132,7 +132,7 @@ class POTOrchestrator:
         # Materialize peaks DataFrame in time order.
         peaks_df = df.iloc[peak_idx].reset_index(drop=True).copy()
 
-        # Step 5 — save + plot.
+        # Step 5 - save + plot.
         base_filename = Path(cfg.input_csv).stem
         out_csv = write_pot_peaks(cfg.output_dir, base_filename, peaks_df)
         print(f"[POT] Peaks written to: {out_csv}")

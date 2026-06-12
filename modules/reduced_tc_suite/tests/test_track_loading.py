@@ -45,7 +45,7 @@ def test_storm_id_to_int(raw, expected):
 
 
 # ---------------------------------------------------------------------------
-# load_tc_tracks — sequential fallback (contiguous suites)
+# load_tc_tracks - sequential fallback (contiguous suites)
 # ---------------------------------------------------------------------------
 
 def test_load_tracks_sequential_numbering(tmp_path):
@@ -63,12 +63,12 @@ def test_load_tracks_sequential_numbering(tmp_path):
 
 
 # ---------------------------------------------------------------------------
-# load_tc_tracks — master-ID mapping (SACS subsets)
+# load_tc_tracks - master-ID mapping (SACS subsets)
 # ---------------------------------------------------------------------------
 
 def test_load_tracks_by_master_storm_ids(tmp_path):
     """Y rows map to files by master ID, not by position. Two Y rows whose
-    master IDs are 65 and 1700 must read files 0065 and 1700 — even though a
+    master IDs are 65 and 1700 must read files 0065 and 1700 - even though a
     sequential 1..2 scan would look for 0001 / 0002."""
     from reduced_tc_suite.geo.bbox_filter import load_tc_tracks
     pattern = "SACCS_JPM{:04d}_TROP.txt"
@@ -95,7 +95,7 @@ def test_load_tracks_unparseable_id_loads_empty(tmp_path):
 
 
 # ---------------------------------------------------------------------------
-# storm_ids_from_track_dir — derive Y-row IDs from filenames
+# storm_ids_from_track_dir - derive Y-row IDs from filenames
 # ---------------------------------------------------------------------------
 
 def test_storm_ids_from_track_dir_subset_ascending(tmp_path):

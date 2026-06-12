@@ -28,7 +28,7 @@ import matplotlib.pyplot as plt
 
 
 # ---------------------------------------------------------------------------
-# Tile fetcher  (OpenStreetMap — no API key required)
+# Tile fetcher  (OpenStreetMap - no API key required)
 # ---------------------------------------------------------------------------
 
 def _deg2num(lat_deg: float, lon_deg: float, zoom: int):
@@ -59,7 +59,7 @@ def _fetch_basemap(ax, lon_min, lon_max, lat_min, lat_max, zoom=7):
 
         n_tiles = (x_max - x_min + 1) * (y_max - y_min + 1)
         if n_tiles > 100:
-            print(f"    [basemap] Too many tiles ({n_tiles}) — skipping satellite layer")
+            print(f"    [basemap] Too many tiles ({n_tiles}) - skipping satellite layer")
             return
 
         rows = []

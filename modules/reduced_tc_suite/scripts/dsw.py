@@ -1,4 +1,4 @@
-"""reduced_tc_suite — post-selection DSW + HC reconstruction.
+"""reduced_tc_suite - post-selection DSW + HC reconstruction.
 
 Author / POC : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
 
@@ -26,11 +26,11 @@ if str(_PKG_PATH) not in sys.path:
 
 
 # ===========================================================================
-# USER OPTIONS  — edit anything in this block, then run the script
+# USER OPTIONS  - edit anything in this block, then run the script
 # ===========================================================================
 
 # ---------------------------------------------------------------------------
-# CONFIG  — paths and DSW parameters
+# CONFIG  - paths and DSW parameters
 # ---------------------------------------------------------------------------
 CONFIG = {
     "h5_path":        str(_MODULE_ROOT / "data/inputs/processed/tc_data.h5"),
@@ -47,7 +47,7 @@ CONFIG = {
 }
 
 # ===========================================================================
-# END USER OPTIONS  — nothing below should need editing for routine use
+# END USER OPTIONS  - nothing below should need editing for routine use
 # ===========================================================================
 
 

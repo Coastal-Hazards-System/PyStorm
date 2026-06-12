@@ -1,4 +1,4 @@
-"""detrend — linear detrending of a water-level time series.
+"""detrend - linear detrending of a water-level time series.
 
 Author / POC : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
 
@@ -8,7 +8,7 @@ Removes a linear sea-level trend from a water-level series by least-squares
 regression on time (POSIX seconds). Two centerings are offered:
 
   "midpoint"  centre time at the midpoint of the National Tidal Datum Epoch
-              (NTDE), e.g. 2012–2016 for Louisiana. Trend is reported relative
+              (NTDE), e.g. 2012-2016 for Louisiana. Trend is reported relative
               to that epoch midpoint, matching NOAA datum conventions.
   "ordinary"  centre time at the mean of the record.
 
@@ -44,8 +44,8 @@ def decimal_year_to_timestamp(year: float) -> pd.Timestamp:
 def ntde_midpoint_timestamp(ntde_range: Tuple[float, float]) -> pd.Timestamp:
     """Midpoint Timestamp of the NTDE, treating the end year as inclusive.
 
-    The epoch spans ``[start, end + 1)`` in (decimal) years — e.g. 1983–2001
-    covers [1983, 2002), midpoint mid-1992 — matching NOAA datum conventions.
+    The epoch spans ``[start, end + 1)`` in (decimal) years - e.g. 1983-2001
+    covers [1983, 2002), midpoint mid-1992 - matching NOAA datum conventions.
     """
     start = decimal_year_to_timestamp(ntde_range[0])
     end   = decimal_year_to_timestamp(ntde_range[1] + 1)
@@ -84,7 +84,7 @@ def detrend_time_series(
     trend_df : DataFrame      columns ("datetime", "value")
         The fitted linear trend, evaluated at each timestamp.
     slope_per_year : float
-        Trend slope in value-units per year (e.g. m/yr) — the fitted value, or
+        Trend slope in value-units per year (e.g. m/yr) - the fitted value, or
         the supplied override.
     """
     method = str(method).lower().strip()
@@ -119,7 +119,7 @@ def detrend_time_series(
     else:
         denom = float(np.dot(x, x))
         if denom == 0.0:
-            raise ValueError("timestamps are constant — cannot compute a trend")
+            raise ValueError("timestamps are constant - cannot compute a trend")
         slope = float(np.dot(x, y) / denom)   # fitted value-units per second
     trend     = slope * x
     detrended = y - trend

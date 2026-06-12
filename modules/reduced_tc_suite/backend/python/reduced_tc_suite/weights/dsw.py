@@ -6,7 +6,7 @@ Algorithm
 ---------
 Given selected storm surges Y_sub [k x m] and benchmark HCs HC_bench [m x N]:
 
-Step 1 — Nodal DSW back-computation
+Step 1 - Nodal DSW back-computation
     At each node i, sort the k surge values in descending order.
     Interpolate HC_bench[i] in log-AER space at each sorted surge → AER values.
     Finite-difference the AER sequence → nodal DSWs (sorted order).
@@ -18,14 +18,14 @@ Step 1 — Nodal DSW back-computation
     Nodes where fewer storms are active are excluded from the global average
     (Step 2) to prevent dry-node bias.
 
-Step 2 — Global DSW set
+Step 2 - Global DSW set
     DSW_global[j] = weighted mean across ACTIVE nodes of nodal DSW for storm j.
 
-Step 3 — HC reconstruction (JPM-OS)
+Step 3 - HC reconstruction (JPM-OS)
     At each node: sort storms by descending surge, cumsum global DSWs,
     interpolate surge vs cumulative AER onto tbl_aer.
 
-Step 4 — Residual metrics
+Step 4 - Residual metrics
     resid = HC_recon - HC_bench
     Per-node: bias, uncertainty, rmse.  Scalar = nanmean across nodes.
 
@@ -158,7 +158,7 @@ def compute_global_dsw(
       - the HC interpolation returns at least one finite AER value.
 
     method:
-      1 = simple mean (equal node weights — classic JPM-OS)
+      1 = simple mean (equal node weights - classic JPM-OS)
       2 = surge-weighted mean (per-storm-per-node)
       3 = variance-weighted mean (fixed per-node weight = surge variance)
     """

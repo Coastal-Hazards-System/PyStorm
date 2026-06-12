@@ -5,8 +5,8 @@
  *
  * @author      Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
  *
- * BUILD  – maximin (farthest-first) initialization, with optional forced medoids.
- * SWAP   – FastPAM1: maintains nearest / second-nearest medoid distances so each
+ * BUILD  - maximin (farthest-first) initialization, with optional forced medoids.
+ * SWAP   - FastPAM1: maintains nearest / second-nearest medoid distances so each
  *          candidate swap cost is O(n) instead of O(n·k).
  *
  * All inputs/outputs use raw pointers or std::vector; the pybind11 layer in

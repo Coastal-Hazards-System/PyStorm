@@ -34,14 +34,14 @@ def load_config(config_path: str | Path) -> dict:
 
 
 PREPROCESS_CONFIG_YAML = """\
-# reduced_tc_suite preprocessor — Example Configuration
+# reduced_tc_suite preprocessor - Example Configuration
 # =====================================================
 # Edit paths and variable names for your data, then run:
 #   python scripts/preprocess.py --config this_file.yaml
 
 output_path: "tc_data.h5"
 
-# X — TC atmospheric parameters
+# X - TC atmospheric parameters
 X_source:       "X_parameters.mat"   # .mat / .csv / .npy / .npz / .txt / .h5
 X_variable:     "X"                  # variable/dataset name (required for .mat, .npz, .h5)
 X_param_names:                       # null = use CSV headers or auto X0..Xp
@@ -63,14 +63,14 @@ X_transpose:    false                # true if raw array is [p_params x n_storms
 storm_id_track_dir:     null         # folder of per-storm TROP files, or null
 storm_id_track_pattern: "LACPR2_JPM{:04d}_TROP.txt"   # {:04d} ← storm ID
 
-# Y — ADCIRC peak surge fields
+# Y - ADCIRC peak surge fields
 Y_source:       "Y_surges.mat"
 Y_variable:     "eta_max"
 Y_node_ids:     null
 Y_units:        "m NAVD88"
 Y_transpose:    false                # true if raw array is [m_nodes x n_storms]
 
-# HC — Benchmark hazard curves  (set HC_source to null to omit /HC entirely)
+# HC - Benchmark hazard curves  (set HC_source to null to omit /HC entirely)
 HC_source:      "HC_benchmark.mat"
 HC_variable:    "HC_bench"
 HC_units:       "m NAVD88"

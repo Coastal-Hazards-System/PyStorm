@@ -1,4 +1,4 @@
-"""peaks_over_threshold — POT orchestration package (CyHAN v2.1 §5.3 expanded form).
+"""peaks_over_threshold - POT orchestration package (CyHAN v2.1 §5.3 expanded form).
 
 Author / POC : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
 

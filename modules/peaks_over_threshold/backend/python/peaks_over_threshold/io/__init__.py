@@ -1,4 +1,4 @@
-"""io — CSV reader for input time series and writers for module outputs.
+"""io - CSV reader for input time series and writers for module outputs.
 
 Author / POC : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
 """

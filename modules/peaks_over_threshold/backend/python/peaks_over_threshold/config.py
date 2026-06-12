@@ -1,4 +1,4 @@
-"""config — pydantic models for the POT job request.
+"""config - pydantic models for the POT job request.
 
 Author / POC : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
 

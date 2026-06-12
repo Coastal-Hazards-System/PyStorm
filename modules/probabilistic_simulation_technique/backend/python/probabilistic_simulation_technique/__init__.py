@@ -1,4 +1,4 @@
-"""probabilistic_simulation_technique — PST orchestration package (CyHAN v2.1 §5.3 expanded form).
+"""probabilistic_simulation_technique - PST orchestration package (CyHAN v2.1 §5.3 expanded form).
 
 Author / POC : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
 

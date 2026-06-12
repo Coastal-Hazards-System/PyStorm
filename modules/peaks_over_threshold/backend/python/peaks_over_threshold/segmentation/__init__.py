@@ -1,4 +1,4 @@
-"""segmentation — event segmenters used by the Python fallback.
+"""segmentation - event segmenters used by the Python fallback.
 
 Author / POC : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
 

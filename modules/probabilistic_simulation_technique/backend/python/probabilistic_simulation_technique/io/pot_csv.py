@@ -1,4 +1,4 @@
-"""pot_csv — load POT input and write PST result CSVs.
+"""pot_csv - load POT input and write PST result CSVs.
 
 Author / POC : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
 

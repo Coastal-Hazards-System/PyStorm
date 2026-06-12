@@ -1,4 +1,4 @@
-"""reduced_tc_suite — Reduced Tropical Cyclone Suite (RTCS) selection module.
+"""reduced_tc_suite - Reduced Tropical Cyclone Suite (RTCS) selection module.
 
 Author / POC : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
 

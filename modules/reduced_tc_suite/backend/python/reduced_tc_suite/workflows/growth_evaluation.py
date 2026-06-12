@@ -1,4 +1,4 @@
-"""RTCS Selection (optimal k) — RMSE-driven growth sweep.
+"""RTCS Selection (optimal k) - RMSE-driven growth sweep.
 
 Author / POC : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
 
@@ -85,7 +85,7 @@ def _select_optimal_k(history_df: pd.DataFrame,
 
 
 def run_growth_evaluation(cfg: Optional[dict] = None):
-    """RTCS Selection (optimal k) — full RMSE sweep + tolerance-driven pick.
+    """RTCS Selection (optimal k) - full RMSE sweep + tolerance-driven pick.
 
     Returns
     -------

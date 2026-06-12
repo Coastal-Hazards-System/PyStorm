@@ -30,24 +30,24 @@ RTCS_SELECTION_DEFAULTS: dict = {
     # ── PCA ───────────────────────────────────────────────────────────────────
     "pca_variance_threshold": 0.95,
     # How to handle NaN (dry-node markers) in Y before PCA:
-    #   "drop_always_dry" — drop all-NaN columns, zero-fill remaining NaN (default)
-    #   "zero"            — replace every NaN with 0.0 (preserves node count)
-    #   "node_mean"       — impute NaN with the per-node mean of wet values
-    #   "wet_only"        — drop any column with at least one NaN
-    #   "wet_ratio_floor" — drop nodes wet for < pca_min_wet_fraction of
+    #   "drop_always_dry" - drop all-NaN columns, zero-fill remaining NaN (default)
+    #   "zero"            - replace every NaN with 0.0 (preserves node count)
+    #   "node_mean"       - impute NaN with the per-node mean of wet values
+    #   "wet_only"        - drop any column with at least one NaN
+    #   "wet_ratio_floor" - drop nodes wet for < pca_min_wet_fraction of
     #                       storms, then zero-fill remaining NaN
     "pca_dry_strategy":       "drop_always_dry",
     # Only used when pca_dry_strategy == "wet_ratio_floor": minimum fraction
-    # of storms (0–1) a node must be wet for to be retained.
+    # of storms (0-1) a node must be wet for to be retained.
     "pca_min_wet_fraction":   0.2,
 
     # ── Subset selection method ────────────────────────────────────────────────
     # How the k storms are chosen from the joint feature space:
-    #   "kmedoids" — PAM, minimizes total distance to the nearest medoid.
+    #   "kmedoids" - PAM, minimizes total distance to the nearest medoid.
     #                Density-following: medoids concentrate where storms are
     #                dense (the weak-storm apex), under-sampling the rare
     #                intense storms. Best for a representative subset (default).
-    #   "maximin"  — greedy farthest-point. Space-filling: spreads the subset
+    #   "maximin"  - greedy farthest-point. Space-filling: spreads the subset
     #                uniformly across the feature space and deliberately reaches
     #                the extremes/tail. Best for even PC-space coverage.
     "selection_method": "kmedoids",

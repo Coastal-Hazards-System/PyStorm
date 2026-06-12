@@ -1,4 +1,4 @@
-"""reduced_tc_suite — standalone preprocessing entry point.
+"""reduced_tc_suite - standalone preprocessing entry point.
 
 Author / POC : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
 

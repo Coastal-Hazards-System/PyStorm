@@ -2,9 +2,9 @@
 
 Author / POC : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
 
-  Coverage     — fraction of Y-space k-means clusters represented by subset
-  Discrepancy  — centered L2 discrepancy of the subset in X-space (full-data scaled)
-  Maximin      — minimum pairwise distance in standardized X-space
+  Coverage     - fraction of Y-space k-means clusters represented by subset
+  Discrepancy  - centered L2 discrepancy of the subset in X-space (full-data scaled)
+  Maximin      - minimum pairwise distance in standardized X-space
 
 Engine contract: arrays in, scalars/dict out.  No config, no I/O.
 """

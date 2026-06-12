@@ -1,17 +1,17 @@
-"""method_testbed — compare the GPD-location selection methods across stations.
+"""method_testbed - compare the GPD-location selection methods across stations.
 
 Author / POC : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
 
 Runs every GPD-location SELECTION method (wmse, stability, mrl, gof) on each
 station's POT series through the full PST pipeline and stacks the resulting
-hazard curves — ONE subplot per station — so the operator can compare, at a
+hazard curves - ONE subplot per station - so the operator can compare, at a
 glance, how each method's threshold choice propagates to the hazard curve.
 Each subplot overlays the empirical POT points and the four best-estimate
 hazard curves, annotated with per-method metrics (selected μ, λ_μ, and the
 best-estimate magnitude at MRI = 100 and 500 yr).
 
 Headless by design. Writes one figure per (series × fit) to
-data/outputs/plots/testbed/method_testbed_<series>_<fit>.png — so the mle and
+data/outputs/plots/testbed/method_testbed_<series>_<fit>.png - so the mle and
 mom results coexist and never overwrite one another.
 
 Run

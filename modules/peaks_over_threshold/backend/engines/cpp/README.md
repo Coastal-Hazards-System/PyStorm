@@ -1,11 +1,11 @@
-# peaks_over_threshold — C++ engine
+# peaks_over_threshold - C++ engine
 
 Header-only kernel for the POT iterative threshold-search loop, plus the
 `_pot` pybind11 binding.
 
 | Artifact                 | Role                                                            |
 |--------------------------|-----------------------------------------------------------------|
-| `POTThresholdSearch.hpp` | `pot::find_threshold_for_target()` — percentile bisection + segmentation |
+| `POTThresholdSearch.hpp` | `pot::find_threshold_for_target()` - percentile bisection + segmentation |
 | `pot_bindings.cpp`       | pybind11 module → `_pot.find_threshold_for_target()`           |
 | `CMakeLists.txt`         | CMake target; installs into `../../python/peaks_over_threshold/` |
 | `build.py`               | Standalone build helper (setuptools → CMake → direct compiler) |

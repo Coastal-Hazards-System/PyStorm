@@ -1,4 +1,4 @@
-"""One-off benchmark — times the α/β sweep on real data with all
+"""One-off benchmark - times the α/β sweep on real data with all
 optimisations on, comparing sequential vs parallel.
 
 Honors SCOPE in the launcher (local applies the bbox filter; regional uses
@@ -52,7 +52,7 @@ def main() -> None:
             np.union1d(bbox_arr, forced_orig) if forced_orig is not None else bbox_arr
         )
     else:
-        print("[bench] Regional scope — skipping bbox filter.")
+        print("[bench] Regional scope - skipping bbox filter.")
         forced_orig = _load_forced_indices(cfg)
 
     print("[bench] Loading data ...")
@@ -85,7 +85,7 @@ def main() -> None:
         dsw_method=cfg.get("dsw_method", 1),
     )
 
-    print(f"\n[bench] Running α/β sweep — sequential "
+    print(f"\n[bench] Running α/β sweep - sequential "
           f"(workers=1, nodes={Y_ab.shape[1]}/{Y.shape[1]}) ...")
     t0 = time.perf_counter()
     seq = run_ab_sweep(grid, workers=1, **common)
@@ -93,7 +93,7 @@ def main() -> None:
     print(f"[bench]   sequential: {seq_t:.2f} s  "
           f"({len(grid)} pts → {seq_t/len(grid):.2f} s/pt)")
 
-    print(f"\n[bench] Running α/β sweep — parallel (workers=auto) ...")
+    print(f"\n[bench] Running α/β sweep - parallel (workers=auto) ...")
     t0 = time.perf_counter()
     par = run_ab_sweep(grid, workers=None, **common)
     par_t = time.perf_counter() - t0

@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name            = "probabilistic_simulation_technique"
 version         = "0.1.0"
-description     = "Probabilistic Simulation Technique (PST) — bootstrap GPD hazard curves with a C++ inner loop."
+description     = "Probabilistic Simulation Technique (PST) - bootstrap GPD hazard curves with a C++ inner loop."
 readme          = "README.md"
 requires-python = ">=3.10"
 authors = [

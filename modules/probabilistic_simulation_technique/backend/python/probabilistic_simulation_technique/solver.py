@@ -1,16 +1,16 @@
-"""solver — thin wrappers around the _pst pybind11 extension.
+"""solver - thin wrappers around the _pst pybind11 extension.
 
 Author / POC : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
 
 CyHAN v2.1 §4.1 specifies the binding role: a conduit that exposes engine
 capability without leaking engine internals upward and without absorbing
-orchestration responsibility. This file is intentionally minimal — the
+orchestration responsibility. This file is intentionally minimal - the
 higher-level dispatch/fallback (pure-Python bootstrap, configuration mapping)
 belongs in ``sampling/bootstrap.py``.
 
 Public API
 ----------
-  CPP_KERNEL_AVAILABLE              bool — True iff ``_pst`` imported
+  CPP_KERNEL_AVAILABLE              bool - True iff ``_pst`` imported
   bootstrap_truncated_cpp(...)      direct call into the C++ kernel
 """
 

@@ -1,10 +1,10 @@
-"""run_peaks_over_threshold — POT launcher (CyHAN v2.1 §5.3).
+"""run_peaks_over_threshold - POT launcher (CyHAN v2.1 §5.3).
 
 Author / POC : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
 
 User-facing entry for the Peaks-Over-Threshold (POT) module. The operator edits
 the USER OPTIONS block (at the top of this file) and runs the script. No
-orchestration logic lives here — the launcher hands the option block to
+orchestration logic lives here - the launcher hands the option block to
 ``main_peaks_over_threshold.run`` per §5.3, which dispatches the requested stages.
 
 Stages (canonical order)
@@ -29,16 +29,16 @@ average rate. These peaks are the input to the PST module's hazard analysis.
 ================================================================================
 METHOD & FORMULATION
 ================================================================================
-PRIMARY — POT extraction (the "pot" stage)
+PRIMARY - POT extraction (the "pot" stage)
   1. Effective duration. The record length used for all rates is the EFFECTIVE
-     duration = (# non-NaN hourly steps) / (365.25 × 24) years — gaps / missing
+     duration = (# non-NaN hourly steps) / (365.25 × 24) years - gaps / missing
      data do not count (a 100-yr span that is 50% complete counts as ~50 yr).
   2. Iterative threshold search. The threshold is raised from START_PERCENTILE
      upward in STEP_SIZE increments (percentiles of the series). At each level
      the exceedances are DECLUSTERED into independent events by METHOD:
-       "hydrograph" — consecutive exceedances within INTEREVENT_HOURS of one
+       "hydrograph" - consecutive exceedances within INTEREVENT_HOURS of one
            another form a single event; its peak is the event maximum.
-       "peak_gap"   — a sample is dropped if it lies within INTEREVENT_HOURS of,
+       "peak_gap"   - a sample is dropped if it lies within INTEREVENT_HOURS of,
            and is no larger than, the previous retained peak.
      The event rate = (# events) / effective_duration. The search is ONE-SIDED:
      it keeps the HIGHEST threshold whose rate is still ≥ TARGET_EVENTS_PER_YEAR
@@ -48,12 +48,12 @@ PRIMARY — POT extraction (the "pot" stage)
      magnitude and trimmed to exactly round(TARGET_EVENTS_PER_YEAR ×
      effective_duration) of the largest, so the written sample has an effective
      rate of EXACTLY the target. (This is also what lets PST recover the record
-     length from the peak count — keep PST's EVENTS_PER_YEAR equal to
+     length from the peak count - keep PST's EVENTS_PER_YEAR equal to
      TARGET_EVENTS_PER_YEAR.)
-  Output per series: {dwl,ntr}_<station>_pot.csv — the declustered peaks
+  Output per series: {dwl,ntr}_<station>_pot.csv - the declustered peaks
   (datetime, value), ready for PST.
 
-SECONDARY — build the POT input from NOAA data (optional upstream stages)
+SECONDARY - build the POT input from NOAA data (optional upstream stages)
   download  Fetch hourly water level + hourly tide predictions per station/year
             from NOAA Tides & Currents into data/inputs/raw/<station>/.
   detrend   Remove the linear sea-level trend from the water level by least
@@ -61,14 +61,14 @@ SECONDARY — build the POT input from NOAA data (optional upstream stages)
             pivots there, matching NOAA datum convention); "ordinary" centres on
             the record mean. The slope is fitted from the record, or imposed via
             DETREND_SLOPE. Produces dwl = detrended water level.
-  ntr       NTR = detrended water level − interpolated hourly tide — the
+  ntr       NTR = detrended water level − interpolated hourly tide - the
             non-tidal (meteorological) residual.
   With "pot" also in STAGES the chain feeds dwl and ntr straight into the POT
   extraction above (one POT sample per series).
 
 Run (headless / CLI)
 --------------------
-Headless by design — figures are written to disk (no window opens), so this
+Headless by design - figures are written to disk (no window opens), so this
 runs unchanged over SSH, in a container, or under cron.
 
   1. Install dependencies once:
@@ -79,7 +79,7 @@ runs unchanged over SSH, in a container, or under cron.
      ...or from the repository root:
          python modules/peaks_over_threshold/run_peaks_over_threshold.py
 
-  CLI batch over explicit input files (no editing needed) — pass one or more
+  CLI batch over explicit input files (no editing needed) - pass one or more
   time-series CSV paths (absolute or relative); POT-only runs on each:
          python run_peaks_over_threshold.py PATH1.csv PATH2.csv ...
          python run_peaks_over_threshold.py "C:\\data\\ntr_8518750.csv"
@@ -95,13 +95,13 @@ Outputs: data files per station in data/outputs/<station>/
 
 from pathlib import Path
 
-# Module root — every path in the options below is relative to this file.
+# Module root - every path in the options below is relative to this file.
 ROOT = Path(__file__).resolve().parent
 DATA = ROOT / "data"
 
 
 # ===========================================================================
-# USER OPTIONS  — edit anything in this block, then run the script
+# USER OPTIONS  - edit anything in this block, then run the script
 # ===========================================================================
 
 # ── Stage selection ────────────────────────────────────────────────────────
@@ -126,7 +126,7 @@ VDATUM       = ""
 # algorithm these feed).
 INTEREVENT_HOURS       = 48.0          # min separation between independent events (declustering window, h)
 METHOD                 = "hydrograph"  # declustering rule: "hydrograph" (group + event max) or "peak_gap"
-TARGET_EVENTS_PER_YEAR = 10.0          # average peaks/yr to retain — MUST match PST's EVENTS_PER_YEAR
+TARGET_EVENTS_PER_YEAR = 10.0          # average peaks/yr to retain - MUST match PST's EVENTS_PER_YEAR
 TOLERANCE              = 0.25          # convergence band: accept a rate in [target, target + tolerance]
 START_PERCENTILE       = 75.0          # series percentile where the upward threshold scan begins
 STEP_SIZE              = 0.01          # percentile increment per scan step (smaller = finer + slower)
@@ -143,7 +143,7 @@ DOWNLOAD_UNITS = "metric"       # NOAA API units: "metric" or "english"
 TIDE_INTERVAL  = "h"            # hourly tide predictions (match the WL grid)
 DETREND_METHOD = "midpoint"     # "midpoint" (NTDE-centered) or "ordinary"
 
-# National Tidal Datum Epoch (NTDE) — two ways to specify it:
+# National Tidal Datum Epoch (NTDE) - two ways to specify it:
 #   1) ONE epoch for every station (even in batch): give a single year.
 #          NTDE_START = 1983
 #          NTDE_END   = 2001
@@ -152,7 +152,7 @@ DETREND_METHOD = "midpoint"     # "midpoint" (NTDE-centered) or "ordinary"
 #      run errors out. Use this when stations are tied to different epochs.
 #          NTDE_START = [1983, 1983, 1983, 2012.42, 1983]   # one per station
 #          NTDE_END   = [2001, 2001, 2001, 2016,    2001]
-#   (Either field may be a single value or a list independently — e.g. a shared
+#   (Either field may be a single value or a list independently - e.g. a shared
 #    end year with per-station start years.)
 #NTDE_START     = 1983
 #NTDE_END       = 2001
@@ -177,7 +177,7 @@ OUTPUT_DIR    = DATA / "outputs"
 PLOTS_DIR     = DATA / "outputs" / "plots"
 
 # ===========================================================================
-# END USER OPTIONS  — nothing below should need editing for routine use
+# END USER OPTIONS  - nothing below should need editing for routine use
 # ===========================================================================
 
 
@@ -199,7 +199,7 @@ def _ensure_cpp_extension() -> None:
     """Build the _pot C++ kernel once if it isn't already compiled.
 
     Must run before the package is imported (its solver probes for _pot at
-    import time). A failed build is non-fatal — the pure-Python fallback runs.
+    import time). A failed build is non-fatal - the pure-Python fallback runs.
     """
     pkg = _BACKEND_PY / "peaks_over_threshold"
     if any(p.suffix in (".pyd", ".so", ".dylib") for p in pkg.glob("_pot*")):
@@ -207,7 +207,7 @@ def _ensure_cpp_extension() -> None:
     build = ROOT / "backend" / "engines" / "cpp" / "build.py"
     if not build.is_file():
         return
-    print("[run] C++ kernel _pot not built — compiling once "
+    print("[run] C++ kernel _pot not built - compiling once "
           "(falls back to pure Python if this fails) ...")
     import subprocess
     try:
@@ -235,7 +235,7 @@ CONFIG = {
     "start_percentile":       START_PERCENTILE,
     "step_size":              STEP_SIZE,
 
-    # preprocessing stages (download / detrend / ntr) — per-station dirs are
+    # preprocessing stages (download / detrend / ntr) - per-station dirs are
     # derived in main from data_dir; the chain runs once per station id.
     "station_ids":    STATION_IDS,
     "data_dir":       DATA,

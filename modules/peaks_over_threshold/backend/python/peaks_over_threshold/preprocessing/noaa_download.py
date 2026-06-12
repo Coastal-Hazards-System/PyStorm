@@ -1,4 +1,4 @@
-"""noaa_download — fetch NOAA water level / tide prediction CSVs.
+"""noaa_download - fetch NOAA water level / tide prediction CSVs.
 
 Author / POC : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
 
@@ -93,7 +93,7 @@ def download_noaa_wl_data(
             else:
                 print(f"  [download] {station_id} {product} {year}: no valid data")
         except requests.exceptions.RequestException as e:
-            print(f"  [download] {station_id} {product} {year}: error — {e}")
+            print(f"  [download] {station_id} {product} {year}: error - {e}")
         finally:
             if sleep_between > 0:
                 time.sleep(sleep_between)

@@ -1,4 +1,4 @@
-"""main_probabilistic_simulation_technique — orchestrator entry (CyHAN v2.1 §5.3).
+"""main_probabilistic_simulation_technique - orchestrator entry (CyHAN v2.1 §5.3).
 
 Author / POC : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
 
@@ -12,8 +12,8 @@ Input resolution
 ``run`` resolves the POT input(s) from the config's ``input_mode`` before
 handing each to ``PSTOrchestrator``:
 
-  "path"    — one POT CSV at ``input_csv``.
-  "station" — POT file(s) from the peaks_over_threshold module's outputs for
+  "path"    - one POT CSV at ``input_csv``.
+  "station" - POT file(s) from the peaks_over_threshold module's outputs for
               ``station_id``, selected by ``targets`` ("dwl"/"ntr"/"both"):
               ``<pot_outputs_dir>/<station>/<target>_<station>_pot.csv``.
 
@@ -68,7 +68,7 @@ def run(config) -> Union[PSTResult, Dict[str, PSTResult]]:
         if station and base_out is not None:
             overrides["output_dir"] = Path(base_out) / station
         # Record length is resolved in the orchestrator (auto = n_pot /
-        # events_per_year) — no water-level file needed here.
+        # events_per_year) - no water-level file needed here.
         ylabel = _ylabel_for(config, tag)
         if ylabel is not None:
             overrides["y_axis_label"] = ylabel
@@ -88,7 +88,7 @@ def _resolve_inputs(config: dict) -> List[Tuple[str, Path, Optional[str]]]:
     mode = str(config.get("input_mode", "path")).lower().strip()
 
     if mode == "path":
-        # One path (input_csv) or many (input_csvs) — the latter enables CLI
+        # One path (input_csv) or many (input_csvs) - the latter enables CLI
         # batch processing over explicit absolute paths.
         paths = list(config.get("input_csvs") or [])
         if not paths and config.get("input_csv") is not None:

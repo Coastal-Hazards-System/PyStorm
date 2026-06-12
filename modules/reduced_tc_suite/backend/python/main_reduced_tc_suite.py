@@ -1,4 +1,4 @@
-"""main_reduced_tc_suite — orchestrator entry (CyHAN v2.1 §5.3).
+"""main_reduced_tc_suite - orchestrator entry (CyHAN v2.1 §5.3).
 
 Author / POC : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
 
@@ -124,7 +124,7 @@ def _apply_bbox(cfg: Dict[str, Any], bbox_config: Mapping[str, Any]) -> None:
 
 
 # ===========================================================================
-# Launcher-side logic  (path wiring, bootstrap, CLI) — moved out of the
+# Launcher-side logic  (path wiring, bootstrap, CLI) - moved out of the
 # operator-facing run_reduced_tc_suite.py so the launcher holds only
 # user options. All functions take the launcher's declarative data as
 # explicit arguments; none read module globals.
@@ -201,7 +201,7 @@ def _ensure_h5_exists(
     if not h5.is_file():
         raise SystemExit(
             f"\n[bootstrap] Preprocessor finished but {h5} is still missing.")
-    print(f"\n[bootstrap] Done — {h5.name} ready.\n")
+    print(f"\n[bootstrap] Done - {h5.name} ready.\n")
 
 
 def _build_bbox_config(
@@ -341,7 +341,7 @@ def launch(
                             / dataset / "tc_data.h5")
     cfg["output_dir"] = str(Path(root) / "data" / "outputs" / dataset)
     # The launcher option key is 'pre_selected_storms'; the backend key is
-    # 'pre_selected_csv'. Bridge them here. Optional — None means none.
+    # 'pre_selected_csv'. Bridge them here. Optional - None means none.
     cfg["pre_selected_csv"] = _raw_path(
         root, dataset, raw_files, "pre_selected_storms", required=False)
 

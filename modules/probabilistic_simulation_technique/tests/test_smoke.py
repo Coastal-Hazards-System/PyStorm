@@ -1,4 +1,4 @@
-"""test_smoke — smoke tests for the PST module (config, bootstrap, threshold).
+"""test_smoke - smoke tests for the PST module (config, bootstrap, threshold).
 
 Author / POC : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
 
@@ -273,7 +273,7 @@ def test_qdo_selection_is_stability_plateau(synthetic_pot):
 
 def test_qdo_excludes_lower_clip_degenerate():
     """The "stability" method must land on a heavy-tail shelf with a finite,
-    non-lower-clip ξ — never the bounded sparse tail."""
+    non-lower-clip ξ - never the bounded sparse tail."""
     rng = np.random.default_rng(5)
     body = genpareto.rvs(0.4, loc=0.5, scale=0.3, size=600, random_state=rng)
     values_pot = np.sort(body)[::-1]

@@ -1,4 +1,4 @@
-"""plots — hazard-curve and QDO-diagnostic renderers for PST results.
+"""plots - hazard-curve and QDO-diagnostic renderers for PST results.
 
 Author / POC : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
 
@@ -32,8 +32,8 @@ from pystorm_common import (
 
 _C = {
     "below":   EMPIRICAL,        # empirical bulk (< μ)
-    "above":   EMPHASIS,         # empirical exceedances (> μ) — coral
-    "gpd":     WAVE_MAKER,       # GPD mean / WMSE — hero cyan
+    "above":   EMPHASIS,         # empirical exceedances (> μ) - coral
+    "gpd":     WAVE_MAKER,       # GPD mean / WMSE - hero cyan
     "mu":      REF_DASH,         # μ cross / reference dashes
     "select":  EMPH_DARK,        # selected μ marker
     "shape":   C["sea_green"],   # GPD shape ξ
@@ -170,8 +170,8 @@ def _plot_mrl_diagnostics(qdo, output_path: Path, ylabel: str = "Response") -> N
 
     Three stacked panels over the order-statistic threshold u:
       1. mean excess e(u) with the weighted-least-squares line fit from μ* up
-         (linear where a GPD holds — the basis of the method).
-      2. weighted MSE of that fit vs the start threshold — μ* is its lowest
+         (linear where a GPD holds - the basis of the method).
+      2. weighted MSE of that fit vs the start threshold - μ* is its lowest
          in-band local minimum.
       3. # exceedances above u, with the selectability floor.
     """
@@ -236,7 +236,7 @@ def _plot_gof_diagnostics(qdo, output_path: Path, ylabel: str = "Response") -> N
     Three stacked panels over the candidate μ:
       1. EDF statistic (A²/W²) vs its critical value; μ* is the LOWEST μ where
          the statistic falls below the critical line (GPD not rejected).
-      2. GPD shape ξ(μ) — context.
+      2. GPD shape ξ(μ) - context.
       3. # exceedances(μ), with the selectability floor.
     """
     mu    = qdo.candidates
@@ -270,7 +270,7 @@ def _plot_gof_diagnostics(qdo, output_path: Path, ylabel: str = "Response") -> N
     leg = a0.legend(fontsize=8, frameon=True, framealpha=0.95, edgecolor=_C["grid"])
     leg.get_frame().set_linewidth(0.8)
 
-    # (2) GPD shape ξ(μ) — context.
+    # (2) GPD shape ξ(μ) - context.
     a1.plot(mu, qdo.shape, "-o", color=_C["shape"], ms=4, lw=1.6)
     a1.axhline(0.0, color=_C["muted"], linewidth=0.9)
     a1.set_ylabel("GPD shape ξ")
@@ -299,13 +299,13 @@ def plot_qdo_diagnostics(qdo, output_path: Path, ylabel: str = "Response") -> No
     Adapts to ``qdo.selection_method``. Four stacked panels share the candidate-μ
     x-axis over the full evaluated range:
 
-      1. WMSE(μ) — the objective. For the "wmse" method the accept tolerance is
+      1. WMSE(μ) - the objective. For the "wmse" method the accept tolerance is
          drawn (it gates); for "stability" it is shown as a diagnostic only.
-      2. GPD shape ξ(μ) — the selected candidate set is highlighted.
-      3. robust ξ-dispersion(μ) — the stability signal (↓ = flatter).
-      4. # exceedances(μ) — data richness, with the selectability floor.
+      2. GPD shape ξ(μ) - the selected candidate set is highlighted.
+      3. robust ξ-dispersion(μ) - the stability signal (↓ = flatter).
+      4. # exceedances(μ) - data richness, with the selectability floor.
 
-    Shaded: the selection band (cyan) and the EXCLUDED region (grey) — sparse
+    Shaded: the selection band (cyan) and the EXCLUDED region (grey) - sparse
     (< floor exceedances) always, plus ξ pinned at the lower clip for the
     "stability" method (which guards against it).
 
@@ -354,7 +354,7 @@ def plot_qdo_diagnostics(qdo, output_path: Path, ylabel: str = "Response") -> No
     lam_sel    = (float(lam_mu_arr[qdo.best_idx])
                   if lam_mu_arr is not None else float("nan"))
 
-    # (1) WMSE — the gate for "wmse" (draw accept tolerance), diagnostic for "stability".
+    # (1) WMSE - the gate for "wmse" (draw accept tolerance), diagnostic for "stability".
     wmse_lbl = "WMSE (diagnostic only)" if is_stab else "WMSE"
     a0.plot(mu, qdo.wmse, "-o", color=_C["gpd"], ms=4, lw=1.6, label=wmse_lbl)
     a0.axvspan(qdo.band_lo, qdo.band_hi, label="selection band", **band_kw)
@@ -377,7 +377,7 @@ def plot_qdo_diagnostics(qdo, output_path: Path, ylabel: str = "Response") -> No
     leg = a0.legend(fontsize=8, frameon=True, framealpha=0.95, edgecolor=_C["grid"])
     leg.get_frame().set_linewidth(0.8)
 
-    # (2) GPD shape ξ(μ) — the candidate set the selection chose among.
+    # (2) GPD shape ξ(μ) - the candidate set the selection chose among.
     a1.plot(mu, qdo.shape, "-o", color=_C["shape"], ms=4, lw=1.6, label="ξ(μ)")
     if sset.size:
         a1.plot(mu[sset], qdo.shape[sset], "o", color=_C["select"], ms=6, zorder=5,

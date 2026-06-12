@@ -1,4 +1,4 @@
-# CyHAN v2.1 — structured manifest for the POT module.
+# CyHAN v2.1 - structured manifest for the POT module.
 #
 # Author / POC : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
 
@@ -37,7 +37,7 @@ raw_tide          = "data/inputs/raw/<station>/tide_prediction_<station>.csv"
 detrended_csv     = "data/inputs/processed/<station>/dwl_<station>.csv"
 trend_csv         = "data/inputs/processed/<station>/trend_<station>.csv"
 ntr_csv           = "data/inputs/processed/<station>/ntr_<station>.csv"
-# POT extraction — the chain runs POT on BOTH processed series.
+# POT extraction - the chain runs POT on BOTH processed series.
 dwl_peaks_csv     = "data/outputs/<station>/dwl_<station>_pot.csv"
 ntr_peaks_csv     = "data/outputs/<station>/ntr_<station>_pot.csv"
 peaks_csv         = "<base>_pot.csv"     # generic form (<base> = input CSV stem)

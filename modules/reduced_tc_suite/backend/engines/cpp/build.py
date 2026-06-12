@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-"""build.py — standalone build helper for the _rtcs pybind11 extension.
+"""build.py - standalone build helper for the _rtcs pybind11 extension.
 
 Author / POC : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
 

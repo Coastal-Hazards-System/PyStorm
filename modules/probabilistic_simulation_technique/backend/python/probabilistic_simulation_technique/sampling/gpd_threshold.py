@@ -1,4 +1,4 @@
-"""gpd_threshold — Quantile Delta Optimization (QDO) GPD-location search.
+"""gpd_threshold - Quantile Delta Optimization (QDO) GPD-location search.
 
 Author / POC : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
 
@@ -14,16 +14,16 @@ The empirical annual exceedance rate (AER) of each POT value is unconditional,
 tail ``X | X > μ``, so its unconditional AER is ``AER(x) = λ_μ · (1 − F(x))``
 where ``λ_μ = n_exc/record_length`` is the exceedance rate ABOVE the candidate
 location μ. Predicting a magnitude at an empirical AER therefore inverts with
-λ_μ — ``x_pred = ppf(1 − AER/λ_μ)`` — identical to the hazard-curve convention
+λ_μ - ``x_pred = ppf(1 − AER/λ_μ)`` - identical to the hazard-curve convention
 in ``hazard/curve.py``. (λ_u builds the AER; λ_μ converts an AER to a GPD
-quantile — two distinct rates, each in its own place.) The fitted GPD shape is
+quantile - two distinct rates, each in its own place.) The fitted GPD shape is
 clipped to the same admissible bounds the ensemble uses, so the objective
 scores the model the pipeline actually fits.
 
 Four selection methods (``selection=``); the GPD fit uses ``fit_method`` ("mle"
 default, or "mom" method-of-moments):
 
-  "wmse" (DEFAULT) — a relative tolerance ``tol`` (default 5%) on the in-band
+  "wmse" (DEFAULT) - a relative tolerance ``tol`` (default 5%) on the in-band
       minimum WMSE defines the WMSE-tolerance set of statistically-
       indistinguishable candidates; a ``tiebreak`` chooses within it. This is
       the established behaviour. CAVEAT: the absolute-magnitude WMSE structurally
@@ -31,19 +31,19 @@ default, or "mom" method-of-moments):
       degenerate high-μ fit (ξ pinned at the lower clip); ``selection_warning``
       flags such a pick and points to "stability".
 
-  "stability" (OPT-IN) — stability-primary, lower-clip-guarded: among eligible
+  "stability" (OPT-IN) - stability-primary, lower-clip-guarded: among eligible
       candidates (in-band, above the exceedance floor, ξ NOT pinned at the lower
       clip) the stability plateau is those within ``stab_tol`` of the minimum
       robust ξ-dispersion (the flat-ξ threshold-stability shelf); a ``tiebreak``
       chooses within it. WMSE is not used to gate. Robust to the degenerate
       sparse tail with no per-station tuning.
 
-  "mrl" (OPT-IN) — automated mean-residual-life (Langousis et al. 2016, eqs 4-6):
+  "mrl" (OPT-IN) - automated mean-residual-life (Langousis et al. 2016, eqs 4-6):
       the lowest in-band order statistic at which the mean-excess curve becomes
       linear (a local minimum of the weighted-least-squares fit error). Non-
       parametric (fits a line to e(u), not the GPD itself).
 
-  "gof" (OPT-IN) — Choulakian-Stephens "failure-to-reject" (Langousis §2.3): the
+  "gof" (OPT-IN) - Choulakian-Stephens "failure-to-reject" (Langousis §2.3): the
       lowest in-band threshold at which the GPD fit is NOT rejected by an EDF
       goodness-of-fit test (``gof_statistic`` "ad"=Anderson-Darling A² or
       "cvm"=Cramér-von Mises W²) at significance ``gof_significance``, using the
@@ -92,7 +92,7 @@ class QDOResult:
     scale          : ndarray  fitted GPD scale per candidate (NaN if no fit)
     shape_stability: ndarray  ROBUST local ξ-dispersion per candidate (scaled
                               MAD over a neighbour window; lower = flatter/more
-                              stable; inf where unassessable) — the PRIMARY
+                              stable; inf where unassessable) - the PRIMARY
                               selection signal (GPD threshold-stability)
     lambda_mu      : ndarray  exceedance rate above each candidate μ,
                               ``n_exceed / record_length`` (events/yr)
@@ -111,7 +111,7 @@ class QDOResult:
     wmse_ceiling   : float    ("wmse") the WMSE accept ceiling actually used (NaN
                               for other methods); in-band candidates at or below
                               it form the WMSE-tolerance set
-    selection_method : str    "wmse" (default) or "stability" — which method ran
+    selection_method : str    "wmse" (default) or "stability" - which method ran
     tiebreak       : str      arbiter within the chosen set ("stability" = min
                               dispersion, ties → lowest μ; "lowest_mu" = lowest μ)
     selected_set_idx : ndarray  indices of the candidate set the selection chose
@@ -141,7 +141,7 @@ class QDOResult:
     selected_set_idx: np.ndarray = field(
         default_factory=lambda: np.empty(0, dtype=np.int64))
     selection_warning: str = ""
-    # MRL ("mrl" method) diagnostics — empty for other methods.
+    # MRL ("mrl" method) diagnostics - empty for other methods.
     mrl_u:          np.ndarray = field(
         default_factory=lambda: np.empty(0, dtype=np.float64))
     mrl_excess:     np.ndarray = field(
@@ -150,7 +150,7 @@ class QDOResult:
         default_factory=lambda: np.empty(0, dtype=np.float64))
     mrl_slope:      float = 0.0
     mrl_intercept:  float = 0.0
-    # GoF ("gof" method) diagnostics — NaN for other methods.
+    # GoF ("gof" method) diagnostics - NaN for other methods.
     gof_stat:       np.ndarray = field(
         default_factory=lambda: np.empty(0, dtype=np.float64))
     gof_crit:       np.ndarray = field(
@@ -186,14 +186,14 @@ def select_gpd_threshold_qdo(
     values_pot : (n,) float64
         Descending-sorted POT magnitudes.
     weibull_aer : (n,) float64
-        Empirical (unconditional) AERs at each POT value — Weibull plotting
+        Empirical (unconditional) AERs at each POT value - Weibull plotting
         positions scaled by the POT base rate λ_u.
     lambda_val : float
         POT base rate λ_u = ``len(values_pot) / record_length``. Retained for
         context/reporting; the objective converts AERs with λ_μ (below).
     record_length : float
         Record length in years. Forms the per-candidate exceedance rate above μ,
-        ``λ_μ = n_exc / record_length`` — the rate used to map an empirical AER
+        ``λ_μ = n_exc / record_length`` - the rate used to map an empirical AER
         to a GPD non-exceedance probability (hazard-curve convention).
     min_percentile, max_percentile : float
         Bounds of the candidate-μ scan, expressed as empirical PERCENTILES of
@@ -204,7 +204,7 @@ def select_gpd_threshold_qdo(
         A candidate μ must retain at least this many exceedances to be
         selectable (guards against over-fitting the sparse tail).
     shape_clip_low, shape_clip_high : float
-        Admissible bounds for the fitted GPD shape ξ — applied here exactly as
+        Admissible bounds for the fitted GPD shape ξ - applied here exactly as
         in the hazard ensemble, so the objective scores the model actually used.
     selection : {"wmse", "stability", "mrl", "gof"}
         Which selection method to use (see below). DEFAULT "wmse".
@@ -213,7 +213,7 @@ def select_gpd_threshold_qdo(
         "mle"; "mom" is the closed-form method of moments (more robust for
         small / quantized samples). Passed through to ``gpd_fit.fit_gpd_clipped``.
     gof_statistic : {"ad", "cvm"}
-        ("gof" method) EDF goodness-of-fit statistic — Anderson-Darling A²
+        ("gof" method) EDF goodness-of-fit statistic - Anderson-Darling A²
         (tail-weighted) or Cramér-von Mises W².
     gof_significance : float
         ("gof" method) significance level α of the failure-to-reject test.
@@ -235,7 +235,7 @@ def select_gpd_threshold_qdo(
 
     Selection methods
     -----------------
-    "wmse"  (DEFAULT) — the WMSE-tolerance set is every in-band candidate with
+    "wmse"  (DEFAULT) - the WMSE-tolerance set is every in-band candidate with
         >= ``min_exceedances`` exceedances whose WMSE is within a fraction
         ``tol`` of the climb from the best fit (floor) to a robust ceiling (the
         highest in-band WMSE that is not a Tukey outlier); ``tiebreak`` picks μ
@@ -244,22 +244,22 @@ def select_gpd_threshold_qdo(
         CAVEAT: WMSE can still shrink into an over-thinned sparse tail, so when the
         pick is ξ-pinned at the clip ``selection_warning`` flags it and suggests
         "stability".
-    "stability"  (opt-in) — STABILITY-PRIMARY, lower-clip-guarded. ELIGIBLE
+    "stability"  (opt-in) - STABILITY-PRIMARY, lower-clip-guarded. ELIGIBLE
         candidates are in-band, >= ``min_exceedances``, finite, and NOT pinned at
         ``shape_clip_low``; the STABILITY PLATEAU is those within ``stab_tol`` of
         the minimum robust ξ-dispersion (the flat-ξ threshold-stability shelf);
         ``tiebreak`` picks μ within it. WMSE is not used to gate. Robust to the
         degenerate sparse tail with no per-station tuning.
-    "mrl"  (opt-in) — automated MEAN-RESIDUAL-LIFE (Langousis et al. 2016, WRR,
+    "mrl"  (opt-in) - automated MEAN-RESIDUAL-LIFE (Langousis et al. 2016, WRR,
         §2.2, eqs 4-6). Non-parametric: the mean excess e(u) is linear in u where
         a GPD holds, so a weighted-least-squares line is fit to the mean-excess
         curve from each candidate upward and μ is the LOWEST in-band order
         statistic that is a local minimum of the fit's weighted MSE. Returns the
         exact order-statistic threshold; ``tiebreak``/``stab_tol``/``tol`` are
         unused. See ``_select_mrl``.
-    "gof"  (opt-in) — Choulakian-Stephens FAILURE-TO-REJECT (Langousis §2.3): the
+    "gof"  (opt-in) - Choulakian-Stephens FAILURE-TO-REJECT (Langousis §2.3): the
         lowest in-band candidate at which the GPD fit to the exceedances is not
-        rejected — the EDF statistic (``gof_statistic`` on the PIT) is <= its
+        rejected - the EDF statistic (``gof_statistic`` on the PIT) is <= its
         critical value at ``gof_significance`` (C&S continuous-data asymptotic
         values, interpolated by ξ and clamped to ξ∈[0,0.3]). See ``_select_gof``.
     """
@@ -314,15 +314,15 @@ def select_gpd_threshold_qdo(
             "GPD-location band")
 
     # Band = empirical PERCENTILES of the POT values (data quantiles), not a
-    # fraction of the magnitude range — robust to a single extreme value and
+    # fraction of the magnitude range - robust to a single extreme value and
     # interpretable as "scan μ between the p_lo and p_hi data quantiles". The
     # count floor (min_exceedances) is the principled upper cap; for typical
     # n_pot it binds before band_hi, which acts as a secondary guardrail.
     band_lo = float(np.percentile(values_pot, min_percentile))
     band_hi = float(np.percentile(values_pot, max_percentile))
 
-    # Evaluate across the FULL range — from the data minimum up to the top of
-    # the selection band — so the diagnostics show candidates below the chosen
+    # Evaluate across the FULL range - from the data minimum up to the top of
+    # the selection band - so the diagnostics show candidates below the chosen
     # μ, not only the selected location and above. Selection is still confined
     # to the [min_percentile, max_percentile] band below. No rounding: it would
     # collapse candidates for small-magnitude series (e.g. sub-meter NTR).
@@ -345,7 +345,7 @@ def select_gpd_threshold_qdo(
             continue
         try:
             # Shared fit: location fixed at th, ξ clipped to the ensemble's
-            # admissible band, σ refit when ξ is clipped — the same model the
+            # admissible band, σ refit when ξ is clipped - the same model the
             # hazard ensemble uses (see gpd_fit.fit_gpd_clipped).
             c, _loc, sc = fit_gpd_clipped(pot, th, shape_clip_low, shape_clip_high,
                                           method=fit_method)
@@ -446,10 +446,10 @@ _MAD_TO_STD = 1.4826        # scales MAD to a normal-consistent standard deviati
 def _local_dispersion(series: np.ndarray, window: int) -> np.ndarray:
     """Robust local dispersion per candidate over a ±window slice.
 
-    Uses the scaled median absolute deviation (MAD) of the finite values —
-    ``1.4826 · median(|x − median(x)|)`` — so a single anomalous fit in the
+    Uses the scaled median absolute deviation (MAD) of the finite values -
+    ``1.4826 · median(|x − median(x)|)`` - so a single anomalous fit in the
     window cannot inflate it (unlike the std). Applied to ξ(μ): a flat (stable)
-    region — the GPD threshold-stability signature — has near-zero dispersion.
+    region - the GPD threshold-stability signature - has near-zero dispersion.
     Candidates with fewer than three finite neighbours cannot be assessed
     robustly and are marked ``inf`` (treated as maximally unstable), so the
     selection never lands on an isolated, unreliable fit.
@@ -684,7 +684,7 @@ def _select_mrl(values_pot, candidates, band_lo, band_hi, min_exceedances):
 
 # ── GoF (Choulakian-Stephens failure-to-reject) helpers ─────────────────────
 # Continuous-data asymptotic critical values of the EDF statistics (both GPD
-# parameters ML-estimated), indexed by shape ξ — Langousis et al. (2016) WRR
+# parameters ML-estimated), indexed by shape ξ - Langousis et al. (2016) WRR
 # Tables 1-2 / Choulakian & Stephens (2001). Columns are the (1-α) quantiles.
 _GOF_XI = np.array([0.0, 0.1, 0.2, 0.3])
 _GOF_CRIT = {
@@ -761,5 +761,5 @@ def _select_gof(values_pot, candidates, shape, scale, n_exceed, in_band,
         best_idx = int(finite[np.argmin(stat[finite] - crit[finite])])  # least-rejected
         warning  = ("GoF: the GPD fit is rejected at every in-band threshold "
                     f"(significance {gof_significance:g}); used the least-rejected "
-                    "μ — the tail may not be GP-distributed in the band.")
+                    "μ - the tail may not be GP-distributed in the band.")
     return best_idx, np.asarray(accept, dtype=np.int64), warning, stat, crit

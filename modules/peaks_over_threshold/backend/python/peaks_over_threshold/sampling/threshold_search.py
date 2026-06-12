@@ -1,4 +1,4 @@
-"""threshold_search — iterative percentile-threshold search (C++ or Python).
+"""threshold_search - iterative percentile-threshold search (C++ or Python).
 
 Author / POC : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
 
@@ -130,7 +130,7 @@ class IterativeThresholdSearch:
                        else segment_peak_gap)
 
         # One-sided search: keep the HIGHEST-threshold state whose rate is still
-        # >= target (mirrors the C++ kernel) — the most selective cut that still
+        # >= target (mirrors the C++ kernel) - the most selective cut that still
         # yields the needed count, isolating the genuine extremes; the
         # orchestrator rank-trims the overshoot. We scan the full range and never
         # break early: the rate-vs-threshold curve can hump (dense low-threshold

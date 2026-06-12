@@ -1,4 +1,4 @@
-"""events — hydrograph and peak-gap segmenters (pure Python fallback).
+"""events - hydrograph and peak-gap segmenters (pure Python fallback).
 
 Author / POC : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
 
