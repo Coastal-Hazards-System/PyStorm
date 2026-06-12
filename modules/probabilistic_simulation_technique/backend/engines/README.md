@@ -20,9 +20,9 @@ python build.py clean      # remove _build/ and the installed .pyd / .so
 Requires `pybind11` (`pip install pybind11`) and a C++17 toolchain (MSVC on
 Windows, gcc/clang elsewhere).
 
-## CyHAN v2.0 install destination
+## CyHAN v2.1 install destination
 
-Per CyHAN v2.0 §16.2 / §16.5, the compiled `_pst.cp<py>-<plat>.{pyd,so}`
+Per CyHAN v2.1 §16.2 / §16.5, the compiled `_pst.cp<py>-<plat>.{pyd,so}`
 extension lives inside the expanded orchestration package, so callers write:
 
 ```python

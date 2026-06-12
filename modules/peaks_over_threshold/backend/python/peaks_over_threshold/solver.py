@@ -2,7 +2,7 @@
 
 Author / POC : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
 
-CyHAN v2.0 §4.1 specifies the binding role: a conduit exposing engine
+CyHAN v2.1 §4.1 specifies the binding role: a conduit exposing engine
 capability without leaking engine internals upward and without absorbing
 orchestration responsibility. Higher-level dispatch and fallback live in
 ``sampling/threshold_search.py``.

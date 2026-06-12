@@ -1,11 +1,11 @@
-# CyHAN v2.0 — structured manifest for the POT module.
+# CyHAN v2.1 — structured manifest for the POT module.
 #
 # Author / POC : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
 
 [module]
 name              = "peaks_over_threshold"
 short_tag         = "pot"
-cyhan_version     = "v2.0"
+cyhan_version     = "v2.1"
 launcher          = "run_peaks_over_threshold.py"
 orchestrator      = "backend/python/main_peaks_over_threshold.py"
 python_package    = "peaks_over_threshold"

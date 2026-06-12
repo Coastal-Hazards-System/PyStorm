@@ -28,7 +28,7 @@ pybind11_add_module(_pst pst_bindings.cpp)
 
 target_include_directories(_pst PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 
-# CyHAN v2.0 §16.2 / §16.5: the pybind11 extension installs alongside the
+# CyHAN v2.1 §16.2 / §16.5: the pybind11 extension installs alongside the
 # expanded orchestration package so callers import it as
 # `from probabilistic_simulation_technique import _pst`.
 install(TARGETS _pst

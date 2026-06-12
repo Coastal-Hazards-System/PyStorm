@@ -1,12 +1,12 @@
 # C++/Python Hybrid Architecture Network (CyHAN)
-# Standard v2.0
+# Standard v2.1
 
 ---
 
 ## Document Control
 
-**Title:** C++/Python Hybrid Architecture Network (CyHAN) Standard v2.0
-**Status:** Major Release (Root Integration)
+**Title:** C++/Python Hybrid Architecture Network (CyHAN) Standard v2.1
+**Status:** Minor Release (Compute-conditional engine; orchestrator-side batch marshaling)
 **Scope:** Desktop and Cloud Scientific Computing Platforms
 **Audience:** System architects, HPC developers, scientific software engineers, technical leadership
 
@@ -176,6 +176,12 @@ explicitly deferred root-level integration (v1.1 §16.8), forbidding root-level
 integration is now permitted and specified (§6, §16.9). It additionally fixes the
 per-module entry contract (§5.3) and adopts the explicit RFC 2119 register and
 behavioral-compliance statement of §0.
+
+**Version 2.1** refines v2.0 without architectural change: it makes the C++
+engine conditional on the presence of performance-critical computation (§5.1),
+places dataset/input resolution and batch marshaling in the orchestrator (§5.3),
+and clarifies the layout for engine-less modules and a shared `common/` library
+(§16). See §13.
 
 ---
 
@@ -376,7 +382,9 @@ UIs is specified in §6.
 A **module** is a self-contained vertical that realizes a single, well-defined
 CyHAN capability. A module **SHALL** contain:
 
-- Its C++ engine (mandatory)
+- Its C++ engine (mandatory where the module performs performance-critical
+  computation per §4.1; a module whose workload has no such computation conforms
+  without one)
 - Its orchestration role realization (mandatory; see §5.3)
 - Its launcher (mandatory; see §5.3)
 
@@ -425,6 +433,11 @@ The launcher **SHALL NOT**:
 
 - Contain orchestration logic (validation, engine-call composition, post-processing)
 - Implement numerical computation
+- Resolve datasets or inputs from registries, or iterate batches/ensembles over
+  them: dataset/input resolution and batch marshaling are orchestration
+  responsibilities and **SHALL** reside in the orchestrator, not the launcher.
+  The launcher **MAY** hold the operator's declarative registries (the editable
+  option data) but **SHALL NOT** perform the resolution over them.
 - Be the place where the orchestration role is realized
 
 The launcher is, in effect, a readable substitute for a long command-line
@@ -442,6 +455,9 @@ The orchestrator **SHALL**:
 - Reside under the module backend: `modules/<name>/backend/python/main_<name>.py`
 - Be importable and expose the entry point the launcher calls
 - Fulfill the orchestration responsibilities and prohibitions of §4.2
+- Own dataset/input resolution and any batch or ensemble iteration over inputs,
+  exposing a single entry point that the launcher calls with the operator's
+  declarative option block
 - Begin as a single file and expand into a `backend/python/<name>/` package as
   complexity warrants, preserving its import entry point
 
@@ -637,7 +653,7 @@ The following practices violate this standard:
 
 ## 11. Conformance Criteria
 
-A system **SHALL** be considered CyHAN v2.0 compliant if:
+A system **SHALL** be considered CyHAN v2.1 compliant if:
 
 - Heavy numerical computation resides in C++
 - The orchestration role is realized in Python, in a non-user-facing
@@ -686,6 +702,16 @@ the v1.1 §16.8 prohibition on root-level `backend/` and `frontend/` directories
 an architectural change, and additionally fixes the launcher/orchestrator
 entry contract and adopts the explicit RFC 2119 register and
 behavioral-compliance statement.
+
+Version 2.1 is a **MINOR** increment. It reconciles §5.1 with the
+behavioral-compliance doctrine (the C++ engine is mandatory only where the module
+performs performance-critical computation; a module with no such computation
+conforms without one), tightens §5.3 to place dataset/input resolution and batch
+marshaling in the orchestrator rather than the launcher, and notes in §16 that
+`backend/engines/cpp/` is omitted for pure-Python and optional-accelerator
+modules and that a shared `common/` library (§5.2) MAY hold cross-module
+presentation helpers. It is backward compatible: every v2.0-conformant module
+remains conformant under v2.1.
 
 ---
 
@@ -773,8 +799,8 @@ deployment environments, compute nodes, and modules.
 
 ## 16. Recommended Folder Structure
 
-CyHAN v2.0 prescribes a **module-first** layout with a defined root-level
-integration tier. This structure is recommended for all v2.0-compliant
+CyHAN v2.1 prescribes a **module-first** layout with a defined root-level
+integration tier. This structure is recommended for all v2.1-compliant
 implementations; conformance remains behavioral per §0.3.
 
 ### 16.1 Canonical Layout
@@ -813,10 +839,14 @@ project-root/
 │   └── web/                                ← shared web frontend (§6.2, optional)
 │
 ├── docs/
-│   └── CyHAN-Standard-v2.0.md
+│   └── CyHAN-Standard-v2.1.md
 │
 └── tests/                                  (optional, cross-module)
 ```
+
+> **Note (v2.1).** `backend/engines/cpp/` is present only for modules with
+> performance-critical computation (§5.1); pure-Python and optional-accelerator
+> modules omit it and still conform.
 
 ### 16.2 Layer Mapping
 
@@ -931,6 +961,7 @@ module to build or run (§6.3).
 Implementations MAY include additional directories such as:
 
 ```
+├── common/                                ← shared library for cross-module helpers (§5.2)
 ├── scripts/
 ├── infrastructure/
 ├── docker/
@@ -940,6 +971,14 @@ Implementations MAY include additional directories such as:
 
 Such additions **SHALL NOT** violate the canonical execution hierarchy or the
 module self-containment requirements of §5.2.
+
+A shared `common/` library (CyHAN §5.2) MAY hold cross-module **presentation and
+pure-utility** helpers (e.g. a plotting palette, a shared figure-style or
+figure-save helper). It **SHALL NOT** hold module domain logic, numerical
+kernels, or orchestration. A module that depends on `common/` remains
+independently runnable through its launcher (§6.3); `common/` is an
+integration-tier dependency, not a sibling-module source dependency, so it does
+not breach the §5.2 prohibition on reaching into a sibling module's tree.
 
 ---
 

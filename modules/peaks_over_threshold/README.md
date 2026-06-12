@@ -135,7 +135,7 @@ peaks_over_threshold/
 └── data/                                   inputs/{raw,processed}/ & outputs/ (gitignored)
 ```
 
-Per CyHAN v2.0, the launcher (`run_peaks_over_threshold.py`) holds user options
+Per CyHAN v2.1, the launcher (`run_peaks_over_threshold.py`) holds user options
 only and calls the orchestrator (`backend/python/main_peaks_over_threshold.py`),
 which dispatches the stages. The module is self-contained.
 

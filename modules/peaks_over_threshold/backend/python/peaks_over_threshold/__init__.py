@@ -1,4 +1,4 @@
-"""peaks_over_threshold — POT orchestration package (CyHAN v2.0 §5.3 expanded form).
+"""peaks_over_threshold — POT orchestration package (CyHAN v2.1 §5.3 expanded form).
 
 Author / POC : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
 
@@ -8,7 +8,7 @@ package is its expanded, multi-file realization. Submodules:
 
   config        pydantic POTConfig + PreprocessConfig
   orchestrator  POTOrchestrator workflow runner
-  solver        thin _pot binding wrapper (CyHAN v2.0 §4.1 binding role)
+  solver        thin _pot binding wrapper (CyHAN v2.1 §4.1 binding role)
   sampling      iterative threshold search (C++ kernel + Python fallback)
   segmentation  hydrograph / peak-gap event segmenters (pure-Python fallback)
   preprocessing NOAA download, detrending, NTR estimation (upstream chain)

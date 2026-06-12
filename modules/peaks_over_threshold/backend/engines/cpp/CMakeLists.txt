@@ -28,7 +28,7 @@ pybind11_add_module(_pot pot_bindings.cpp)
 
 target_include_directories(_pot PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 
-# CyHAN v2.0 §16.2 / §16.5: install into the expanded orchestration package
+# CyHAN v2.1 §16.2 / §16.5: install into the expanded orchestration package
 # so callers write `from peaks_over_threshold import _pot`.
 install(TARGETS _pot
         LIBRARY DESTINATION

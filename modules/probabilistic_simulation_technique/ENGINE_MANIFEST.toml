@@ -1,11 +1,11 @@
-# CyHAN v2.0 — optional structured manifest for the PST module.
+# CyHAN v2.1 — optional structured manifest for the PST module.
 #
 # Author / POC : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
 
 [module]
 name              = "probabilistic_simulation_technique"
 short_tag         = "pst"
-cyhan_version     = "v2.0"
+cyhan_version     = "v2.1"
 launcher          = "run_probabilistic_simulation_technique.py"
 orchestrator      = "backend/python/main_probabilistic_simulation_technique.py"
 python_package    = "probabilistic_simulation_technique"

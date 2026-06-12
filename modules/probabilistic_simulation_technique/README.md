@@ -203,7 +203,7 @@ probabilistic_simulation_technique/
 └── data/                                       inputs/{raw,processed}/ & outputs/ (gitignored)
 ```
 
-Per CyHAN v2.0, the launcher holds user options only and calls the orchestrator
+Per CyHAN v2.1, the launcher holds user options only and calls the orchestrator
 (`backend/python/main_probabilistic_simulation_technique.py`), which resolves the
 inputs and runs PST on each. The module is self-contained.
 
