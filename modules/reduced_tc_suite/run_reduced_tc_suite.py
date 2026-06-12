@@ -1,4 +1,4 @@
-"""run_reduced_tc_suite — RTCS launcher (CyHAN v2.0 §5.3).
+"""run_reduced_tc_suite — RTCS launcher (CyHAN v2.1 §5.3).
 
 Author / POC : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
 
@@ -7,12 +7,12 @@ User-facing entry point for the Reduced TC Suite (formerly
 below and runs the script. This file holds ONLY declarative options — every
 code element (path wiring, store bootstrap, bbox assembly, CLI parsing,
 dispatch) lives in ``main_reduced_tc_suite``; the launcher simply calls
-``main_reduced_tc_suite.launch`` with the option block per §5.3.
+``main_reduced_tc_suite.launch_batch`` with the option block per §5.3.
 
 ================================================================================
-WHAT RSS PRODUCES
+WHAT RTCS PRODUCES
 ================================================================================
-RSS selects a small, REPRESENTATIVE subset of synthetic tropical-cyclone storms
+RTCS selects a small, REPRESENTATIVE subset of synthetic tropical-cyclone storms
 (a Reduced Tropical-Cyclone Suite, RTCS) from a large JPM storm set, so the
 subset reproduces the full suite's coastal hazard with far fewer ADCIRC runs.
 It reads the storms' TC parameters (X) and ADCIRC peak-surge fields (Y), builds
@@ -55,7 +55,7 @@ Bootstrapping
 -------------
 If the processed ``tc_data.h5`` store is missing for the active DATASET,
 the launcher invokes the in-process Preprocessor automatically, using
-RAW_FILES to locate the raw source `.mat` files and PREPROCESS_METADATA
+RAW_FILES_BY_DATASET to locate the raw source `.mat` files and PREPROCESS_METADATA
 to decode them.
 
 Y-array cleanup
@@ -72,7 +72,7 @@ Headless by design — figures (SPLOM, PCA y-space, HC, QBM) are written to disk
 
   1. Install dependencies once:
          pip install -r requirements.txt
-  2. Edit the USER OPTIONS block below (DATASET, RAW_FILES, CONFIG, …).
+  2. Edit the USER OPTIONS block below (DATASET, RAW_FILES_BY_DATASET, CONFIG, …).
   3. Run from the module directory (uses the DATASET / MODE / SCOPE constants):
          python run_reduced_tc_suite.py
      ...override mode/scope on the command line for ad-hoc runs:
@@ -85,10 +85,10 @@ Headless by design — figures (SPLOM, PCA y-space, HC, QBM) are written to disk
          python modules/reduced_tc_suite/run_reduced_tc_suite.py
 
 Unlike the POT/PST launchers (which take input-file PATHS), this one batches by
-DATASET KEY — each key must exist in RAW_FILES_BY_DATASET below, because RSS
+DATASET KEY — each key must exist in RAW_FILES_BY_DATASET below, because RTCS
 needs the dataset's raw filenames + metadata + units, not a single file. If the
-processed tc_data.h5 store is missing it is built automatically from RAW_FILES
-(see Bootstrapping above). ``--help`` lists all options.
+processed tc_data.h5 store is missing it is built automatically from
+RAW_FILES_BY_DATASET (see Bootstrapping above). ``--help`` lists all options.
 
 Inputs
 ------
@@ -110,35 +110,37 @@ from pathlib import Path
 os.environ.setdefault("MPLBACKEND", "Agg")
 
 
-# ── Module-root path anchoring (CyHAN v2.0 §A.5) ──────────────────────────
+# ── Module-root path anchoring (CyHAN v2.1 §A.5) ──────────────────────────
 # All paths below are constructed relative to ROOT so the launcher can be
 # invoked from any working directory (e.g. an IDE run-config, a Jenkins job,
 # or a parent directory `python modules/.../run_*.py`).
 ROOT = Path(__file__).resolve().parent       # run_<name>.py lives at module root
 _BACKEND_PY = ROOT / "backend" / "python"
-if str(_BACKEND_PY) not in sys.path:
-    sys.path.insert(0, str(_BACKEND_PY))
+_COMMON_PY  = ROOT.parents[1] / "common" / "python"   # shared CyHAN common library (§5.2)
+for _p in (_BACKEND_PY, _COMMON_PY):
+    if _p.is_dir() and str(_p) not in sys.path:
+        sys.path.insert(0, str(_p))
 
 
 def _ensure_cpp_extension() -> None:
-    """Build the _rss C++ kernel once if it isn't already compiled.
+    """Build the _rtcs C++ kernel once if it isn't already compiled.
 
-    Must run before the package is imported (kmedoids probes for _rss at import
+    Must run before the package is imported (kmedoids probes for _rtcs at import
     time). A failed build is non-fatal — the pure-Python fallback runs.
     """
     pkg = _BACKEND_PY / "reduced_tc_suite"
-    if any(p.suffix in (".pyd", ".so", ".dylib") for p in pkg.glob("_rss*")):
+    if any(p.suffix in (".pyd", ".so", ".dylib") for p in pkg.glob("_rtcs*")):
         return
     build = ROOT / "backend" / "engines" / "cpp" / "build.py"
     if not build.is_file():
         return
-    print("[run] C++ kernel _rss not built — compiling once "
+    print("[run] C++ kernel _rtcs not built — compiling once "
           "(falls back to pure Python if this fails) ...")
     import subprocess
     try:
         subprocess.run([sys.executable, str(build)], check=True)
     except Exception as exc:                                   # noqa: BLE001
-        print(f"[run] _rss build failed: {exc}. Using pure-Python fallback.")
+        print(f"[run] _rtcs build failed: {exc}. Using pure-Python fallback.")
 
 
 # ===========================================================================
@@ -212,14 +214,6 @@ RAW_FILES_BY_DATASET = {
     },
 }
 
-# Select the active dataset's filenames — clear error if DATASET is unknown.
-try:
-    RAW_FILES = RAW_FILES_BY_DATASET[DATASET]
-except KeyError:
-    raise SystemExit(
-        f"DATASET={DATASET!r} has no entry in RAW_FILES_BY_DATASET; "
-        f"available datasets: {sorted(RAW_FILES_BY_DATASET)}")
-
 # ── Vertical datum / units, keyed by DATASET ─────────────────────────────
 # Unit string written to the /Y and /HC attributes of tc_data.h5 (one value
 # per dataset — surge and HC share the same datum). CHS-NA is referenced to
@@ -229,12 +223,6 @@ UNITS_BY_DATASET = {
     "chs-na": "m MSL",
     "chs-la": "m NAVD88",
 }
-try:
-    DATA_UNITS = UNITS_BY_DATASET[DATASET]
-except KeyError:
-    raise SystemExit(
-        f"DATASET={DATASET!r} has no entry in UNITS_BY_DATASET; "
-        f"available datasets: {sorted(UNITS_BY_DATASET)}")
 
 
 # ── Preprocess metadata ─────────────────────────────────────────────────
@@ -254,7 +242,7 @@ PREPROCESS_METADATA = {
     # Y — ADCIRC peak surge fields (storms × nodes, stored as float32)
     "Y_variable":             "Resp",       # MATLAB variable name
     "Y_node_ids":             None,         # explicit node-ID list, or None → use node filter
-    "Y_units":                DATA_UNITS,   # from UNITS_BY_DATASET (tracks DATASET)
+    "Y_units":                None,         # injected per-dataset by the orchestrator from UNITS_BY_DATASET
     "Y_transpose":            True,         # CHS-* .mats ship Y as (nodes × storms) → transpose
 
     # Node filter — subsets Y columns to the kept ADCIRC mesh nodes
@@ -264,7 +252,7 @@ PREPROCESS_METADATA = {
 
     # HC — benchmark hazard curves (nodes × AER levels, float64)
     "HC_variable":            "BE_22",      # MATLAB variable name
-    "HC_units":               DATA_UNITS,   # from UNITS_BY_DATASET (tracks DATASET)
+    "HC_units":               None,         # injected per-dataset by the orchestrator from UNITS_BY_DATASET
     "HC_transpose":           False,        # set True if .mat ships HC as (AER × nodes)
     "HC_aer_levels":          None,         # explicit AER vector override, or None → defaults
 
@@ -514,78 +502,29 @@ CONFIG["alpha_beta_grid"] = AB_GRID if AB_SWEEP else None
 # END USER OPTIONS  — nothing below should need editing for routine use
 # ===========================================================================
 #
-# All launcher logic (path wiring, store bootstrap, bbox assembly, CLI
-# parsing, dispatch) lives in main_reduced_tc_suite.launch. This file
-# only hands it the operator option block above.
-
-def _resolve_dataset(ds: str):
-    """Per-dataset (raw_files, preprocess_metadata) from the registries.
-
-    The CLI batches by dataset KEY (not file path) because RSS needs the
-    dataset's raw filenames + vertical datum, which live in the registries.
-    """
-    try:
-        raw = RAW_FILES_BY_DATASET[ds]
-    except KeyError:
-        raise SystemExit(
-            f"--dataset {ds!r} has no entry in RAW_FILES_BY_DATASET; "
-            f"available: {sorted(RAW_FILES_BY_DATASET)}")
-    try:
-        units = UNITS_BY_DATASET[ds]
-    except KeyError:
-        raise SystemExit(
-            f"--dataset {ds!r} has no entry in UNITS_BY_DATASET; "
-            f"available: {sorted(UNITS_BY_DATASET)}")
-    meta = dict(PREPROCESS_METADATA)
-    meta["Y_units"]  = units      # datum tracks the dataset
-    meta["HC_units"] = units
-    return raw, meta
-
+# All procedural logic (CLI parsing, dataset resolution, batch iteration, path
+# wiring, store bootstrap, bbox assembly, dispatch) lives in
+# main_reduced_tc_suite.launch_batch. This file only hands it the operator
+# option block above.
 
 if __name__ == "__main__":
-    import argparse
-
-    _cli = argparse.ArgumentParser(
-        prog="run_reduced_tc_suite.py",
-        description="Run the Reduced TC Suite headless. With no --dataset it "
-                    "uses the DATASET option above; pass one or more registered "
-                    "dataset keys to batch over study areas.")
-    _cli.add_argument("--dataset", nargs="+", metavar="KEY", default=None,
-                      help=f"Registered dataset key(s) to run (batch). Available: "
-                           f"{sorted(RAW_FILES_BY_DATASET)}. Default: {DATASET!r}.")
-    _cli.add_argument("--mode", choices=["fixed", "optimal"], default=MODE,
-                      help=f"Selection mode (default: {MODE}).")
-    _cli.add_argument("--scope", choices=["local", "regional"], default=SCOPE,
-                      help=f"Geographic scope (default: {SCOPE}).")
-    _args = _cli.parse_args()
-    # This launcher owns CLI parsing; blank argv so launch()'s internal parser
-    # falls back to the mode/scope we pass as defaults below.
-    sys.argv = [sys.argv[0]]
-
-    _datasets = _args.dataset or [DATASET]
-
-    _ensure_cpp_extension()   # build _rss on first run if needed
+    _ensure_cpp_extension()   # build _rtcs on first run if needed
 
     # The orchestrator entry (main_reduced_tc_suite) lives in backend/python,
     # added to sys.path above at runtime. Resolve it dynamically so there is no
     # static import for the IDE to flag as unresolved.
     from importlib import import_module
-    launch = import_module("main_reduced_tc_suite").launch
+    launch_batch = import_module("main_reduced_tc_suite").launch_batch
 
-    _rc = 0
-    for _ds in _datasets:
-        _raw_files, _preprocess_metadata = _resolve_dataset(_ds)
-        if len(_datasets) > 1:
-            print(f"\n{'#' * 64}\n#  dataset: {_ds}\n{'#' * 64}")
-        _rc = launch(
-            root                = ROOT,
-            dataset             = _ds,
-            default_mode        = _args.mode,
-            default_scope       = _args.scope,
-            raw_files           = _raw_files,
-            preprocess_metadata = _preprocess_metadata,
-            track_file_patterns = TRACK_FILE_PATTERNS,
-            bbox                = BBOX,
-            config              = dict(CONFIG),
-        ) or _rc
-    raise SystemExit(_rc)
+    raise SystemExit(launch_batch(
+        root                 = ROOT,
+        default_dataset      = DATASET,
+        default_mode         = MODE,
+        default_scope        = SCOPE,
+        raw_files_by_dataset = RAW_FILES_BY_DATASET,
+        units_by_dataset     = UNITS_BY_DATASET,
+        preprocess_metadata  = PREPROCESS_METADATA,
+        track_file_patterns  = TRACK_FILE_PATTERNS,
+        bbox                 = BBOX,
+        config               = dict(CONFIG),
+    ))

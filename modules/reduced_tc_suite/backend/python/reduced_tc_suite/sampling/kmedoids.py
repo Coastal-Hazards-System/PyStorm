@@ -5,9 +5,9 @@ Author / POC : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usa
 Engine contract: arrays in, index array out.  No config, no I/O.
 
 Dispatch order:
-  1. C++ binding ``reduced_tc_suite._rss`` — preferred. Supports forced medoids.
+  1. C++ binding ``reduced_tc_suite._rtcs`` — preferred. Supports forced medoids.
      Installed into this package by ``backend/engines/cpp/build.py`` per
-     CyHAN v2.0 §16.2 / §16.5.
+     CyHAN v2.1 §16.2 / §16.5.
   2. sklearn_extra.cluster.KMedoids — when no forced medoids requested.
   3. _greedy_kmedoids (built-in fallback — BUILD + SWAP).
 """
@@ -20,7 +20,7 @@ import numpy as np
 from scipy.spatial.distance import cdist
 
 try:
-    from .._rss import kmedoids_pam as _cpp_pam   # type: ignore[attr-defined]
+    from .._rtcs import kmedoids_pam as _cpp_pam   # type: ignore[attr-defined]
     _HAS_CPP = True
 except ImportError:
     _HAS_CPP = False

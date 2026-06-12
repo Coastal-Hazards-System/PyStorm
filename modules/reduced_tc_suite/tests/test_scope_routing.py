@@ -13,22 +13,22 @@ if str(_PKG_PATH) not in sys.path:
 
 # Orchestrator entry lives in backend/python (added to sys.path above); resolve
 # it dynamically so there is no static import for the IDE to flag as unresolved.
-rss_main = import_module("main_reduced_tc_suite")
+rtcs_main = import_module("main_reduced_tc_suite")
 
 
 def test_run_rejects_bad_scope():
     with pytest.raises(ValueError, match="scope"):
-        rss_main.run(config={"output_dir": "x"}, mode="fixed", scope="nope")
+        rtcs_main.run(config={"output_dir": "x"}, mode="fixed", scope="nope")
 
 
 def test_run_rejects_bad_mode():
     with pytest.raises(ValueError, match="mode"):
-        rss_main.run(config={"output_dir": "x"}, mode="nope", scope="local")
+        rtcs_main.run(config={"output_dir": "x"}, mode="nope", scope="local")
 
 
 def test_regional_scope_forces_bbox_to_none(monkeypatch, tmp_path):
     """When scope=regional, bbox_config is ignored even if provided."""
-    mod = rss_main
+    mod = rtcs_main
 
     seen = {"bbox_called": False, "workflow_called_with_cfg": None}
 
@@ -55,7 +55,7 @@ def test_regional_scope_forces_bbox_to_none(monkeypatch, tmp_path):
 
 
 def test_local_scope_invokes_bbox_when_given(monkeypatch, tmp_path):
-    mod = rss_main
+    mod = rtcs_main
 
     seen = {"bbox_called": False}
 
@@ -78,7 +78,7 @@ def test_local_scope_invokes_bbox_when_given(monkeypatch, tmp_path):
 
 def test_local_scope_without_bbox_skips_filter(monkeypatch, tmp_path):
     """Backwards-compat: scope='local' with no bbox_config still works."""
-    mod = rss_main
+    mod = rtcs_main
 
     seen = {"bbox_called": False}
 

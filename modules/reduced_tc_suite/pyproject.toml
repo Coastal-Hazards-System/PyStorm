@@ -30,7 +30,7 @@ dev = [
 ]
 
 [tool.setuptools]
-# CyHAN v2.0 §5.3 / §16.2 orchestrator entry, sibling of the expanded package.
+# CyHAN v2.1 §5.3 / §16.2 orchestrator entry, sibling of the expanded package.
 py-modules = ["main_reduced_tc_suite"]
 
 [tool.setuptools.packages.find]

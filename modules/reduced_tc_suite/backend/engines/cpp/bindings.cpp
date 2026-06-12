@@ -5,8 +5,8 @@
  * @author      Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
  *
  * Wraps kmedoids::pam() with numpy ↔ C++ buffer conversions and publishes it
- * as the `_rss` extension module installed into the `reduced_tc_suite`
- * Python package (CyHAN v2.0 §16.2 / §16.5).
+ * as the `_rtcs` extension module installed into the `reduced_tc_suite`
+ * Python package (CyHAN v2.1 §16.2 / §16.5).
  */
 
 #include <pybind11/pybind11.h>
@@ -64,7 +64,7 @@ py::array_t<int32_t> kmedoids_pam(
     return out;
 }
 
-PYBIND11_MODULE(_rss, m) {
+PYBIND11_MODULE(_rtcs, m) {
     m.doc() = "C++ accelerated k-medoids PAM with FastPAM1 optimization";
     m.def("kmedoids_pam", &kmedoids_pam,
           py::arg("D"), py::arg("k"), py::arg("seed"), py::arg("forced"),

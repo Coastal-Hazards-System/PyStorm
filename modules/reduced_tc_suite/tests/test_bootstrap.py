@@ -20,7 +20,7 @@ if str(_PKG_PATH) not in sys.path:
 
 # Orchestrator entry lives in backend/python (added to sys.path above); resolve
 # it dynamically so there is no static import for the IDE to flag as unresolved.
-rss_main = import_module("main_reduced_tc_suite")
+rtcs_main = import_module("main_reduced_tc_suite")
 
 
 class _FakePreprocessor:
@@ -70,7 +70,7 @@ def _stage_raw(root: Path):
 
 
 def _ensure(root, h5):
-    rss_main._ensure_h5_exists(
+    rtcs_main._ensure_h5_exists(
         root=root, dataset=_DATASET, raw_files=_RAW_FILES,
         preprocess_metadata={}, track_file_patterns={}, h5_path=str(h5))
 

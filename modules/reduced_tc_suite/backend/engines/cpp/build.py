@@ -1,11 +1,11 @@
 #!/usr/bin/env python
-"""build.py — standalone build helper for the _rss pybind11 extension.
+"""build.py — standalone build helper for the _rtcs pybind11 extension.
 
 Author / POC : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
 
 Builds the C++ k-medoids kernel (``kmedoids_core.hpp`` + ``bindings.cpp``) and
 installs the resulting extension into the expanded orchestration package
-(``backend/python/reduced_tc_suite/``) per CyHAN v2.0 §16.2 / §16.5.
+(``backend/python/reduced_tc_suite/``) per CyHAN v2.1 §16.2 / §16.5.
 
 Usage
 -----
@@ -30,7 +30,7 @@ HERE      = Path(__file__).resolve().parent
 BUILD_DIR = HERE / "_build"
 PYTHON_PKG_DIR = (HERE / ".." / ".." / "python" / "reduced_tc_suite").resolve()
 
-MODULE_NAME = "_rss"
+MODULE_NAME = "_rtcs"
 SOURCE_FILE = HERE / "bindings.cpp"
 
 

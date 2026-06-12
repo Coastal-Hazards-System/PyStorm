@@ -105,7 +105,7 @@ Medoids (PAM) with maximin **BUILD** (initialization) and an exhaustive
 **SWAP** (refinement) phase. Three back-ends dispatch in order:
 
 1. A C++ kernel (`backend/engines/cpp/`, binding installed as
-   `reduced_tc_suite._rss`) exposed through pybind11. Honours arbitrary
+   `reduced_tc_suite._rtcs`) exposed through pybind11. Honours arbitrary
    forced medoids.
 2. `sklearn-extra` `KMedoids(method="pam")` when no forced medoids are
    requested.
@@ -542,7 +542,7 @@ Outputs land under `data/outputs/<dataset>/<scope>/<mode>/`.
 
 ---
 
-## 8. Module Layout (CyHAN v2.0 §16.1)
+## 8. Module Layout (CyHAN v2.1 §16.1)
 
 ```
 reduced_tc_suite/
@@ -550,9 +550,9 @@ reduced_tc_suite/
 ├── pyproject.toml                        Installable orchestrator package
 ├── ENGINE_MANIFEST.toml                  Structured module manifest
 ├── backend/
-│   ├── engines/cpp/                      C++ k-medoids kernel (_rss)
+│   ├── engines/cpp/                      C++ k-medoids kernel (_rtcs)
 │   │   ├── kmedoids_core.hpp             Header-only PAM with FastPAM1 refinement
-│   │   ├── bindings.cpp                  pybind11 → _rss
+│   │   ├── bindings.cpp                  pybind11 → _rtcs
 │   │   ├── CMakeLists.txt
 │   │   └── build.py
 │   └── python/
@@ -572,7 +572,7 @@ reduced_tc_suite/
 └── data/                                inputs/{raw,processed}/ & outputs/<dataset>/<scope>/<mode>/ (gitignored)
 ```
 
-The two mandatory entry artifacts per CyHAN v2.0 §5.3:
+The two mandatory entry artifacts per CyHAN v2.1 §5.3:
 
 | Artifact     | Location                                       | Role               |
 |--------------|------------------------------------------------|--------------------|

@@ -1,27 +1,33 @@
-"""main_reduced_tc_suite — orchestrator entry (CyHAN v2.0 §5.3).
+"""main_reduced_tc_suite — orchestrator entry (CyHAN v2.1 §5.3).
 
 Author / POC : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
 
 Non-user-facing realization of the Python Orchestration role (§4.2).
-``run_reduced_tc_suite.py`` at the module root imports ``run`` from this
-file with the operator-edited configuration, the optional bounding-box
-configuration, and the selected mode (``"fixed"`` or ``"optimal"``).
+``run_reduced_tc_suite.py`` at the module root holds only the operator-edited
+option block (the per-dataset registries, the bbox window, and the tuning
+config) and hands it to ``launch_batch`` here.
 
-The substantive workflow is already expanded into the
-``reduced_tc_suite`` package — this entry composes (a) CLI / option
-resolution and path wiring, (b) the auto-bootstrap of ``tc_data.h5``,
-(c) the optional bbox filter, (d) the per-mode output sub-directory
-routing, and (e) the mode dispatch into ``workflows.rtcs_selection`` or
-``workflows.growth_evaluation``. None of that logic lives in the launcher;
-``run_reduced_tc_suite.py`` holds only the operator-edited options and a
-single call to ``launch``.
+This entry owns everything procedural: (a) CLI / option resolution, (b) dataset
+resolution and batch iteration over study areas (per CyHAN §5.3, dataset
+resolution and batch marshaling are orchestration responsibilities, not the
+launcher's), (c) path wiring and the auto-bootstrap of ``tc_data.h5``, (d) the
+optional bbox filter, (e) per-mode output sub-directory routing, and (f) the
+mode dispatch into ``workflows.rtcs_selection`` or
+``workflows.growth_evaluation``. The substantive workflow itself is expanded
+into the ``reduced_tc_suite`` package.
 
 Public API
 ----------
-  launch(root, dataset, default_mode, default_scope, raw_files,
-         preprocess_metadata, track_file_patterns, bbox, config)  -> int
-      Full entry point the launcher calls: resolves CLI args + paths,
-      bootstraps the store, builds the bbox config, and dispatches to run().
+  launch_batch(root, default_dataset, default_mode, default_scope,
+               raw_files_by_dataset, units_by_dataset, preprocess_metadata,
+               track_file_patterns, bbox, config)  -> int
+      Batch entry the launcher calls. Parses the CLI (--dataset/--mode/--scope),
+      resolves each dataset's raw files + vertical datum from the registries,
+      and runs ``launch`` once per dataset. Returns an aggregate exit code.
+  launch(root, dataset, mode, scope, raw_files, preprocess_metadata,
+         track_file_patterns, bbox, config)  -> int
+      Per-dataset entry: resolves paths, bootstraps the store, builds the bbox
+      config, and dispatches to ``run``.
   run(config, bbox_config, mode, scope)  ->  workflow result
       Lower-level orchestration step (assumes config is already wired).
 """
@@ -214,8 +220,19 @@ def _build_bbox_config(
     return full
 
 
-def _parse_args(default_mode: str, default_scope: str) -> argparse.Namespace:
-    p = argparse.ArgumentParser(prog="run_reduced_tc_suite.py")
+def _parse_args(
+    default_dataset: str, default_mode: str, default_scope: str,
+    available_datasets: Mapping[str, Any],
+) -> argparse.Namespace:
+    p = argparse.ArgumentParser(
+        prog="run_reduced_tc_suite.py",
+        description="Run the Reduced TC Suite headless. With no --dataset it "
+                    "uses the DATASET option in the launcher; pass one or more "
+                    "registered dataset keys to batch over study areas.")
+    p.add_argument(
+        "--dataset", nargs="+", metavar="KEY", default=None,
+        help=f"Registered dataset key(s) to run (batch). Available: "
+             f"{sorted(available_datasets)}. Default: {default_dataset!r}.")
     p.add_argument(
         "--mode", choices=["fixed", "optimal"], default=default_mode,
         help=f"Selection mode (default: {default_mode}, set by MODE constant).")
@@ -226,23 +243,97 @@ def _parse_args(default_mode: str, default_scope: str) -> argparse.Namespace:
     return p.parse_args()
 
 
+def _resolve_dataset(
+    ds:                   str,
+    raw_files_by_dataset: Mapping[str, Any],
+    units_by_dataset:     Mapping[str, str],
+    preprocess_metadata:  Mapping[str, Any],
+) -> tuple:
+    """Per-dataset (raw_files, preprocess_metadata) from the launcher registries.
+
+    The CLI batches by dataset KEY (not file path) because RTCS needs the
+    dataset's raw filenames and vertical datum, which live in the launcher's
+    registries. The datum is injected into a copy of the metadata template so it
+    tracks the dataset.
+    """
+    try:
+        raw = raw_files_by_dataset[ds]
+    except KeyError:
+        raise SystemExit(
+            f"--dataset {ds!r} has no entry in RAW_FILES_BY_DATASET; "
+            f"available: {sorted(raw_files_by_dataset)}")
+    try:
+        units = units_by_dataset[ds]
+    except KeyError:
+        raise SystemExit(
+            f"--dataset {ds!r} has no entry in UNITS_BY_DATASET; "
+            f"available: {sorted(units_by_dataset)}")
+    meta = dict(preprocess_metadata)
+    meta["Y_units"]  = units      # datum tracks the dataset
+    meta["HC_units"] = units
+    return raw, meta
+
+
+def launch_batch(
+    root:                 Path,
+    default_dataset:      str,
+    default_mode:         str,
+    default_scope:        str,
+    raw_files_by_dataset: Mapping[str, Any],
+    units_by_dataset:     Mapping[str, str],
+    preprocess_metadata:  Mapping[str, Any],
+    track_file_patterns:  Mapping[str, str],
+    bbox:                 Mapping[str, Any],
+    config:               Dict[str, Any],
+) -> int:
+    """Operator entry point. Parses the CLI, resolves the dataset(s) to run from
+    the launcher registries, and dispatches ``launch`` once per dataset.
+
+    With no --dataset the single ``default_dataset`` runs; one or more --dataset
+    keys batch over study areas. Per CyHAN §5.3 the dataset resolution and the
+    batch loop are orchestration responsibilities and live here, not in the
+    launcher. Returns the last non-zero per-dataset exit code (0 if all ran).
+    """
+    args = _parse_args(default_dataset, default_mode, default_scope,
+                       raw_files_by_dataset)
+    datasets = args.dataset or [default_dataset]
+
+    rc = 0
+    for ds in datasets:
+        raw_files, preprocess_meta = _resolve_dataset(
+            ds, raw_files_by_dataset, units_by_dataset, preprocess_metadata)
+        if len(datasets) > 1:
+            print(f"\n{'#' * 64}\n#  dataset: {ds}\n{'#' * 64}")
+        rc = launch(
+            root                = root,
+            dataset             = ds,
+            mode                = args.mode,
+            scope               = args.scope,
+            raw_files           = raw_files,
+            preprocess_metadata = preprocess_meta,
+            track_file_patterns = track_file_patterns,
+            bbox                = bbox,
+            config              = config,
+        ) or rc
+    return rc
+
+
 def launch(
     root:                Path,
     dataset:             str,
-    default_mode:        str,
-    default_scope:       str,
+    mode:                str,
+    scope:               str,
     raw_files:           Mapping[str, Any],
     preprocess_metadata: Mapping[str, Any],
     track_file_patterns: Mapping[str, str],
     bbox:                Mapping[str, Any],
     config:              Dict[str, Any],
 ) -> int:
-    """Operator entry point. Resolves CLI overrides and per-dataset paths,
-    auto-bootstraps the store, builds the bbox config for local scope, then
-    dispatches to ``run``. All inputs are the launcher's declarative options.
+    """Run one RTCS selection for a single resolved dataset with already-resolved
+    ``mode`` and ``scope``. Resolves per-dataset paths, auto-bootstraps the
+    store, builds the bbox config for local scope, then dispatches to ``run``.
+    Called once per dataset by ``launch_batch``.
     """
-    args = _parse_args(default_mode, default_scope)
-
     cfg = dict(config)
     # Per-dataset paths live here (derived from the standard layout), not in
     # the operator's options block.
@@ -262,7 +353,7 @@ def launch(
     # dataset with no bbox / track files can still complete a regional run.
     bbox_config = (_build_bbox_config(root, dataset, raw_files,
                                       track_file_patterns, bbox)
-                   if args.scope == "local" else None)
+                   if scope == "local" else None)
 
-    run(config=cfg, bbox_config=bbox_config, mode=args.mode, scope=args.scope)
+    run(config=cfg, bbox_config=bbox_config, mode=mode, scope=scope)
     return 0
