@@ -163,7 +163,7 @@ def read_store(path: Path) -> StoreData:
         if n_sentinel:
             Y[sentinel_mask] = np.nan
             pct = 100.0 * n_sentinel / Y.size
-            print(f"    Y: cleaned {n_sentinel:,} -99999 sentinels → NaN  ({pct:.2f}%)")
+            print(f"    Y: cleaned {n_sentinel:,} -99999 sentinels -> NaN  ({pct:.2f}%)")
 
         try:
             raw = fh["X"].attrs["param_names"]
