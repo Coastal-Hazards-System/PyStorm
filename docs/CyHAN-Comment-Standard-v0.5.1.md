@@ -1,6 +1,6 @@
 # CyHAN - Comment & Docstring Standard (Python + C++)
 
-*Draft v0.4*
+*Draft v0.5.1*
 
 This document codifies the comment, docstring, and section-divider conventions
 for every CyHAN source file, organized by **file role** (launcher, orchestrator
@@ -11,16 +11,12 @@ docstrings, inline comments, typography, log strings) are defined once in
 Section 4 and referenced by every role. Applying it makes the comments read the
 same way across all modules. Nothing here changes runtime behavior.
 
-> **Changes from v0.3**
-> 1. **Field renamed `Author / POC` -> `Author`.** Source headers carry a single
->    `Author : <name>  <email>` line (C++ keeps the Doxygen `@author` tag), matching
->    the universal software convention. `conftest.py` is exempt (one-line docstring).
-> 2. **Tier-3 divider glyph.** The Tier-3 examples now show the box-drawing form
->    `# ── label ──` (U+2500, padded to ~column 78) that every module already
->    uses; it is the house glyph and is distinct from the banned em/en dashes (4.4).
+> **Changes from v0.4**
+> 1. **Plot-title brand prefix (4.6).** A figure's top-level title begins with
+>    `PyStorm-<ACRONYM>` (e.g. `PyStorm-RTCS`); subplot and legend titles do not.
 >
-> Earlier history (the v0.2 -> v0.3 role-first restructure, the hyphen-not-em-dash
-> rule, and the launcher/USER-OPTIONS templates) is in version control.
+> Earlier history (v0.2 -> v0.3 role-first restructure; v0.3 -> v0.4 the Author
+> field and box-drawing dividers) is in version control.
 
 ---
 
@@ -411,8 +407,17 @@ print(f"    Source : HDF5  ({h5})")
 print(f"    X      : {X.shape}  (storms x parameters)")
 ```
 
-Per-module prefixes (`[pot]`, `[ssh]`, `[tca]`) on operator-facing status lines
+Per-module prefixes (`[pot]`, `[csh]`, `[tca]`) on operator-facing status lines
 are fine; keep one prefix per module.
+
+### 4.6 Plot and figure titles
+
+A figure's top-level title (a `suptitle`, or the single main `set_title` of a
+single-axes figure) begins with the module brand prefix `PyStorm-<ACRONYM>` (e.g.
+`PyStorm-POT`, `PyStorm-RTCS`, `PyStorm-CSH`), where `<ACRONYM>` is the module's.
+Subplot / panel titles and legend titles take NO prefix; they stay descriptive
+(`Coverage of Y-space`, `Station 8771013`, `Node 12`, `TC Intensity`). Em/en dashes
+are allowed inside title strings (4.4); the brand prefix itself is hyphenated.
 
 ---
 
@@ -453,6 +458,7 @@ are fine; keep one prefix per module.
 | Tier 3 divider | `# ── label ──` | `// ── label ──` |
 | Public docstring | `"""Summary."""` + `Returns` | `/** Summary. */` + `@return` |
 | Trailing comment | `value,   # meaning` | `value;   // meaning` |
+| Figure title | `set_title(f"PyStorm-<ACR> ...")` | same |
 | Separator | hyphen ` - ` | hyphen ` - ` |
 
 ---
