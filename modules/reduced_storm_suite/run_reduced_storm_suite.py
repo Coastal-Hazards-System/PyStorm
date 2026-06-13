@@ -4,10 +4,11 @@ Author : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.arm
 
 User-facing entry point for the Reduced Storm Suite (formerly
 ``storm_selection``). The operator edits values in the USER OPTIONS block
-below and runs the script. This file holds ONLY declarative options - every
-code element (path wiring, store bootstrap, bbox assembly, CLI parsing,
-dispatch) lives in ``api_reduced_storm_suite``; the launcher simply calls
-``api_reduced_storm_suite.launch_batch`` with the option block per §5.3.
+below and runs the script. This file holds the declarative options and a thin
+CLI; every procedural element (path wiring, store bootstrap, bbox assembly,
+dataset resolution, batch iteration, dispatch) lives in
+``api_reduced_storm_suite``. The launcher assembles a single ``config`` dict
+and calls ``api_reduced_storm_suite.run(config)`` per §5.3.
 
 ================================================================================
 WHAT RSS PRODUCES
@@ -510,29 +511,63 @@ CONFIG["alpha_beta_grid"] = AB_GRID if AB_SWEEP else None
 # END USER OPTIONS  - nothing below should need editing for routine use
 # ===========================================================================
 #
-# All procedural logic (CLI parsing, dataset resolution, batch iteration, path
-# wiring, store bootstrap, bbox assembly, dispatch) lives in
-# api_reduced_storm_suite.launch_batch. This file only hands it the operator
-# option block above.
+# All procedural logic (dataset resolution, batch iteration, path wiring, store
+# bootstrap, bbox assembly, dispatch) lives in api_reduced_storm_suite.run. This
+# file parses the CLI and hands it a single config dict built from the options
+# above.
+
+
+def _parse_cli():
+    """Thin operator CLI: override the DATASET / MODE / SCOPE / STORM_TYPE
+    constants for an ad-hoc run without editing the file. With no --dataset the
+    DATASET constant runs; pass one or more registered keys to batch over study
+    areas."""
+    import argparse
+    p = argparse.ArgumentParser(
+        prog="run_reduced_storm_suite.py",
+        description="Run the Reduced Storm Suite headless. With no --dataset it "
+                    "uses the DATASET constant; pass one or more registered "
+                    "dataset keys to batch over study areas.")
+    p.add_argument(
+        "--dataset", nargs="+", metavar="KEY", default=None,
+        help=f"Registered dataset key(s) to run. Available: "
+             f"{sorted(RAW_FILES_BY_DATASET)}. Default: {DATASET!r}.")
+    p.add_argument(
+        "--mode", choices=["fixed", "optimal"], default=MODE,
+        help=f"Selection mode (default: {MODE}, set by the MODE constant).")
+    p.add_argument(
+        "--scope", choices=["local", "regional"], default=SCOPE,
+        help=f"Geographic scope (default: {SCOPE}, set by the SCOPE constant). "
+             f"'regional' ignores BBOX and uses all nodes/storms.")
+    p.add_argument(
+        "--storm-type", choices=["tc", "etc"], default=STORM_TYPE,
+        help=f"Storm type (default: {STORM_TYPE}; etc is a placeholder).")
+    return p.parse_args()
+
 
 if __name__ == "__main__":
     _ensure_cpp_extension()   # build _rss on first run if needed
+
+    args = _parse_cli()
 
     # The orchestrator entry (api_reduced_storm_suite) lives in backend/python,
     # added to sys.path above at runtime. Resolve it dynamically so there is no
     # static import for the IDE to flag as unresolved.
     from importlib import import_module
-    launch_batch = import_module("api_reduced_storm_suite").launch_batch
+    _run = import_module("api_reduced_storm_suite").run
 
-    raise SystemExit(launch_batch(
+    cfg = dict(CONFIG)
+    cfg.update(
         root                 = ROOT,
-        default_dataset      = DATASET,
-        default_mode         = MODE,
-        default_scope        = SCOPE,
+        datasets             = args.dataset or [DATASET],
+        mode                 = args.mode,
+        scope                = args.scope,
+        storm_type           = args.storm_type,
         raw_files_by_dataset = RAW_FILES_BY_DATASET,
         units_by_dataset     = UNITS_BY_DATASET,
         preprocess_metadata  = PREPROCESS_METADATA,
         track_file_patterns  = TRACK_FILE_PATTERNS,
         bbox                 = BBOX,
-        config               = dict(CONFIG),
-    ))
+    )
+    _run(cfg)
+    raise SystemExit(0)

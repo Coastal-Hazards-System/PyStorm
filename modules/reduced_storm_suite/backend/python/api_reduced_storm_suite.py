@@ -3,11 +3,11 @@
 Author : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
 
 Non-user-facing realization of the Python Orchestration role (§4.2).
-``run_reduced_storm_suite.py`` at the module root holds only the operator-edited
+``run_reduced_storm_suite.py`` at the module root holds the operator-edited
 option block (the per-dataset registries, the bbox window, and the tuning
-config) and hands it to ``launch_batch`` here.
+config), parses the CLI, and hands a single ``config`` dict to ``run`` here.
 
-This entry owns everything procedural: (a) CLI / option resolution, (b) dataset
+This entry owns everything procedural: (a) option resolution, (b) dataset
 resolution and batch iteration over study areas (per CyHAN §5.3, dataset
 resolution and batch marshaling are orchestration responsibilities, not the
 launcher's), (c) path wiring and the auto-bootstrap of ``tc_data.h5``, (d) the
@@ -18,27 +18,46 @@ into the ``reduced_storm_suite`` package.
 
 Public API
 ----------
-  launch_batch(root, default_dataset, default_mode, default_scope,
-               raw_files_by_dataset, units_by_dataset, preprocess_metadata,
-               track_file_patterns, bbox, config)  -> int
-      Batch entry the launcher calls. Parses the CLI (--dataset/--mode/--scope),
-      resolves each dataset's raw files + vertical datum from the registries,
-      and runs ``launch`` once per dataset. Returns an aggregate exit code.
-  launch(root, dataset, mode, scope, raw_files, preprocess_metadata,
-         track_file_patterns, bbox, config)  -> int
-      Per-dataset entry: resolves paths, bootstraps the store, builds the bbox
-      config, and dispatches to ``run``.
-  run(config, bbox_config, mode, scope)  ->  workflow result
-      Lower-level orchestration step (assumes config is already wired).
+  run(config)  ->  RSSResult | dict[str, RSSResult]
+      The single module entry point (matches every PyStorm module's
+      ``run(config) -> <Module>Result`` contract). ``config`` carries the
+      operator option block plus the orchestration controls: ``root``,
+      ``dataset``/``datasets``, ``mode``, ``scope``, ``storm_type``,
+      ``raw_files_by_dataset``, ``units_by_dataset``, ``preprocess_metadata``,
+      ``track_file_patterns``, ``bbox``; every other key is selection tuning
+      passed through to the workflow. Per CyHAN §5.3 dataset resolution and the
+      batch loop over study areas live here, in the orchestrator. Returns a
+      single ``RSSResult`` for one dataset, or a ``{dataset: RSSResult}``
+      mapping when batching.
 """
 
-import argparse
+from dataclasses import dataclass
 from pathlib import Path
-from typing  import Any, Dict, Mapping, Optional
+from typing  import Any, Dict, List, Mapping, Optional, Union
 
 
 # Fallback TROP naming when a dataset is absent from track_file_patterns.
 _DEFAULT_TRACK_FILE_PATTERN = "LACPR2_JPM{:04d}_TROP.txt"
+
+# Config keys that steer orchestration (consumed by run / _launch_one). Every
+# other key in the config is selection tuning, passed through to the workflow.
+# (storm_type is intentionally NOT here: it is validated by run() but also flows
+# through to the workflow, preserving the pre-alignment behavior.)
+_ORCH_KEYS = frozenset({
+    "root", "dataset", "datasets", "mode", "scope",
+    "raw_files_by_dataset", "units_by_dataset", "preprocess_metadata",
+    "track_file_patterns", "bbox",
+})
+
+
+@dataclass
+class RSSResult:
+    """Outcome of one RSS selection (a single dataset)."""
+    dataset:    str
+    mode:       str
+    scope:      str
+    output_dir: str
+    result:     Any        # the workflow's native return, e.g. (indices, metrics)
 
 
 def _check_storm_type(config: Mapping[str, Any]) -> None:
@@ -54,32 +73,20 @@ def _check_storm_type(config: Mapping[str, Any]) -> None:
             "not yet implemented; use storm_type='tc'.")
 
 
-def run(
+def _run_selection(
     config:      Dict[str, Any],
+    *,
     bbox_config: Optional[Mapping[str, Any]] = None,
     mode:        str                         = "fixed",
     scope:       str                         = "local",
 ) -> Any:
-    """Execute one RSS selection.
+    """Execute one RSS selection for an already-wired config (paths resolved).
 
-    Parameters
-    ----------
-    config : dict
-        Operator configuration (paths, k parameters, ...). A shallow copy is
-        made before mutation; the caller's dict is not modified.
-    bbox_config : Mapping or None
-        Geographic bounding-box configuration. When provided AND scope is
-        "local", the bbox filter is applied before selection and a diagnostic
-        map is rendered. Ignored when scope is "regional".
-    mode : {"fixed", "optimal"}
-        Selection algorithm to run.
-    scope : {"local", "regional"}
-        Geographic scope. "local" applies bbox_config; "regional" forces a
-        basin-wide run (all nodes, all storms) regardless of bbox_config.
-
-    Returns
-    -------
-    Whatever the dispatched workflow returns (see
+    Internal per-dataset step used by ``run`` -> ``_launch_one``. Routes the
+    output sub-directory by scope/mode, applies the bbox filter for local scope
+    (regional forces ``bbox_config`` to None), and dispatches to the fixed-k or
+    growth-sweep workflow. A shallow copy of ``config`` is made before mutation.
+    Returns the workflow's native result (see
     ``reduced_storm_suite.workflows.rss_selection.run_rss_selection`` /
     ``...growth_evaluation.run_growth_evaluation``).
     """
@@ -234,33 +241,6 @@ def _build_bbox_config(
     return full
 
 
-def _parse_args(
-    default_dataset: str, default_mode: str, default_scope: str,
-    available_datasets: Mapping[str, Any],
-) -> argparse.Namespace:
-    p = argparse.ArgumentParser(
-        prog="run_reduced_storm_suite.py",
-        description="Run the Reduced Storm Suite headless. With no --dataset it "
-                    "uses the DATASET option in the launcher; pass one or more "
-                    "registered dataset keys to batch over study areas.")
-    p.add_argument(
-        "--dataset", nargs="+", metavar="KEY", default=None,
-        help=f"Registered dataset key(s) to run (batch). Available: "
-             f"{sorted(available_datasets)}. Default: {default_dataset!r}.")
-    p.add_argument(
-        "--mode", choices=["fixed", "optimal"], default=default_mode,
-        help=f"Selection mode (default: {default_mode}, set by MODE constant).")
-    p.add_argument(
-        "--scope", choices=["local", "regional"], default=default_scope,
-        help=f"Geographic scope (default: {default_scope}, set by SCOPE "
-             f"constant). 'regional' ignores BBOX and uses all nodes/storms.")
-    p.add_argument(
-        "--storm-type", choices=["tc", "etc"], default=None,
-        help="Storm type (tc = tropical, implemented; etc = placeholder). "
-             "Default: the STORM_TYPE constant.")
-    return p.parse_args()
-
-
 def _resolve_dataset(
     ds:                   str,
     raw_files_by_dataset: Mapping[str, Any],
@@ -292,56 +272,57 @@ def _resolve_dataset(
     return raw, meta
 
 
-def launch_batch(
-    root:                 Path,
-    default_dataset:      str,
-    default_mode:         str,
-    default_scope:        str,
-    raw_files_by_dataset: Mapping[str, Any],
-    units_by_dataset:     Mapping[str, str],
-    preprocess_metadata:  Mapping[str, Any],
-    track_file_patterns:  Mapping[str, str],
-    bbox:                 Mapping[str, Any],
-    config:               Dict[str, Any],
-) -> int:
-    """Operator entry point. Parses the CLI, resolves the dataset(s) to run from
-    the launcher registries, and dispatches ``launch`` once per dataset.
+def run(config: Dict[str, Any]) -> Union[RSSResult, Dict[str, RSSResult]]:
+    """Single RSS entry point (see the module docstring for the config schema).
 
-    With no --dataset the single ``default_dataset`` runs; one or more --dataset
-    keys batch over study areas. Per CyHAN §5.3 the dataset resolution and the
-    batch loop are orchestration responsibilities and live here, not in the
-    launcher. Returns the last non-zero per-dataset exit code (0 if all ran).
+    Validates the orchestration controls, resolves the dataset(s) from the
+    launcher registries, and runs the selection once per dataset (the batch loop
+    and dataset resolution stay here in the orchestrator, per CyHAN §5.3).
+    Returns one ``RSSResult`` for a single dataset, or a ``{dataset: RSSResult}``
+    mapping for a batch. The caller's dict is not modified.
     """
-    args = _parse_args(default_dataset, default_mode, default_scope,
-                       raw_files_by_dataset)
-    datasets = args.dataset or [default_dataset]
-
     cfg = dict(config)
-    if args.storm_type:
-        cfg["storm_type"] = args.storm_type
-    _check_storm_type(cfg)   # raise early for the etc placeholder, before any data work
 
-    rc = 0
+    # Validate controls first, before touching the registries, so a bad mode /
+    # scope / storm_type is reported without needing the rest of the config.
+    mode  = cfg.get("mode",  "fixed")
+    scope = cfg.get("scope", "local")
+    if mode not in ("fixed", "optimal"):
+        raise ValueError(f"mode must be 'fixed' or 'optimal'; got {mode!r}")
+    if scope not in ("local", "regional"):
+        raise ValueError(f"scope must be 'local' or 'regional'; got {scope!r}")
+    _check_storm_type(cfg)   # raises for the etc placeholder before any data work
+
+    try:
+        root                 = Path(cfg["root"])
+        raw_files_by_dataset = cfg["raw_files_by_dataset"]
+        units_by_dataset     = cfg["units_by_dataset"]
+    except KeyError as exc:
+        raise KeyError(f"run() config is missing required key {exc}") from None
+    preprocess_metadata = cfg.get("preprocess_metadata", {})
+    track_file_patterns = cfg.get("track_file_patterns", {})
+    bbox                = cfg.get("bbox", {})
+
+    datasets: List[str] = cfg.get("datasets") or [cfg["dataset"]]
+
+    # Selection tuning = everything that is not an orchestration control; it is
+    # exactly what the per-dataset workflow consumes.
+    tuning = {k: v for k, v in cfg.items() if k not in _ORCH_KEYS}
+
+    results: Dict[str, RSSResult] = {}
     for ds in datasets:
-        raw_files, preprocess_meta = _resolve_dataset(
-            ds, raw_files_by_dataset, units_by_dataset, preprocess_metadata)
         if len(datasets) > 1:
             print(f"\n{'#' * 64}\n#  dataset: {ds}\n{'#' * 64}")
-        rc = launch(
-            root                = root,
-            dataset             = ds,
-            mode                = args.mode,
-            scope               = args.scope,
-            raw_files           = raw_files,
-            preprocess_metadata = preprocess_meta,
-            track_file_patterns = track_file_patterns,
-            bbox                = bbox,
-            config              = cfg,
-        ) or rc
-    return rc
+        raw_files, preprocess_meta = _resolve_dataset(
+            ds, raw_files_by_dataset, units_by_dataset, preprocess_metadata)
+        results[ds] = _launch_one(
+            root, ds, mode, scope, raw_files, preprocess_meta,
+            track_file_patterns, bbox, tuning)
+
+    return results[datasets[0]] if len(datasets) == 1 else results
 
 
-def launch(
+def _launch_one(
     root:                Path,
     dataset:             str,
     mode:                str,
@@ -351,11 +332,10 @@ def launch(
     track_file_patterns: Mapping[str, str],
     bbox:                Mapping[str, Any],
     config:              Dict[str, Any],
-) -> int:
-    """Run one RSS selection for a single resolved dataset with already-resolved
-    ``mode`` and ``scope``. Resolves per-dataset paths, auto-bootstraps the
-    store, builds the bbox config for local scope, then dispatches to ``run``.
-    Called once per dataset by ``launch_batch``.
+) -> RSSResult:
+    """Run one RSS selection for a single resolved dataset. Resolves per-dataset
+    paths, auto-bootstraps the store, builds the bbox config for local scope,
+    then dispatches to ``_run_selection``. Called once per dataset by ``run``.
     """
     cfg = dict(config)
     # Per-dataset paths live here (derived from the standard layout), not in
@@ -378,5 +358,7 @@ def launch(
                                       track_file_patterns, bbox)
                    if scope == "local" else None)
 
-    run(config=cfg, bbox_config=bbox_config, mode=mode, scope=scope)
-    return 0
+    result = _run_selection(cfg, bbox_config=bbox_config, mode=mode, scope=scope)
+    out_dir = str(Path(root) / "data" / "outputs" / dataset / scope / mode)
+    return RSSResult(dataset=dataset, mode=mode, scope=scope,
+                     output_dir=out_dir, result=result)
