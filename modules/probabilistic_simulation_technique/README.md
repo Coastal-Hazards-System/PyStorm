@@ -162,6 +162,34 @@ pytest tests/
 For the default `INPUT_MODE = "station"`, set `STATION_IDS` and `PST_TARGETS`. For
 `INPUT_MODE = "path"`, set `INPUT_CSV`.
 
+## Programmatic API
+
+Like every PyStorm module, PST exposes one entry point in
+`backend/python/api_probabilistic_simulation_technique.py`:
+
+```python
+run(config) -> PSTResult | dict[str, PSTResult]
+```
+
+The launcher (`run_probabilistic_simulation_technique.py`) only assembles
+`config` (input selection, parameters) and calls `run`. To drive PST from your
+own code:
+
+```python
+import sys
+sys.path.insert(0, "modules/probabilistic_simulation_technique/backend/python")
+from api_probabilistic_simulation_technique import run
+
+result = run(config)   # config: a dict (or a PSTConfig)
+```
+
+It returns a single **`PSTResult`** for one input, or a `{target: PSTResult}`
+mapping when several inputs run (station mode). Each `PSTResult` carries the
+`gpd_threshold`, the rates `lambda_val` / `lambda_mu`, the best-estimate and
+confidence-bound hazard-curve tables (`hc_table_be`, `hc_table_cb10`,
+`hc_table_cb90`), the AER grid (`aer_table`), the bootstrap `ensemble`, and
+`used_cpp_kernel`.
+
 ## Method testbed
 
 `scripts/method_testbed.py` runs all four selection methods through the full

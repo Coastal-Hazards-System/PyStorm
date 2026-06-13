@@ -99,6 +99,35 @@ python run_augmented_hurricane_database.py --basin both --no-download
   record span and NHC vintage, e.g.
   `augmented_hurdat2_atlantic_1851-2025_20260227.csv`.
 
+## Programmatic API
+
+Like every PyStorm module, AHD exposes one entry point in
+`backend/python/api_augmented_hurricane_database.py`:
+
+```python
+run(config) -> AHDResult
+```
+
+The launcher (`run_augmented_hurricane_database.py`) only assembles `config` from
+its USER OPTIONS block and calls `run`. To drive AHD from your own code, a
+notebook, or another module, put the backend on the path and call `run`:
+
+```python
+import sys
+sys.path.insert(0, "modules/augmented_hurricane_database/backend/python")
+from api_augmented_hurricane_database import run
+
+result = run(config)   # config: a dict (or an AHDConfig) of the launcher's options
+```
+
+`run` accepts a plain `dict` or an `AHDConfig`. It returns **`AHDResult`**:
+
+- `results` - `{basin: BasinResult}` for each basin built
+- `csv_paths` - convenience list of the augmented-HURDAT CSV paths
+
+Each `BasinResult` carries `basin`, `csv_path`, `parquet_path`, `n_storms`,
+`n_rows`, and the fill counts `n_rmax_filled`, `n_pmin_gpm`, `n_rmax_gpm`.
+
 ## EBTRK Rmax backfill (optional)
 
 HURDAT2 records the radius of maximum wind (`rmax_km`) only for recent seasons.

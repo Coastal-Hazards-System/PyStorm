@@ -114,6 +114,35 @@ python run_coastal_storm_hydrograph.py --aggregate median --no-plots
 - **`SCALE_PEAKS` ("auto")** - example scaled hydrographs at each point's observed
   median and max peak, or a list of peak elevations, or `None`.
 
+## Programmatic API
+
+Like every PyStorm module, CSH exposes one entry point in
+`backend/python/api_coastal_storm_hydrograph.py`:
+
+```python
+run(config) -> CSHResult
+```
+
+The launcher (`run_coastal_storm_hydrograph.py`) only assembles `config` from its
+USER OPTIONS block and calls `run`. To drive CSH from your own code:
+
+```python
+import sys
+sys.path.insert(0, "modules/coastal_storm_hydrograph/backend/python")
+from api_coastal_storm_hydrograph import run
+
+result = run(config)   # config: a dict with the launcher's options (CSHConfig fields)
+```
+
+It returns **`CSHResult`**:
+
+- `params_path` - the combined parameters CSV (or None)
+- `results` - `{sp_id: SavePointResult}` per save point
+
+Each `SavePointResult` carries `sp_id`, `n_storms`, `ground_elev`,
+`median_equiv_width`, `unit_path`, `scaled_paths`, and the plot paths
+`plot_path` / `ensemble_plot_path`.
+
 ## Outputs (`data/outputs/`)
 
 | File | Contents |

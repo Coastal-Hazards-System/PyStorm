@@ -548,7 +548,37 @@ Outputs land under `data/outputs/<dataset>/<scope>/<mode>/`.
 
 ---
 
-## 8. Module Layout (CyHAN v2.2 §16.1)
+## 8. Programmatic API
+
+Like every PyStorm module, RSS exposes one entry point in
+`backend/python/api_reduced_storm_suite.py`:
+
+```python
+run(config) -> RSSResult | dict[str, RSSResult]
+```
+
+The launcher (`run_reduced_storm_suite.py`) assembles `config` from its option
+block, parses the `--dataset/--mode/--scope/--storm-type` CLI, and calls `run`.
+`config` is a plain dict carrying the orchestration controls (`root`, `dataset`
+or `datasets`, `mode`, `scope`, `storm_type`, `raw_files_by_dataset`,
+`units_by_dataset`, `preprocess_metadata`, `track_file_patterns`, `bbox`) plus
+the selection-tuning keys; per §5.3 dataset resolution and the batch loop run
+inside `run`. To drive RSS from your own code:
+
+```python
+import sys
+sys.path.insert(0, "modules/reduced_storm_suite/backend/python")
+from api_reduced_storm_suite import run
+
+result = run(config)
+```
+
+It returns one **`RSSResult`** for a single dataset, or a `{dataset: RSSResult}`
+mapping when batching. Each `RSSResult` carries `dataset`, `mode`, `scope`,
+`output_dir`, and `result` (the workflow's native return, e.g. the selected
+indices and metrics).
+
+## 9. Module Layout (CyHAN v2.2 §16.1)
 
 ```
 reduced_storm_suite/
@@ -587,7 +617,7 @@ The two mandatory entry artifacts per CyHAN v2.2 §5.3:
 
 ---
 
-## 9. References
+## 10. References
 
 ### Joint Probability Method and Coastal Hazards System (Nadal-Caraballo et al.)
 
@@ -633,7 +663,7 @@ The two mandatory entry artifacts per CyHAN v2.2 §5.3:
 
 ---
 
-## 10. Acronyms
+## 11. Acronyms
 
 | Acronym  | Expansion                                                               |
 |----------|-------------------------------------------------------------------------|

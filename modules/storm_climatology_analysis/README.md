@@ -201,6 +201,32 @@ explain how it is built; the **whitepaper** has the full treatment.
 4. **Write** the selection, SRR/DSRR/daily tables, and full arrays; optionally map
    each CRL.
 
+## Programmatic API
+
+Like every PyStorm module, SCA exposes one entry point in
+`backend/python/api_storm_climatology_analysis.py`:
+
+```python
+run(config) -> SCAResult
+```
+
+The launcher (`run_storm_climatology_analysis.py`) only assembles `config` from
+its USER OPTIONS block and calls `run`. To drive SCA from your own code:
+
+```python
+import sys
+sys.path.insert(0, "modules/storm_climatology_analysis/backend/python")
+from api_storm_climatology_analysis import run
+
+result = run(config)   # config: a dict with the launcher's options (SCAConfig fields)
+```
+
+It returns **`SCAResult`** with `results` = `{basin: BasinResult}`. Each
+`BasinResult` carries `basin`, `n_crls`, `n_selected`, `nyrs`, the table paths
+`srr_path` / `srr_daily_path` / `dsrr_summary_path` / `dsrr_arrays_path`, the
+optional `srr_radius_path`, and the plot counts `n_maps` / `n_monthly_maps` /
+`n_daily_plots`.
+
 ## Layout
 
 ```

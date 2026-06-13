@@ -107,6 +107,33 @@ The USER OPTIONS block covers the stages, station list, POT parameters
 step size), and the NOAA-to-NTR pipeline settings (years, datum, NTDE, slope).
 Positional CLI paths force POT-only on each file; `--help` lists options.
 
+## Programmatic API
+
+Like every PyStorm module, POT exposes one entry point in
+`backend/python/api_peaks_over_threshold.py`:
+
+```python
+run(config) -> POTResult | PipelineResult
+```
+
+The launcher (`run_peaks_over_threshold.py`) only assembles `config` (stations,
+stages, parameters) and calls `run`. To drive POT from your own code:
+
+```python
+import sys
+sys.path.insert(0, "modules/peaks_over_threshold/backend/python")
+from api_peaks_over_threshold import run
+
+result = run(config)   # config: a dict (or a POTConfig / PreprocessConfig)
+```
+
+It returns a **`POTResult`** for a single POT-only extraction, or a
+**`PipelineResult`** when preprocessing stages (and/or multiple stations and
+targets) run. `POTResult` carries `threshold`, `peaks_df`, `events_per_year`,
+`final_percentile`, `effective_duration_years`, `converged`, `iterations`, and
+`used_cpp_kernel`. `PipelineResult` bundles `preprocess` and a `pot` map of
+`{target: POTResult}` (e.g. `{"dwl": ..., "ntr": ...}`).
+
 ## Layout
 
 ```
