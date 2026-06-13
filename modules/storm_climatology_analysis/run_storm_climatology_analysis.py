@@ -1,16 +1,16 @@
-"""run_tc_climatological_analysis - TCA launcher (CyHAN v2.1 §5.3).
+"""run_storm_climatology_analysis - SCA launcher (CyHAN v2.1 §5.3).
 
 Author : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
 
-User-facing entry for the Tropical Cyclone Climatological Analysis (TCA) module.
+User-facing entry for the Storm Climatology Analysis (SCA) module.
 The operator edits the USER OPTIONS block below and runs the script. No
 orchestration logic lives here - the launcher hands the option block to
-``main_tc_climatological_analysis.run`` per §5.3.
+``main_storm_climatology_analysis.run`` per §5.3.
 
 ================================================================================
-WHAT TCA PRODUCES
+WHAT SCA PRODUCES
 ================================================================================
-For each CHS Coastal Reference Location (CRL), TCA selects the tropical cyclones
+For each CHS Coastal Reference Location (CRL), SCA selects the tropical cyclones
 from the augmented HURDAT2 best-track (the augmented_hurricane_database output)
 that pass within MAX_DIST, picking each storm's representative point as the fix
 that maximizes the Gaussian distance weight times the central-pressure deficit.
@@ -129,7 +129,7 @@ METHOD (ports the CHS MATLAB: StormSelection + SRR_GKF)
 Run
 ---
   1. pip install -r requirements.txt
-  2. Edit the USER OPTIONS below, then:  python run_tc_climatological_analysis.py
+  2. Edit the USER OPTIONS below, then:  python run_storm_climatology_analysis.py
 """
 
 from pathlib import Path
@@ -145,6 +145,13 @@ _AHD_OUTPUTS = ROOT.parent / "augmented_hurricane_database" / "data" / "outputs"
 # ===========================================================================
 # USER OPTIONS  - edit anything in this block, then run the script
 # ===========================================================================
+
+# ── Storm type ────────────────────────────────────────────────────────────────
+# "tc"  - tropical cyclones (the implemented analysis, from the augmented HURDAT2).
+# "etc" - extratropical cyclones (PLACEHOLDER; not yet implemented: the same GKF
+#         recurrence-rate machinery would run on an ETC track source).
+# Overridable on the command line with --storm-type.
+STORM_TYPE = "tc"
 
 # ── Basin selection ──────────────────────────────────────────────────────────
 # "atlantic", "pacific", or "both". Both are enabled now that a Pacific CRL set
@@ -229,6 +236,7 @@ for _p in (_BACKEND_PY, _COMMON_PY):
 
 
 CONFIG = {
+    "storm_type":           STORM_TYPE,
     "basins":               BASIN,
     "input_dir":            DATA / "inputs",
     "output_dir":           OUTPUT_DIR,
@@ -263,7 +271,9 @@ def _apply_cli(config: dict) -> dict:
     """Apply CLI overrides for headless runs (no file edits needed)."""
     import argparse
     p = argparse.ArgumentParser(
-        description="CRL-based tropical-cyclone storm recurrence rates (SRR/DSRR).")
+        description="CRL-based storm recurrence rates (SRR/DSRR).")
+    p.add_argument("--storm-type", choices=["tc", "etc"],
+                   help="Override STORM_TYPE (tc=tropical, implemented; etc=placeholder).")
     p.add_argument("--basin", choices=["atlantic", "pacific", "both"],
                    help="Override BASIN.")
     p.add_argument("--plots", dest="plots", action="store_true", default=None,
@@ -272,6 +282,8 @@ def _apply_cli(config: dict) -> dict:
                    help="Disable all per-CRL plots (annual + monthly maps + daily SRR).")
     args = p.parse_args()
     config = dict(config)
+    if args.storm_type:
+        config["storm_type"] = args.storm_type
     if args.basin:
         config["basins"] = args.basin
     if args.plots is not None:                 # toggles all three products together
@@ -284,8 +296,11 @@ def _apply_cli(config: dict) -> dict:
 if __name__ == "__main__":
     cfg = _apply_cli(CONFIG)
     from importlib import import_module
-    result = import_module("main_tc_climatological_analysis").run(cfg)
-    print("\n[tca] done:")
+    try:
+        result = import_module("main_storm_climatology_analysis").run(cfg)
+    except NotImplementedError as exc:
+        raise SystemExit(f"[sca] {exc}")
+    print("\n[sca] done:")
     for basin, r in result.results.items():
         bits = []
         if r.n_maps:

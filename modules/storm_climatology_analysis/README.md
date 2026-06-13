@@ -1,4 +1,4 @@
-# tc_climatological_analysis
+# storm_climatology_analysis
 
 CRL-based tropical-cyclone **storm recurrence rates** for the U.S. Atlantic and
 Pacific coasts. For each CHS **Coastal Reference Location (CRL)**, the module
@@ -7,6 +7,12 @@ within a cutoff distance, then computes - with the **Gaussian Kernel Function
 (GKF)** - the omnidirectional and directional recurrence rates, both annually and
 per calendar month, for four intensity bins, plus a **continuous daily** (day-of-year)
 seasonal cycle of the omnidirectional rate.
+
+> **Storm type (TC / ETC).** SCA runs in two storm-type modes, set by `STORM_TYPE`
+> (`--storm-type`): **`tc`** (tropical cyclones, the implemented analysis) and
+> **`etc`** (extratropical cyclones, a *placeholder* that raises `NotImplementedError`
+> for now; the same GKF recurrence-rate machinery would run on an ETC track source).
+> The rest of this README documents the `tc` mode.
 
 The companion **whitepaper** (`SRR_GKF_Whitepaper.md`) documents the method in full.
 
@@ -55,9 +61,9 @@ Inputs follow the CyHAN **raw / processed** convention: original source files in
 
 ```bash
 pip install -r requirements.txt
-python run_tc_climatological_analysis.py                 # USER OPTIONS block
-python run_tc_climatological_analysis.py --basin atlantic
-python run_tc_climatological_analysis.py --basin both --plots
+python run_storm_climatology_analysis.py                 # USER OPTIONS block
+python run_storm_climatology_analysis.py --basin atlantic
+python run_storm_climatology_analysis.py --basin both --plots
 ```
 
 ### Key options (USER OPTIONS block)
@@ -198,15 +204,15 @@ explain how it is built; the **whitepaper** has the full treatment.
 ## Layout
 
 ```
-tc_climatological_analysis/
-├── run_tc_climatological_analysis.py        # launcher (USER OPTIONS)
+storm_climatology_analysis/
+├── run_storm_climatology_analysis.py        # launcher (USER OPTIONS)
 ├── SRR_GKF_Whitepaper.md                    # companion whitepaper (method + validation)
 ├── analysis/
 │   └── day_kernel_sensitivity.py            # DAY_KERNEL bandwidth LOO-CV sensitivity
 ├── backend/python/
-│   ├── main_tc_climatological_analysis.py   # orchestrator entry: run(config)
-│   └── tc_climatological_analysis/
-│       ├── config.py        # TCAConfig (pydantic)
+│   ├── main_storm_climatology_analysis.py   # orchestrator entry: run(config)
+│   └── storm_climatology_analysis/
+│       ├── config.py        # SCAConfig (pydantic)
 │       ├── crls.py          # CRL loader (CSV + tab-delimited)
 │       ├── hurdat_source.py # locate/load augmented HURDAT2 (links to AHD module)
 │       ├── selection.py     # Gaussian-weighted per-CRL storm selection
@@ -214,7 +220,7 @@ tc_climatological_analysis/
 │       ├── basemap.py       # Natural Earth coastline/boundaries via pyshp
 │       ├── plots.py         # per-CRL selected-TC maps
 │       ├── writer.py        # SRR/DSRR table + array writers
-│       └── orchestrator.py  # TCAOrchestrator: per-basin pipeline
+│       └── orchestrator.py  # SCAOrchestrator: per-basin pipeline
 ├── data/{inputs/{raw,processed},outputs}/
 └── tests/
 ```

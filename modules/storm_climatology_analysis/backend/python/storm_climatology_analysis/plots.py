@@ -30,8 +30,8 @@ from typing import Optional
 import numpy as np
 import pandas as pd
 
-from tc_climatological_analysis import basemap as _basemap
-from tc_climatological_analysis.gkf import MONTHS
+from storm_climatology_analysis import basemap as _basemap
+from storm_climatology_analysis.gkf import MONTHS
 
 from pystorm_common import save_figure
 
@@ -144,7 +144,7 @@ def _annual_specs(selection, crls, rates, basin, max_crls):
         clat, clon = pos.get(cid, (np.nan, np.nan))
         srr4 = _srr4_annual(rates, idx[cid])
         specs.append((f"CHS_{title_basin}_CRL_{cid:04d}.png",
-                      f"PyStorm-TCA {title_basin} CRL {cid:04d}",
+                      f"PyStorm-SCA {title_basin} CRL {cid:04d}",
                       clat, clon, g["lon"].to_numpy(float), g["lat"].to_numpy(float),
                       g["dp"].to_numpy(float), srr4))
         if max_crls is not None and len(specs) >= max_crls:
@@ -166,7 +166,7 @@ def _monthly_specs(selection, crls, rates, basin, max_crls):
             gm = g[g["month"] == m]
             srr4 = _srr4_monthly(rates, ci, m - 1)
             specs.append((f"CHS_{title_basin}_CRL_{cid:04d}_{m:02d}_{MONTHS[m - 1]}.png",
-                          f"PyStorm-TCA {title_basin} CRL {cid:04d} — {MONTHS[m - 1]}",
+                          f"PyStorm-SCA {title_basin} CRL {cid:04d} — {MONTHS[m - 1]}",
                           clat, clon, gm["lon"].to_numpy(float), gm["lat"].to_numpy(float),
                           gm["dp"].to_numpy(float), srr4))
         ncrl += 1
@@ -294,7 +294,7 @@ def _ensure_basemap(resolution, cache_dir, basin, verbose) -> bool:
         return True
     except Exception as exc:                                   # noqa: BLE001
         if verbose:
-            print(f"[tca] {basin}: basemap unavailable ({exc}); maps omit coastlines")
+            print(f"[sca] {basin}: basemap unavailable ({exc}); maps omit coastlines")
         return False
 
 
@@ -310,7 +310,7 @@ def _dispatch(specs, *, basin, out_dir, dp_low, dp_med, resolution, cache_dir,
     if jobs > 1:
         from concurrent.futures import ProcessPoolExecutor
         if verbose:
-            print(f"[tca] {basin}: rendering {len(specs):,} {label} on {jobs} processes")
+            print(f"[sca] {basin}: rendering {len(specs):,} {label} on {jobs} processes")
         payloads = [(specs[i::jobs], kw) for i in range(jobs)]
         total = 0
         with ProcessPoolExecutor(max_workers=jobs) as ex:
@@ -318,7 +318,7 @@ def _dispatch(specs, *, basin, out_dir, dp_low, dp_med, resolution, cache_dir,
                 total += c
         return total
     if verbose:
-        print(f"[tca] {basin}: rendering {len(specs):,} {label} (serial)")
+        print(f"[sca] {basin}: rendering {len(specs):,} {label} (serial)")
     return _render_specs(specs, **kw)
 
 
@@ -398,7 +398,7 @@ def _daily_specs(selection, crls, rates, basin, max_crls):
         curves = tuple(np.asarray(rates[b]["srr_daily"][ci], dtype=float)
                        for b in _SRR_ORDER)
         specs.append((f"CHS_{title_basin}_CRL_{cid:04d}.png",
-                      f"PyStorm-TCA {title_basin} CRL {cid:04d}", curves))
+                      f"PyStorm-SCA {title_basin} CRL {cid:04d}", curves))
         if max_crls is not None and len(specs) >= max_crls:
             break
     return specs
@@ -476,7 +476,7 @@ def _dispatch_daily(specs, *, out_dir, doys, n_jobs, verbose, basin, label,
     if jobs > 1:
         from concurrent.futures import ProcessPoolExecutor
         if verbose:
-            print(f"[tca] {basin}: rendering {len(specs):,} {label} on {jobs} processes")
+            print(f"[sca] {basin}: rendering {len(specs):,} {label} on {jobs} processes")
         payloads = [(specs[i::jobs], kw) for i in range(jobs)]
         total = 0
         with ProcessPoolExecutor(max_workers=jobs) as ex:
@@ -484,7 +484,7 @@ def _dispatch_daily(specs, *, out_dir, doys, n_jobs, verbose, basin, label,
                 total += c
         return total
     if verbose:
-        print(f"[tca] {basin}: rendering {len(specs):,} {label} (serial)")
+        print(f"[sca] {basin}: rendering {len(specs):,} {label} (serial)")
     return _render_daily_specs(specs, **kw)
 
 

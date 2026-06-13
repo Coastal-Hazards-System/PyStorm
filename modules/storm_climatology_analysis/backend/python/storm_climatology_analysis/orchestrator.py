@@ -10,14 +10,14 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Dict, List, Optional
 
-from tc_climatological_analysis.config import TCAConfig
-from tc_climatological_analysis.crls import load_crls
-from tc_climatological_analysis.hurdat_source import (
+from storm_climatology_analysis.config import SCAConfig
+from storm_climatology_analysis.crls import load_crls
+from storm_climatology_analysis.hurdat_source import (
     locate_augmented_hurdat, load_augmented_hurdat, created_date,
 )
-from tc_climatological_analysis.selection import select_storms
-from tc_climatological_analysis.gkf import compute_rates
-from tc_climatological_analysis import writer
+from storm_climatology_analysis.selection import select_storms
+from storm_climatology_analysis.gkf import compute_rates
+from storm_climatology_analysis import writer
 
 
 @dataclass
@@ -40,14 +40,14 @@ class BasinResult:
 
 
 @dataclass
-class TCAResult:
+class SCAResult:
     results: Dict[str, BasinResult] = field(default_factory=dict)
 
 
-class TCAOrchestrator:
+class SCAOrchestrator:
     """Runs the climatological analysis for the configured basins."""
 
-    def __init__(self, config: TCAConfig) -> None:
+    def __init__(self, config: SCAConfig) -> None:
         self.cfg = config
 
     def _resolve_in(self, p) -> Path:
@@ -59,12 +59,12 @@ class TCAOrchestrator:
         cfg = self.cfg
         crl_file = cfg.crl_file_for(basin)
         if crl_file is None:
-            print(f"[tca] {basin}: no CRL set configured; skipped.")
+            print(f"[sca] {basin}: no CRL set configured; skipped.")
             return None
 
         crl_path = self._resolve_in(crl_file)
         crls = load_crls(crl_path)
-        print(f"[tca] {basin}: {len(crls):,} CRLs from {crl_path.name}")
+        print(f"[sca] {basin}: {len(crls):,} CRLs from {crl_path.name}")
 
         hurdat_path = locate_augmented_hurdat(
             basin, explicit_file=cfg.hurdat_file_for(basin),
@@ -79,14 +79,14 @@ class TCAOrchestrator:
                       else max(int(cfg.start_year), data_min))
         end_year = int(cfg.end_year) if cfg.end_year else int(hurdat["year"].max())
         nyrs = end_year - start_year + 1
-        print(f"[tca] {basin}: augmented HURDAT {hurdat_path.name} "
+        print(f"[sca] {basin}: augmented HURDAT {hurdat_path.name} "
               f"({len(hurdat):,} fixes); rate over {start_year}-{end_year} "
               f"(Nyrs={nyrs})")
 
         selection = select_storms(
             hurdat, crls, k_size=cfg.k_size, max_dist=cfg.max_dist,
             max_cp=cfg.max_cp, ref_pressure=cfg.ref_pressure)
-        print(f"[tca] {basin}: selected {len(selection):,} CRL-TC pairs "
+        print(f"[sca] {basin}: selected {len(selection):,} CRL-TC pairs "
               f"(<= {cfg.max_dist:.0f} km)")
 
         rates = compute_rates(
@@ -107,7 +107,7 @@ class TCAOrchestrator:
             rates, crls, out / f"srr_daily_{basin}{suf}.csv")
         dsrr_sum = writer.write_dsrr_summary(rates, crls, out / f"dsrr_{basin}{suf}.csv")
         dsrr_arr = writer.write_dsrr_arrays(rates, crls, out / f"dsrr_{basin}{suf}.npz")
-        print(f"[tca] {basin}: wrote SRR/DSRR (annual + monthly + daily) -> {out}")
+        print(f"[sca] {basin}: wrote SRR/DSRR (annual + monthly + daily) -> {out}")
 
         srr_radius_path = None
         if cfg.srr_radial:
@@ -115,7 +115,7 @@ class TCAOrchestrator:
             rad_dir = out / f"srr_{r}km"
             srr_radius_path = writer.write_srr_radius_table(
                 rates, crls, cfg.srr_radius_km, rad_dir / f"srr_{r}km_{basin}{suf}.csv")
-            print(f"[tca] {basin}: wrote SRR_{r}km (within {r} km; TC/yr) -> {rad_dir}")
+            print(f"[sca] {basin}: wrote SRR_{r}km (within {r} km; TC/yr) -> {rad_dir}")
 
         n_maps = n_monthly = n_daily = 0
         if cfg.plot_selection or cfg.plot_monthly or cfg.plot_daily:
@@ -132,7 +132,7 @@ class TCAOrchestrator:
 
     def _render_maps(self, selection, crls, rates, basin: str):
         cfg = self.cfg
-        from tc_climatological_analysis import plots
+        from storm_climatology_analysis import plots
         base = Path(cfg.plot_dir) if cfg.plot_dir else (cfg.output_dir / "plots")
         cache_dir = cfg.raw_dir / "naturalearth"
         common = dict(dp_low=cfg.dp_low, dp_med=cfg.dp_med,
@@ -161,14 +161,14 @@ class TCAOrchestrator:
                     od = base / (f"selection_{tag}_{basin}" if tag else f"selection_{basin}")
                     na = plots.plot_selected_storms(
                         selection, crls, rates, basin=basin, out_dir=od, **vkw)
-                    print(f"[tca] {basin}: wrote {na:,} {pre}CRL maps -> {od}")
+                    print(f"[sca] {basin}: wrote {na:,} {pre}CRL maps -> {od}")
                     n_annual += na
                 if cfg.plot_monthly:
                     od = base / (f"selection_monthly_{tag}_{basin}" if tag
                                  else f"selection_monthly_{basin}")
                     nm = plots.plot_selected_storms_monthly(
                         selection, crls, rates, basin=basin, out_dir=od, **vkw)
-                    print(f"[tca] {basin}: wrote {nm:,} {pre}monthly CRL maps -> {od}")
+                    print(f"[sca] {basin}: wrote {nm:,} {pre}monthly CRL maps -> {od}")
                     n_monthly += nm
                 if cfg.plot_daily:
                     od = base / (f"daily_{tag}_{basin}" if tag else f"daily_{basin}")
@@ -176,14 +176,19 @@ class TCAOrchestrator:
                         selection, crls, rates, basin=basin, out_dir=od,
                         srr_scale=scale, srr_label=daily_label, srr_note=daily_note_v,
                         n_jobs=cfg.plot_jobs)
-                    print(f"[tca] {basin}: wrote {nd:,} {pre}daily SRR plots -> {od}")
+                    print(f"[sca] {basin}: wrote {nd:,} {pre}daily SRR plots -> {od}")
                     n_daily += nd
         except RuntimeError as exc:                            # e.g. matplotlib missing
-            print(f"[tca] {basin}: CRL plots skipped ({exc})")
+            print(f"[sca] {basin}: CRL plots skipped ({exc})")
         return n_annual, n_monthly, n_daily
 
-    def run(self) -> TCAResult:
-        result = TCAResult()
+    def run(self) -> SCAResult:
+        if self.cfg.storm_type == "etc":
+            raise NotImplementedError(
+                "storm_type='etc' (extratropical-cyclone climatology) is a placeholder "
+                "and not yet implemented; use storm_type='tc'. The same GKF "
+                "recurrence-rate machinery would run on an ETC track source.")
+        result = SCAResult()
         for basin in self.cfg.basins:
             r = self._process_basin(basin)
             if r is not None:

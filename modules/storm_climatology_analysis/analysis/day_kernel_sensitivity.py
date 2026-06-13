@@ -36,8 +36,8 @@ import pandas as pd
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "backend" / "python"))
-from tc_climatological_analysis.selection import gaussian_weights  # noqa: E402
-from tc_climatological_analysis.gkf import DOYS, doy_diff           # noqa: E402
+from storm_climatology_analysis.selection import gaussian_weights  # noqa: E402
+from storm_climatology_analysis.gkf import DOYS, doy_diff           # noqa: E402
 
 K_SIZE = 200.0                       # distance kernel (must match the run that built the selection)
 H_GRID = np.arange(3.0, 45.1, 1.0)   # candidate bandwidths (days) to score

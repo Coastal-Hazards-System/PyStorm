@@ -14,8 +14,8 @@ reproducible.
 
 Following CyHAN v2.1, a C++ engine is shipped where a module has
 performance-critical computation, and is omitted where it does not. Compute-heavy
-modules (POT, PST, RTCS) ship a C++ kernel with a pure-Python fallback so each
-workflow runs whether or not the extension is built; pure-Python modules (TCA,
+modules (POT, PST, RSS) ship a C++ kernel with a pure-Python fallback so each
+workflow runs whether or not the extension is built; pure-Python modules (SCA,
 CSH) ship no engine. AHD ships an optional C++ accelerator with a NumPy fallback.
 
 ## Modules
@@ -25,14 +25,14 @@ PyStorm has six modules. Two short chains, two independent:
 | Module | Purpose |
 |--------|---------|
 | [`augmented_hurricane_database`](modules/augmented_hurricane_database/README.md) (AHD) | Build an augmented HURDAT2 best-track: parse NHC HURDAT2, derive storm motion, optionally backfill Rmax from EBTRK and impute missing Cp/Rmax with a Gaussian-process metamodel. The best-track foundation for downstream TC analyses. |
-| [`tc_climatological_analysis`](modules/tc_climatological_analysis/README.md) | Per-CRL tropical-cyclone storm recurrence rates (SRR/DSRR) from the augmented HURDAT2, annual and monthly, via the Gaussian Kernel Function. |
+| [`storm_climatology_analysis`](modules/storm_climatology_analysis/README.md) | Per-CRL tropical-cyclone storm recurrence rates (SRR/DSRR) from the augmented HURDAT2, annual and monthly, via the Gaussian Kernel Function. |
 | [`peaks_over_threshold`](modules/peaks_over_threshold/README.md) (POT) | Extract independent storm peaks from a continuous water-level or NTR time series. |
 | [`probabilistic_simulation_technique`](modules/probabilistic_simulation_technique/README.md) (PST) | Turn a POT peak sample into a hazard curve (response magnitude versus AER) with a confidence band. |
-| [`reduced_tc_suite`](modules/reduced_tc_suite/README.md) (RTCS) | Select a small, representative Reduced Tropical Cyclone Suite that reproduces the full synthetic suite's hazard. |
+| [`reduced_storm_suite`](modules/reduced_storm_suite/README.md) (RSS) | Select a small, representative Reduced Storm Suite that reproduces the full synthetic suite's hazard. |
 | [`coastal_storm_hydrograph`](modules/coastal_storm_hydrograph/README.md) (CSH) | Reduce an ensemble of synthetic-TC surge series to one dimensionless surge shape per save point, scalable by a peak elevation and an equivalent width. |
 
-Data flow: **AHD writes the augmented best-track that TCA reads; POT writes
-per-station peak files that PST reads.** RTCS and CSH are independent.
+Data flow: **AHD writes the augmented best-track that SCA reads; POT writes
+per-station peak files that PST reads.** RSS and CSH are independent.
 
 ## Architecture
 
@@ -52,10 +52,10 @@ What each module ships varies with its workload:
 | Module | C++ engine | Ancillary scripts |
 |--------|------------|-------------------|
 | AHD | optional `_gpm` accelerator (NumPy fallback) | — |
-| TCA | none (pure Python) | `analysis/` (kernel sensitivity) |
+| SCA | none (pure Python) | `analysis/` (kernel sensitivity) |
 | POT | `_pot` kernel | — |
 | PST | `_pst` kernel | `scripts/` (method testbed) |
-| RTCS | `_rtcs` kernel | `scripts/` (preprocess, DSW) |
+| RSS | `_rss` kernel | `scripts/` (preprocess, DSW) |
 | CSH | none (pure Python) | `analysis/` (shape/timescale studies) |
 
 ## Quickstart
@@ -69,9 +69,9 @@ fallback runs instead.
 cd modules/augmented_hurricane_database
 python run_augmented_hurricane_database.py
 
-# TCA: per-CRL storm recurrence rates from the augmented best-track
-cd modules/tc_climatological_analysis
-python run_tc_climatological_analysis.py
+# SCA: per-CRL storm recurrence rates from the augmented best-track
+cd modules/storm_climatology_analysis
+python run_storm_climatology_analysis.py
 
 # POT: extract peaks from a water-level / NTR series
 cd modules/peaks_over_threshold
@@ -81,9 +81,9 @@ python run_peaks_over_threshold.py
 cd modules/probabilistic_simulation_technique
 python run_probabilistic_simulation_technique.py
 
-# RTCS: reduced TC suite selection
-cd modules/reduced_tc_suite
-python run_reduced_tc_suite.py
+# RSS: reduced storm suite selection
+cd modules/reduced_storm_suite
+python run_reduced_storm_suite.py
 
 # CSH: unit storm-surge hydrographs
 cd modules/coastal_storm_hydrograph
@@ -103,13 +103,13 @@ builds on first run, or build it manually:
 ```bash
 python modules/peaks_over_threshold/backend/engines/cpp/build.py             # _pot
 python modules/probabilistic_simulation_technique/backend/engines/build.py   # _pst
-python modules/reduced_tc_suite/backend/engines/cpp/build.py                 # _rtcs
+python modules/reduced_storm_suite/backend/engines/cpp/build.py                 # _rss
 python modules/augmented_hurricane_database/backend/engines/cpp/build.py     # _gpm (optional)
 ```
 
 `build.py` tries setuptools, then CMake, then a direct compiler call. It needs
 pybind11 (`pip install pybind11`) and a C++17 toolchain (MSVC or MinGW on
-Windows, gcc or clang elsewhere). TCA and CSH have no engine to build.
+Windows, gcc or clang elsewhere). SCA and CSH have no engine to build.
 
 ## Repository layout
 
@@ -118,10 +118,10 @@ PyStorm/
 │
 ├── modules/                                  six self-contained capability verticals
 │   ├── augmented_hurricane_database/         AHD  augmented HURDAT2 best-track
-│   ├── tc_climatological_analysis/           per-CRL SRR/DSRR (consumes AHD)
+│   ├── storm_climatology_analysis/           per-CRL SRR/DSRR (consumes AHD)
 │   ├── peaks_over_threshold/                 POT  storm-peak extraction
 │   ├── probabilistic_simulation_technique/   PST  hazard curves (consumes POT)
-│   ├── reduced_tc_suite/                     RTCS representative suite selection
+│   ├── reduced_storm_suite/                     RSS representative suite selection
 │   └── coastal_storm_hydrograph/               CSH  unit storm-surge hydrographs
 │
 │   Each module:
@@ -165,7 +165,7 @@ copies. All six modules write their figures through it.
   already drifting); every module's figure write now goes through `save_figure` at
   the 150 DPI standard. AHD and CSH still pass their fast PNG settings
   (`compress_level`, no tight bbox) through `save_figure`. The one exception is
-  TCA's per-CRL map renderer (a blit/PIL fast-path for ~1000+ maps that does not
+  SCA's per-CRL map renderer (a blit/PIL fast-path for ~1000+ maps that does not
   use `savefig`), which stays at 110 dpi by design.
 - **Scope (presentation and pure utilities only):** it **must not** hold module
   domain logic, numerical kernels, or orchestration - that would couple modules
@@ -204,7 +204,8 @@ copies. All six modules write their figures through it.
 | PAM | Partitioning Around Medoids (k-medoids) |
 | POT | Peaks Over Threshold |
 | PST | Probabilistic Simulation Technique |
-| RTCS | Reduced Tropical Cyclone Suite |
+| RSS | Reduced Storm Suite |
+| SCA | Storm Climatology Analysis |
 | SRR | Storm Recurrence Rate |
 | CSH | Coastal Storm Hydrograph |
 | TC | Tropical Cyclone |

@@ -1,8 +1,8 @@
-"""config - configuration model for the tc_climatological_analysis module.
+"""config - configuration model for the storm_climatology_analysis module.
 
 Author : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
 
-A single validated ``TCAConfig`` carries the operator options from the launcher
+A single validated ``SCAConfig`` carries the operator options from the launcher
 to the orchestrator. Paths are coerced to ``Path``; ``basins`` is normalized to
 the canonical lower-case basin list. The Pacific is scaffolded but off by default
 (no Pacific CRLs are available yet).
@@ -20,8 +20,14 @@ from pydantic import BaseModel, field_validator
 BASINS = ("atlantic", "pacific")
 
 
-class TCAConfig(BaseModel):
+class SCAConfig(BaseModel):
     model_config = {"arbitrary_types_allowed": True}
+
+    # ── Storm type (which cyclone class) ───────────────────────────────────────
+    # "tc"  : tropical cyclones (the implemented analysis, from the augmented HURDAT2).
+    # "etc" : extratropical cyclones. PLACEHOLDER (not yet implemented): the same GKF
+    #         recurrence-rate machinery would run on an ETC track source.
+    storm_type: str = "tc"
 
     # Which basins to analyze. Both by default now that Pacific CRLs exist.
     basins: List[str] = ["atlantic", "pacific"]
@@ -80,6 +86,14 @@ class TCAConfig(BaseModel):
     plot_jobs: Optional[int] = None                   # None/0 -> auto, 1 -> serial
     # Natural Earth basemap resolution for the maps: "10m", "50m", or "110m".
     basemap_resolution: str = "50m"
+
+    @field_validator("storm_type", mode="before")
+    @classmethod
+    def _storm_type(cls, v):
+        v = str(v).strip().lower()
+        if v not in ("tc", "etc"):
+            raise ValueError("storm_type must be 'tc' or 'etc'")
+        return v
 
     @field_validator("basins", mode="before")
     @classmethod

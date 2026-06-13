@@ -13,7 +13,7 @@ same way across all modules. Nothing here changes runtime behavior.
 
 > **Changes from v0.4**
 > 1. **Plot-title brand prefix (4.6).** A figure's top-level title begins with
->    `PyStorm-<ACRONYM>` (e.g. `PyStorm-RTCS`); subplot and legend titles do not.
+>    `PyStorm-<ACRONYM>` (e.g. `PyStorm-RSS`); subplot and legend titles do not.
 >
 > Earlier history (v0.2 -> v0.3 role-first restructure; v0.3 -> v0.4 the Author
 > field and box-drawing dividers) is in version control.
@@ -338,8 +338,8 @@ for public API. Section underlines match the heading length exactly (`Returns`
 -> 7 dashes). Private helpers get a single line.
 
 ```python
-def run_rtcs_selection(cfg):
-    """RTCS selection (fixed k) - select a fixed-size Reduced TC Suite.
+def run_rss_selection(cfg):
+    """RSS selection (fixed k) - select a fixed-size Reduced Storm Suite.
 
     Returns
     -------
@@ -414,7 +414,7 @@ are fine; keep one prefix per module.
 
 A figure's top-level title (a `suptitle`, or the single main `set_title` of a
 single-axes figure) begins with the module brand prefix `PyStorm-<ACRONYM>` (e.g.
-`PyStorm-POT`, `PyStorm-RTCS`, `PyStorm-CSH`), where `<ACRONYM>` is the module's.
+`PyStorm-POT`, `PyStorm-RSS`, `PyStorm-CSH`), where `<ACRONYM>` is the module's.
 Subplot / panel titles and legend titles take NO prefix; they stay descriptive
 (`Coverage of Y-space`, `Station 8771013`, `Node 12`, `TC Intensity`). Em/en dashes
 are allowed inside title strings (4.4); the brand prefix itself is hyphenated.
@@ -468,7 +468,7 @@ are allowed inside title strings (4.4); the brand prefix itself is hyphenated.
 1. **Audit** every file under `modules/` and `common/` by role against Section 3;
    produce a divergence list (missing Author lines, em-dash headers, wrong divider
    widths, launcher headers missing `WHAT PRODUCES` / `METHOD`).
-2. **Normalize headers to hyphens.** The launchers in POT, PST, and RTCS still
+2. **Normalize headers to hyphens.** The launchers in POT, PST, and RSS still
    use em-dash header separators (legacy v0.2 rule); convert them to hyphens.
 3. **Normalize** divider widths, underline lengths, and Doxygen tag form in a
    single pass per module.

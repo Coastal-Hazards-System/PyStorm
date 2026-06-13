@@ -1,4 +1,4 @@
-"""tc_climatological_analysis - CRL-based tropical-cyclone storm recurrence rates.
+"""storm_climatology_analysis - CRL-based tropical-cyclone storm recurrence rates.
 
 Author : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
 
@@ -10,29 +10,29 @@ Gaussian Kernel Function, both annually and per calendar month, for All/Low/Med/
 High intensity bins. Optionally maps the selected TCs per CRL.
 """
 
-from tc_climatological_analysis.config import TCAConfig, BASINS
-from tc_climatological_analysis.crls import load_crls
-from tc_climatological_analysis.hurdat_source import (
+from storm_climatology_analysis.config import SCAConfig, BASINS
+from storm_climatology_analysis.crls import load_crls
+from storm_climatology_analysis.hurdat_source import (
     locate_augmented_hurdat,
     load_augmented_hurdat,
 )
-from tc_climatological_analysis.selection import select_storms, gaussian_weights
-from tc_climatological_analysis.gkf import (
+from storm_climatology_analysis.selection import select_storms, gaussian_weights
+from storm_climatology_analysis.gkf import (
     compute_rates,
     azimuth_diff,
     heading_zero_degree_adj,
     HEADINGS,
     MONTHS,
 )
-from tc_climatological_analysis.orchestrator import (
-    TCAOrchestrator,
-    TCAResult,
+from storm_climatology_analysis.orchestrator import (
+    SCAOrchestrator,
+    SCAResult,
     BasinResult,
 )
-from tc_climatological_analysis import plots, basemap, writer
+from storm_climatology_analysis import plots, basemap, writer
 
 __all__ = [
-    "TCAConfig",
+    "SCAConfig",
     "BASINS",
     "load_crls",
     "locate_augmented_hurdat",
@@ -44,8 +44,8 @@ __all__ = [
     "heading_zero_degree_adj",
     "HEADINGS",
     "MONTHS",
-    "TCAOrchestrator",
-    "TCAResult",
+    "SCAOrchestrator",
+    "SCAResult",
     "BasinResult",
     "plots",
     "basemap",

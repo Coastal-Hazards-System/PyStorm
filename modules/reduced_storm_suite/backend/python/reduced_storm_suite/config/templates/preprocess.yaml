@@ -1,4 +1,4 @@
-# reduced_tc_suite Pre-processor Configuration Template
+# reduced_storm_suite Pre-processor Configuration Template
 # ======================================================
 # Generate this file with:
 #   python scripts/preprocess.py --generate-config > preprocess.yaml

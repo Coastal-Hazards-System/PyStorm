@@ -10,7 +10,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from tc_climatological_analysis.gkf import MONTHS, DOYS
+from storm_climatology_analysis.gkf import MONTHS, DOYS
 
 
 def write_selection(selection: pd.DataFrame, path) -> Path:

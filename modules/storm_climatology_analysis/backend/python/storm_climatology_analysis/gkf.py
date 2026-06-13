@@ -38,7 +38,7 @@ from typing import Dict
 import numpy as np
 import pandas as pd
 
-from tc_climatological_analysis.selection import gaussian_weights
+from storm_climatology_analysis.selection import gaussian_weights
 
 # Heading grid (-179..180 deg), matching the MATLAB ``hding``.
 HEADINGS = np.arange(-179, 181, dtype=float)

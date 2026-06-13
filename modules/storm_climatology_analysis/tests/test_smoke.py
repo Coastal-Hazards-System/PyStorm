@@ -1,8 +1,9 @@
-"""test_smoke - smoke tests for the tc_climatological_analysis module.
+"""test_smoke - smoke tests for the storm_climatology_analysis module.
 
 Author : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
 
-Validates: (1) config basin defaults; (2) CRL loading (Atlantic CSV + Pacific tab); (3) Gaussian weights, Haversine distance, azimuth/doy circular wrapping; (4) storm selection within/beyond max_dist and high-pressure dropping; (5) daily and monthly SRR additivity; (6) SRR table/radius writers and units.
+Validates: (1) config basin defaults; (2) CRL loading (Atlantic CSV + Pacific tab); (3) Gaussian weights, Haversine distance, azimuth/doy circular wrapping; (4) storm selection within/beyond max_dist and high-pressure dropping; (5) daily and monthly SRR additivity; (6) SRR table/radius writers and units;
+(7) storm_type tc/etc dispatch (etc placeholder raises NotImplementedError).
 """
 
 from __future__ import annotations
@@ -11,12 +12,12 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from tc_climatological_analysis.config import TCAConfig
-from tc_climatological_analysis.crls import load_crls
-from tc_climatological_analysis.selection import (
+from storm_climatology_analysis.config import SCAConfig
+from storm_climatology_analysis.crls import load_crls
+from storm_climatology_analysis.selection import (
     select_storms, gaussian_weights, _haversine_km, ymd_to_doy,
 )
-from tc_climatological_analysis.gkf import (
+from storm_climatology_analysis.gkf import (
     azimuth_diff, heading_zero_degree_adj, compute_rates, doy_diff,
     HEADINGS, MONTHS, DOYS,
 )
@@ -42,10 +43,10 @@ def _one_storm_hurdat(month=9, pmin=980.0, lat=(24.0, 25.0), lon=(-90.0, -90.0),
 
 
 def test_config_basins_default_both():
-    cfg = TCAConfig()
+    cfg = SCAConfig()
     assert cfg.basins == ["atlantic", "pacific"]     # both on now that Pacific CRLs exist
     assert cfg.pacific_crl_file == "CHS_PAC_CRLs_v1.2.txt"
-    assert TCAConfig(basins="atlantic").basins == ["atlantic"]
+    assert SCAConfig(basins="atlantic").basins == ["atlantic"]
     # raw/processed input convention
     assert cfg.raw_dir.name == "raw" and cfg.processed_dir.name == "processed"
 
@@ -157,7 +158,7 @@ def test_compute_rates_daily_additivity():
 
 
 def test_srr_daily_table(tmp_path):
-    from tc_climatological_analysis import writer
+    from storm_climatology_analysis import writer
     crls = pd.DataFrame({"id": [1], "lat": [25.0], "lon": [-90.0]})
     sel = select_storms(_one_storm_hurdat(month=9, pmin=980.0), crls)
     rates = compute_rates(sel, crls, k_size=200.0, dir_kernel=30.0, day_kernel=15.0,
@@ -201,7 +202,7 @@ def test_compute_rates_monthly_additivity():
 
 
 def test_created_date_from_ahd_name():
-    from tc_climatological_analysis.hurdat_source import created_date
+    from storm_climatology_analysis.hurdat_source import created_date
     # The NHC file date is parsed from the AHD filename; the output tag's start/end
     # years come from the rate period, not the source filename.
     assert created_date("augmented_hurdat2_atlantic_1851-2025_20260227.csv") == "20260227"
@@ -209,7 +210,7 @@ def test_created_date_from_ahd_name():
 
 
 def test_srr_radius_table(tmp_path):
-    from tc_climatological_analysis import writer
+    from storm_climatology_analysis import writer
     crls = pd.DataFrame({"id": [1], "lat": [25.0], "lon": [-90.0]})
     sel = select_storms(_one_storm_hurdat(month=9, pmin=980.0), crls)
     rates = compute_rates(sel, crls, k_size=200.0, dir_kernel=30.0, day_kernel=15.0,
@@ -235,3 +236,12 @@ def test_srr_units_value():
                           dp_low=28.0, dp_med=48.0)
     assert rates["all"]["srr"][0] == pytest.approx(
         1.0 / (np.sqrt(2 * np.pi) * 200.0), rel=1e-6)
+
+
+def test_storm_type_dispatch_and_placeholder():
+    from storm_climatology_analysis.orchestrator import SCAOrchestrator
+    assert SCAConfig().storm_type == "tc"           # default is the implemented mode
+    with pytest.raises(Exception):                  # invalid rejected by the validator
+        SCAConfig(storm_type="bogus")
+    with pytest.raises(NotImplementedError):        # etc placeholder raises on run
+        SCAOrchestrator(SCAConfig(storm_type="etc")).run()
