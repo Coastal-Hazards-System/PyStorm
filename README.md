@@ -42,10 +42,39 @@ orchestrator under `backend/python/`.
 
 | Path | Language | Role |
 |------|----------|------|
-| `run_<module>.py` | Python | Launcher at the module root. User options only; calls the orchestrator. |
-| `backend/python/main_<module>.py` | Python | Orchestrator entry: the Python Orchestration role (data flow, I/O, config, diagnostics, plotting). |
+| `run_<module>.py` | Python | Launcher at the module root. User options + a thin CLI; assembles `config` and calls the orchestrator's `run(config)`. |
+| `backend/python/api_<module>.py` | Python | Orchestrator / module API: the Python Orchestration role (data flow, I/O, config, diagnostics, plotting), exposed as `run(config)`. |
 | `backend/engines/` | C++ | Compute kernel exposed through pybind11 (only where a module has heavy compute). |
 | `tests/` | Python | Smoke and integration tests covering the Python path and, where present, the C++ binding. |
+
+### The `run(config)` convention
+
+Every module exposes a single programmatic entry point in
+`backend/python/api_<module>.py`:
+
+```python
+run(config) -> <Module>Result
+```
+
+`config` is a plain dict (some modules also accept their Pydantic config model).
+The launcher is just a thin front-end: it builds `config` from its USER OPTIONS
+block (and any CLI overrides) and calls `run`. To drive a module from your own
+code, a notebook, or another module, put its backend on the path and call `run`
+directly:
+
+```python
+import sys
+sys.path.insert(0, "modules/<module>/backend/python")
+from api_<module> import run
+
+result = run(config)
+```
+
+`run` returns a typed `<Module>Result` (e.g. `AHDResult`, `POTResult`,
+`SCAResult`, `RSSResult`). Batch-capable modules (POT, PST, RSS) return a
+`dict[str, <Module>Result]` when given multiple inputs (stations, paths, or
+datasets), collapsing to a single result when given one. Each module README's
+**Programmatic API** section documents that module's exact config and result.
 
 What each module ships varies with its workload:
 
@@ -132,7 +161,7 @@ PyStorm/
 │     backend/
 │       engines/                 C++ kernel + pybind11 binding (compute-heavy modules)
 │       python/
-│         main_<module>.py       orchestrator entry
+│         api_<module>.py        orchestrator / module API: run(config)
 │         <module>/              expanded orchestration package
 │     tests/                     smoke + integration tests
 │     data/                      inputs/{raw,processed}/ & outputs/ (gitignored)
