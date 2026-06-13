@@ -88,20 +88,20 @@ def main() -> None:
         dsw_method=cfg.get("dsw_method", 1),
     )
 
-    print(f"\n[bench] Running α/β sweep - sequential "
+    print(f"\n[bench] Running alpha/beta sweep - sequential "
           f"(workers=1, nodes={Y_ab.shape[1]}/{Y.shape[1]}) ...")
     t0 = time.perf_counter()
     seq = run_ab_sweep(grid, workers=1, **common)
     seq_t = time.perf_counter() - t0
     print(f"[bench]   sequential: {seq_t:.2f} s  "
-          f"({len(grid)} pts → {seq_t/len(grid):.2f} s/pt)")
+          f"({len(grid)} pts -> {seq_t/len(grid):.2f} s/pt)")
 
-    print(f"\n[bench] Running α/β sweep - parallel (workers=auto) ...")
+    print(f"\n[bench] Running alpha/beta sweep - parallel (workers=auto) ...")
     t0 = time.perf_counter()
     par = run_ab_sweep(grid, workers=None, **common)
     par_t = time.perf_counter() - t0
     print(f"[bench]   parallel:   {par_t:.2f} s  "
-          f"→ {seq_t/par_t:.2f}× speedup over sequential")
+          f"-> {seq_t/par_t:.2f}x speedup over sequential")
 
     diffs = [abs(s["score"] - p["score"]) for s, p in zip(seq, par)]
     print(f"\n[bench] Max score divergence seq vs par: {max(diffs):.3e}  "
