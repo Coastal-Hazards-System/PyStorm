@@ -6,6 +6,9 @@
 # Archive — local-only stash of legacy data + superseded docs (not on GitHub)
 archive/
 
+# Local-only reports (not on GitHub)
+docs/CyHAN-Comment-Standard-v0.3-Audit.md
+
 # Python
 __pycache__/
 *.pyc

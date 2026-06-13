@@ -1,6 +1,6 @@
 # CyHAN - Comment & Docstring Standard (Python + C++)
 
-*Draft v0.3*
+*Draft v0.4*
 
 This document codifies the comment, docstring, and section-divider conventions
 for every CyHAN source file, organized by **file role** (launcher, orchestrator
@@ -11,21 +11,16 @@ docstrings, inline comments, typography, log strings) are defined once in
 Section 4 and referenced by every role. Applying it makes the comments read the
 same way across all modules. Nothing here changes runtime behavior.
 
-> **Changes from v0.2**
-> 1. **Role-first structure.** v0.2 was organized by topic; v0.3 leads with a
->    per-role template (Section 3) because a launcher, an engine, and a test do
->    not document the same way. This is what standardizes comments across modules.
-> 2. **Hyphen, not em dash.** The header separator and prose use a hyphen
->    (`-`), not an em dash. Em and en dashes are reserved for plot/figure
->    titles only (see 4.4). This reverses the v0.2 rule and matches the rest of
->    the project's typography policy.
-> 3. **Launcher header template** (`WHAT <X> PRODUCES` / `METHOD` / `Run` /
->    `Outputs`) and the **USER OPTIONS** conventions, derived from the module
->    launchers (3.1).
-> 4. A commented-out **option alternative** inside a USER OPTIONS block is
->    allowed as an operator toggle (3.1); commented-out **logic** is still banned.
-> 5. Scientific notation (Greek letters, math operators) is allowed in
->    docstrings and comments (4.4).
+> **Changes from v0.3**
+> 1. **Field renamed `Author / POC` -> `Author`.** Source headers carry a single
+>    `Author : <name>  <email>` line (C++ keeps the Doxygen `@author` tag), matching
+>    the universal software convention. `conftest.py` is exempt (one-line docstring).
+> 2. **Tier-3 divider glyph.** The Tier-3 examples now show the box-drawing form
+>    `# ── label ──` (U+2500, padded to ~column 78) that every module already
+>    uses; it is the house glyph and is distinct from the banned em/en dashes (4.4).
+>
+> Earlier history (the v0.2 -> v0.3 role-first restructure, the hyphen-not-em-dash
+> rule, and the launcher/USER-OPTIONS templates) is in version control.
 
 ---
 
@@ -45,13 +40,14 @@ same way across all modules. Nothing here changes runtime behavior.
 
 1. **First content line is a one-line tag:** `<name_or_role> - <one-line purpose>.`
    The separator is a hyphen with a space on each side. End with a period.
-2. **Author / POC line is mandatory,** immediately under the tag. Git blame is
-   not a substitute for an explicit point of contact, and not every checkout has
-   history. Use a real person, never `TBD` or a team alias as the sole contact.
+2. **Author line is mandatory,** immediately under the tag
+   (`Author : <name>  <email>`). Git blame is not a substitute for an explicit
+   author, and not every checkout has history. Use a real person, never `TBD` or
+   a team alias. `conftest.py` is the one exemption (3.6).
 3. **No em or en dashes in source text** (4.4). Use a hyphen, comma, or
    parentheses. Em/en dashes are allowed only inside plot/figure title strings.
 4. **No revision-history blocks** at the top of files. Version control owns
-   history; the Author / POC line is the only metadata banner in source.
+   history; the Author line is the only metadata banner in source.
 5. **No commented-out logic** and **no `TODO` without an owner or tracker
    reference.** (A commented-out option *value* in a launcher USER OPTIONS block
    is a documented operator toggle, not logic; it is allowed; see 3.1.)
@@ -90,7 +86,7 @@ string"), not a developer.
 ```python
 """run_<name> - <ABBREV> launcher (CyHAN v2.1 5.3).
 
-Author / POC : <Full Name>  <email>
+Author : <Full Name>  <email>
 
 User-facing entry for the <Full Name> (<ABBREV>) module. The operator edits the
 USER OPTIONS block below and runs the script. No orchestration logic lives here;
@@ -133,13 +129,13 @@ banner, grouped by Tier-3 dividers (4.1):
 # USER OPTIONS  - edit anything in this block, then run the script
 # ===========================================================================
 
-# -- Stage selection --
+# ── Stage selection ─────────────────────────────────────────────────────────
 # PRIMARY (default): ["pot"] POT only, on INPUT_CSV below.
 # SECONDARY: add upstream stages in canonical order: "download","detrend","ntr".
 #STAGES = ["download", "detrend", "ntr", "pot"]    # ready-to-use alternative
 STAGES = ["detrend", "ntr", "pot"]
 
-# -- Data semantics --
+# ── Data semantics ──────────────────────────────────────────────────────────
 DT_HOURS       = 0.25          # time step (15 min)
 DRY_VALUE      = -99999.0      # dry sentinel (water below ground)
 AGGREGATE      = "mean"        # "mean" or "median" across a point's storms
@@ -174,7 +170,7 @@ No user options appear here.
 ```python
 """main_<name> - orchestrator entry (CyHAN v2.1 5.3).
 
-Author / POC : <Full Name>  <email>
+Author : <Full Name>  <email>
 
 Receives the launcher's option dict, validates it into a <X>Config, and runs the
 analysis. No user options live here.
@@ -201,7 +197,7 @@ docstrings, Tier-2/Tier-3 dividers for internal regions.
 ```python
 """<role> - <one-line purpose>.
 
-Author / POC : <Full Name>  <email>
+Author : <Full Name>  <email>
 
 <1 to 4 sentences: what this module owns and what it does not. Note the role
 boundary when relevant, e.g. "post-processing only; no engine calls".>
@@ -267,7 +263,7 @@ USER OPTIONS block, with a `Run` section showing concrete invocations.
 ```python
 """<name> - <one-line purpose>.
 
-Author / POC : <Full Name>  <email>
+Author : <Full Name>  <email>
 
 <What it does and what it writes. Note "Headless by design" if it only writes
 files. State which module outputs or inputs it consumes.>
@@ -286,7 +282,7 @@ identically.
 ```python
 """test_<area> - smoke tests for the <ABBREV> module.
 
-Author / POC : <Full Name>  <email>
+Author : <Full Name>  <email>
 
 Validates: (1) config construction; (2) <stage> on a synthetic record;
 (3) <invariant>; (4) end-to-end <Orchestrator> run.
@@ -294,8 +290,9 @@ Validates: (1) config construction; (2) <stage> on a synthetic record;
 ```
 
 - A one-line numbered "Validates:" list is the whole header; keep it current.
-- `conftest.py`: a single-line module docstring stating what it wires (for
-  example, putting `backend/python` and `common/python` on `sys.path`).
+- `conftest.py`: exempt from the Author line; a single-line module docstring
+  stating what it wires (e.g. putting `backend/python` and `common/python` on
+  `sys.path`) is sufficient.
 - Fixtures and helpers: one-line docstring; no sections.
 
 ---
@@ -327,14 +324,15 @@ API). Use sparingly, at most 3 to 5 per file:
 drawing run padded to ~column 78:
 
 ```python
-# -- PCA dry-node handling --
+# ── PCA dry-node handling ───────────────────────────────────────────────────
 ```
 ```cpp
-// --- BUILD: maximin initialization ---
+// ── BUILD: maximin initialization ──────────────────────────────────────────
 ```
 
 Rules: dividers have a blank line before and after; the C++ rule width matches
-the Python equals width so visual weight is consistent across languages.
+the Python equals width so visual weight is consistent across languages. The
+Tier-3 fill is box-drawing `─` (U+2500), not an em/en dash (4.4).
 
 ### 4.2 Function and method docstrings
 
@@ -436,23 +434,23 @@ are fine; keep one prefix per module.
 
 | Role | Header has | Special convention |
 |------|-----------|--------------------|
-| Launcher | tag, POC, WHAT PRODUCES, METHOD, Run, Outputs | USER OPTIONS block; operator voice |
-| Orchestrator entry | tag, POC, (Public API if expanded) | no user options |
-| Orchestration package | tag, POC, role boundary | NumPy docstrings; dividers |
+| Launcher | tag, Author, WHAT PRODUCES, METHOD, Run, Outputs | USER OPTIONS block; operator voice |
+| Orchestrator entry | tag, Author, (Public API if expanded) | no user options |
+| Orchestration package | tag, Author, role boundary | NumPy docstrings; dividers |
 | C++ engine | Doxygen @file/@brief/@author, engine contract | arrays in/out, no I/O |
 | Bindings | Doxygen, "conduit", extension name | conversions only |
-| Script / analysis | tag, POC, Run usage | headless note |
-| Test | tag, POC, numbered Validates | keep list current |
+| Script / analysis | tag, Author, Run usage | headless note |
+| Test | tag, Author, numbered Validates | keep list current |
 
 **By element.**
 
 | Element | Python | C++ |
 |---------|--------|-----|
 | File tag | `"""name - purpose."""` | `/** @file ... @brief ... */` |
-| Author / POC | `Author / POC : Name <email>` | `@author Name <email>` |
+| Author | `Author : Name <email>` | `@author Name <email>` |
 | Tier 1 divider | `# ===...===` | `// ===...===` |
 | Tier 2 divider | `# ---...---` | `// ---...---` |
-| Tier 3 divider | `# -- label --` | `// --- label ---` |
+| Tier 3 divider | `# ── label ──` | `// ── label ──` |
 | Public docstring | `"""Summary."""` + `Returns` | `/** Summary. */` + `@return` |
 | Trailing comment | `value,   # meaning` | `value;   // meaning` |
 | Separator | hyphen ` - ` | hyphen ` - ` |
@@ -462,13 +460,13 @@ are fine; keep one prefix per module.
 ## 7. Rollout
 
 1. **Audit** every file under `modules/` and `common/` by role against Section 3;
-   produce a divergence list (missing POC lines, em-dash headers, wrong divider
+   produce a divergence list (missing Author lines, em-dash headers, wrong divider
    widths, launcher headers missing `WHAT PRODUCES` / `METHOD`).
 2. **Normalize headers to hyphens.** The launchers in POT, PST, and RTCS still
    use em-dash header separators (legacy v0.2 rule); convert them to hyphens.
 3. **Normalize** divider widths, underline lengths, and Doxygen tag form in a
    single pass per module.
-4. For any file missing an Author / POC line, **ask before assigning**; do not
+4. For any file missing an Author line, **ask before assigning**; do not
    auto-populate from `git blame`.
 5. Keep this document in `docs/` alongside `CyHAN-Standard-v2.1.md` as the
    long-lived reference.
