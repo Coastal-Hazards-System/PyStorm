@@ -123,7 +123,7 @@ class PreprocessOrchestrator:
         plots_dir = Path(plots_dir); plots_dir.mkdir(parents=True, exist_ok=True)
         fig, ax = plt.subplots(figsize=(10, 5))
         p = TimeSeriesPlotter(ax, "datetime", "value", ylabel="Water Level",
-                              units=units, title="PyStorm: Time Series Detrending")
+                              units=units, title="PyStorm-POT Time Series Detrending")
         p.plot(measured,  label="Measured",     color=PALETTE["measured"])
         p.plot(detrended, label="Detrended",    color=PALETTE["series"])
         p.plot(trend,     label="Linear Trend", color=PALETTE["trend"], linestyle="--")
@@ -148,7 +148,7 @@ class PreprocessOrchestrator:
         plots_dir = Path(plots_dir); plots_dir.mkdir(parents=True, exist_ok=True)
         fig, ax = plt.subplots(figsize=(10, 5))
         p = TimeSeriesPlotter(ax, "datetime", "ntr", ylabel="Non-Tidal Residual",
-                              units=units, title="PyStorm: Non-Tidal Residual (NTR)")
+                              units=units, title="PyStorm-POT Non-Tidal Residual (NTR)")
         p.plot(ntr_full, label="NTR", color=PALETTE["series"])
         p.finalize()
         out = plots_dir / f"ntr_{sid}.png"

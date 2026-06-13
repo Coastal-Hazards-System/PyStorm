@@ -181,7 +181,7 @@ class POTOrchestrator:
         plotter = TimeSeriesPlotter(
             ax, datetime_col="datetime", value_col="value",
             ylabel=value_col_label, units=full_units,
-            title=f"PyStorm: {value_col_label} — Peaks Over Threshold",
+            title=f"PyStorm-POT {value_col_label} — Peaks Over Threshold",
         )
         df_valid = df.dropna(subset=["datetime", "value"])
         plotter.plot(df_valid, label=value_col_label, color=PALETTE["series"])

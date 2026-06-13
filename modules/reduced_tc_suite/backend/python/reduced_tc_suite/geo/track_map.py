@@ -188,7 +188,7 @@ def plot_bbox_map(
     ax.set_xlabel("Longitude (°E)")
     ax.set_ylabel("Latitude (°N)")
     ax.set_title(
-        f"Bounding-Box Filter — "
+        f"PyStorm-RTCS Bounding-Box Filter — "
         f"{len(bbox_node_lats)} nodes, "
         f"{len(storm_indices_near)} storms (within {max_dist_km:.0f} km)",
         fontsize=12, fontweight="bold",

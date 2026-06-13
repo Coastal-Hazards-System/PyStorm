@@ -144,7 +144,7 @@ def _annual_specs(selection, crls, rates, basin, max_crls):
         clat, clon = pos.get(cid, (np.nan, np.nan))
         srr4 = _srr4_annual(rates, idx[cid])
         specs.append((f"CHS_{title_basin}_CRL_{cid:04d}.png",
-                      f"CHS — {title_basin} CRL {cid:04d}",
+                      f"PyStorm-TCA {title_basin} CRL {cid:04d}",
                       clat, clon, g["lon"].to_numpy(float), g["lat"].to_numpy(float),
                       g["dp"].to_numpy(float), srr4))
         if max_crls is not None and len(specs) >= max_crls:
@@ -166,7 +166,7 @@ def _monthly_specs(selection, crls, rates, basin, max_crls):
             gm = g[g["month"] == m]
             srr4 = _srr4_monthly(rates, ci, m - 1)
             specs.append((f"CHS_{title_basin}_CRL_{cid:04d}_{m:02d}_{MONTHS[m - 1]}.png",
-                          f"CHS — {title_basin} CRL {cid:04d} — {MONTHS[m - 1]}",
+                          f"PyStorm-TCA {title_basin} CRL {cid:04d} — {MONTHS[m - 1]}",
                           clat, clon, gm["lon"].to_numpy(float), gm["lat"].to_numpy(float),
                           gm["dp"].to_numpy(float), srr4))
         ncrl += 1
@@ -398,7 +398,7 @@ def _daily_specs(selection, crls, rates, basin, max_crls):
         curves = tuple(np.asarray(rates[b]["srr_daily"][ci], dtype=float)
                        for b in _SRR_ORDER)
         specs.append((f"CHS_{title_basin}_CRL_{cid:04d}.png",
-                      f"CHS — {title_basin} CRL {cid:04d}", curves))
+                      f"PyStorm-TCA {title_basin} CRL {cid:04d}", curves))
         if max_crls is not None and len(specs) >= max_crls:
             break
     return specs

@@ -140,7 +140,7 @@ class HazardCurvePlotter:
         self.ax.set_xticks([1e-3, 1e-2, 1e-1, 1, 10])
         self.ax.set_xlabel("Annual Exceedance Rate (AER, yr⁻¹)", fontsize=12)
         self.ax.set_ylabel(ylabel, fontsize=12)
-        self.ax.set_title("PyStorm — Probabilistic Simulation Technique (PST)",
+        self.ax.set_title("PyStorm-PST Probabilistic Simulation Technique (PST)",
                           fontsize=13, fontweight="bold")
         style_ax(self.ax)
         self.ax.grid(True, which="both", color=_C["grid"], linewidth=0.6, alpha=0.7)
@@ -200,7 +200,7 @@ def _plot_mrl_diagnostics(qdo, output_path: Path, ylabel: str = "Response") -> N
             label=f"WLS fit (A={A:+.3f} → ξ={A/(1+A):+.3f})")
     a0.plot([], [], **sel_kw, label=f"selected μ* = {ustar:.3f}")
     a0.set_ylabel(f"mean excess e(u)")
-    a0.set_title("PyStorm — automated mean-residual-life (μ) selection [mrl]",
+    a0.set_title("PyStorm-PST automated mean-residual-life (μ) selection [mrl]",
                  fontsize=12, fontweight="bold")
     style_ax(a0)
     leg = a0.legend(fontsize=8, frameon=True, framealpha=0.95, edgecolor=_C["grid"])
@@ -264,7 +264,7 @@ def _plot_gof_diagnostics(qdo, output_path: Path, ylabel: str = "Response") -> N
     a0.plot([], [], **acc_kw, label="not rejected (stat ≤ crit)")
     a0.plot([], [], **sel_kw, label=f"selected μ* = {qdo.best_threshold:.3f}")
     a0.set_ylabel(f"{stt} GoF statistic")
-    a0.set_title("PyStorm — GoF failure-to-reject (μ) selection [gof]",
+    a0.set_title("PyStorm-PST GoF failure-to-reject (μ) selection [gof]",
                  fontsize=12, fontweight="bold")
     style_ax(a0)
     leg = a0.legend(fontsize=8, frameon=True, framealpha=0.95, edgecolor=_C["grid"])
@@ -371,7 +371,7 @@ def plot_qdo_diagnostics(qdo, output_path: Path, ylabel: str = "Response") -> No
             a0.axhline(ceiling, color=_C["above"], linestyle="--", linewidth=1.3,
                        zorder=3, label=f"accept ceiling ({tol:.0%} of floor→robust-max)")
     a0.set_ylabel("WMSE")
-    a0.set_title("PyStorm — QDO GPD-location (μ) selection diagnostics  "
+    a0.set_title("PyStorm-PST QDO GPD-location (μ) selection diagnostics  "
                  f"[{method}]", fontsize=12, fontweight="bold")
     style_ax(a0)
     leg = a0.legend(fontsize=8, frameon=True, framealpha=0.95, edgecolor=_C["grid"])

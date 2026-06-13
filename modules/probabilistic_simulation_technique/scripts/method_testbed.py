@@ -125,7 +125,7 @@ def main(series="dwl", fit="mle"):
     np.atleast_1d(axes)[0].invert_xaxis()
     np.atleast_1d(axes)[-1].set_xlabel(
         "Annual Exceedance Rate, AER (1/yr)   [MRI = 1 / AER]", fontsize=11)
-    fig.suptitle(f"PyStorm — GPD-location selection comparison "
+    fig.suptitle(f"PyStorm-PST GPD-location selection comparison "
                  f"({series}, fit={fit})", fontsize=13, fontweight="bold")
     fig.tight_layout(rect=(0, 0, 1, 0.99))
 

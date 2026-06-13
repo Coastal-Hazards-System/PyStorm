@@ -140,7 +140,7 @@ def _render_specs(specs, *, basin, target, out_dir, dpi=150) -> int:
         gpm_line.set_data(t, v)
         obs_pts.set_data(t[o], v[o])
         title.set_text(
-            f"HURDAT Data Imputation\n(TC: {name}, ID: {_id_label(nhc_id)})")
+            f"PyStorm-AHD HURDAT Data Imputation\n(TC: {name}, ID: {_id_label(nhc_id)})")
         year_txt.set_text(str(int(year)))
         lo, hi = float(t.min()), float(t.max())
         if hi <= lo:                                   # single fix / one timestamp

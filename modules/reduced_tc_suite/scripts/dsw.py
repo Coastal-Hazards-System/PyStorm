@@ -93,7 +93,7 @@ def _plot_hc_comparison(HC_recon, HC_bench, tbl_aer, node_indices, out_dir):
     nrows = (n + ncols - 1) // ncols
     fig, axes = plt.subplots(nrows, ncols,
                              figsize=(5 * ncols, 4 * nrows), squeeze=False)
-    fig.suptitle("Reconstructed HC vs Benchmark", fontsize=13, fontweight="bold")
+    fig.suptitle("PyStorm-RTCS Reconstructed HC vs Benchmark", fontsize=13, fontweight="bold")
 
     mri = 1.0 / tbl_aer        # mean return interval (yr)
 

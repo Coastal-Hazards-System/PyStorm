@@ -25,7 +25,7 @@ def plot_growth_history(history, cfg, out_dir):
     k_v   = df["k"].values
     nrows = 2 if do_hc else 1
     fig, axes = plt.subplots(nrows, 3, figsize=(16, 5 * nrows))
-    fig.suptitle("Growth Loop — All Metrics vs Subset Size k",
+    fig.suptitle("PyStorm-RTCS Growth Loop — All Metrics vs Subset Size k",
                  fontsize=13, fontweight="bold")
     if nrows == 1:
         axes = axes[np.newaxis, :]
@@ -175,7 +175,7 @@ def plot_pca_yspace(
                    linewidths=0.8, zorder=4)
 
     ax.set(xlabel="PC 1", ylabel="PC 2")
-    ax.set_title(title or "Y-space PCA — PC 1 vs PC 2",
+    ax.set_title(f"PyStorm-RTCS {title or 'Y-space PCA — PC 1 vs PC 2'}",
                  fontsize=12, fontweight="bold")
     ax.grid(alpha=0.3)
 
@@ -265,7 +265,7 @@ def plot_tc_splom(
 
     fig, axes = plt.subplots(n, n, figsize=(3 * n, 3 * n),
                              gridspec_kw={"hspace": 0.05, "wspace": 0.05})
-    fig.suptitle(title, fontsize=14, fontweight="bold", y=1.01)
+    fig.suptitle(f"PyStorm-RTCS {title}",fontsize=14, fontweight="bold", y=1.01)
 
     for row in range(n):
         for col in range(n):
@@ -379,7 +379,7 @@ def _plot_hc_grid(
     nrows = (n_nodes + ncols - 1) // ncols
     fig, axes = plt.subplots(nrows, ncols,
                              figsize=(5 * ncols, 4 * nrows), squeeze=False)
-    fig.suptitle(title, fontsize=13, fontweight="bold", y=1.02)
+    fig.suptitle(f"PyStorm-RTCS {title}",fontsize=13, fontweight="bold", y=1.02)
 
     for ax_idx, node in enumerate(nodes):
         r, c = divmod(ax_idx, ncols)
@@ -493,7 +493,7 @@ def plot_hc_qbm(
     nrows = (n_nodes + ncols - 1) // ncols
     fig, axes = plt.subplots(nrows, ncols,
                              figsize=(5 * ncols, 4 * nrows), squeeze=False)
-    fig.suptitle(f"HC Comparison -- Benchmark vs DSW vs {title_suffix}",
+    fig.suptitle(f"PyStorm-RTCS HC Comparison -- Benchmark vs DSW vs {title_suffix}",
                  fontsize=13, fontweight="bold", y=1.02)
 
     for ax_idx, node in enumerate(nodes):
