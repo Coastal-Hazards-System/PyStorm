@@ -142,7 +142,7 @@ Windows, gcc or clang elsewhere). SCA and CSH have no engine to build.
 
 ## Repository layout
 
-```
+```text
 PyStorm/
 │
 ├── modules/                                  six self-contained capability verticals
