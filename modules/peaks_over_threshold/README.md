@@ -113,7 +113,7 @@ Like every PyStorm module, POT exposes one entry point in
 `backend/python/api_peaks_over_threshold.py`:
 
 ```python
-run(config) -> POTResult | PipelineResult
+run(config) -> POTResult | PipelineResult | dict[str, ...]
 ```
 
 The launcher (`run_peaks_over_threshold.py`) only assembles `config` (stations,
@@ -127,12 +127,19 @@ from api_peaks_over_threshold import run
 result = run(config)   # config: a dict (or a POTConfig / PreprocessConfig)
 ```
 
-It returns a **`POTResult`** for a single POT-only extraction, or a
-**`PipelineResult`** when preprocessing stages (and/or multiple stations and
-targets) run. `POTResult` carries `threshold`, `peaks_df`, `events_per_year`,
-`final_percentile`, `effective_duration_years`, `converged`, `iterations`, and
-`used_cpp_kernel`. `PipelineResult` bundles `preprocess` and a `pot` map of
-`{target: POTResult}` (e.g. `{"dwl": ..., "ntr": ...}`).
+The return type follows the job:
+
+- **`POTResult`** - a single POT-only extraction (one input series, or a
+  `POTConfig`). Carries `threshold`, `peaks_df`, `events_per_year`,
+  `final_percentile`, `effective_duration_years`, `converged`, `iterations`,
+  and `used_cpp_kernel`.
+- **`PipelineResult`** - a single-station run with preprocessing stages. Bundles
+  `preprocess` and a `pot` map `{target: POTResult}` (e.g. `{"dwl": ...,
+  "ntr": ...}`).
+- **`dict[str, POTResult | PipelineResult]`** - a batch over `station_ids`
+  (keyed by station) or over `input_csvs` (keyed by file stem); the default
+  launcher config (multiple stations) returns this. A batch of size one
+  collapses to the single result above.
 
 ## Layout
 

@@ -47,7 +47,7 @@ class PipelineResult:
     pot:        dict = field(default_factory=dict)
 
 
-def run(config) -> Union[POTResult, PipelineResult]:
+def run(config) -> Union[POTResult, PipelineResult, dict]:
     """Execute the requested stages.
 
     Parameters
@@ -59,8 +59,16 @@ def run(config) -> Union[POTResult, PipelineResult]:
 
     Returns
     -------
-    POTResult        when POT-only.
-    PipelineResult   when any preprocessing stage runs.
+    POTResult
+        A single POT-only extraction (a ``POTConfig``, or a dict resolving to
+        one input series).
+    PipelineResult
+        A single-station / no-station run with preprocessing stages; bundles the
+        preprocess result and a ``pot`` map ``{target: POTResult}``.
+    dict[str, POTResult | PipelineResult]
+        A batch over ``station_ids`` (keyed by station) or over ``input_csvs``
+        (keyed by file stem). A batch of size one collapses to the single
+        result above.
     """
     # POTConfig instance → POT-only (backward compatible).
     if isinstance(config, POTConfig):
