@@ -1,6 +1,6 @@
 """orchestrator - run the selected NTR-pipeline stages with I/O and plots.
 
-Author / POC : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
+Author : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
 
 Wraps the pure preprocessing engines (download / detrend / ntr) with file
 reads, writes, and diagnostic plots, executing only the stages requested in

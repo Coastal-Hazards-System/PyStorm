@@ -1,15 +1,20 @@
-// gpm_kernel.hpp - power-exponential correlation kernel for the GP metamodel.
-//
-// Author / POC : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
-//
-// R_ij = exp( -sum_k theta_k * |A_ik - B_jk|^p ).  This is the dominant cost of
-// GP prediction (a tall m x n kernel against the support set) and of the
-// per-evaluation R build during calibration. It is pure elementwise/reduction
-// work with no BLAS, so an OpenMP-parallel C++ loop beats the NumPy broadcast
-// (which allocates large temporaries). The O(n^3) Cholesky/solves stay in
-// LAPACK (via SciPy) where they are already optimal.
-
 #pragma once
+/**
+ * @file        gpm_kernel.hpp
+ * @brief       Power-exponential correlation kernel for the GP metamodel.
+ *
+ * @author      Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
+ *
+ * R_ij = exp( -sum_k theta_k * |A_ik - B_jk|^p ). This is the dominant cost of GP
+ * prediction (a tall m x n kernel against the support set) and of the
+ * per-evaluation R build during calibration. It is pure elementwise/reduction
+ * work with no BLAS, so an OpenMP-parallel C++ loop beats the NumPy broadcast
+ * (which allocates large temporaries). The O(n^3) Cholesky/solves stay in LAPACK
+ * (via SciPy) where they are already optimal.
+ *
+ * Engine contract: arrays in, arrays out. Raw pointers only; the pybind11 layer
+ * in bindings.cpp handles numpy <-> C++. No config, no I/O.
+ */
 #include <cmath>
 #include <cstddef>
 

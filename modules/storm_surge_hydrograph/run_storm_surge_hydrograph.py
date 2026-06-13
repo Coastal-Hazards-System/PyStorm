@@ -1,6 +1,6 @@
 """run_storm_surge_hydrograph - SSH launcher (CyHAN v2.1 5.3).
 
-Author / POC : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
+Author : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
 
 User-facing entry for the Storm Surge Hydrograph (SSH) module. The operator edits
 the USER OPTIONS block below and runs the script. No orchestration logic lives here

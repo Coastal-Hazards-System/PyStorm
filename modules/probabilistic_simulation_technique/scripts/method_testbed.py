@@ -1,6 +1,6 @@
 """method_testbed - compare the GPD-location selection methods across stations.
 
-Author / POC : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
+Author : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
 
 Runs every GPD-location SELECTION method (wmse, stability, mrl, gof) on each
 station's POT series through the full PST pipeline and stacks the resulting

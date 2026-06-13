@@ -1,4 +1,6 @@
-"""Parallel α/β grid sweep for RTCS selection.
+"""_ab_sweep - parallel α/β grid sweep for RTCS selection.
+
+Author : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
 
 Each (α, β) iteration is independent: it builds a joint matrix, runs
 k-medoids with the same forced indices and seed, then evaluates HC metrics.

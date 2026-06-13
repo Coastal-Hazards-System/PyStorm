@@ -1,6 +1,6 @@
 """Discrete Storm Weight (DSW) back-computation and JPM-OS hazard-curve reconstruction.
 
-Author / POC : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
+Author : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
 
 Algorithm
 ---------

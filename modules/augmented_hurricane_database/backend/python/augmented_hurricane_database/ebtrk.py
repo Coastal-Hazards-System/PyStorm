@@ -1,6 +1,6 @@
 """EBTRK Rmax backfill - fill missing HURDAT2 radius-of-maximum-wind.
 
-Author / POC : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
+Author : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
 
 Port of ``ebtrk/CHS_TC_HURDAT_Atlantic_with_ebtrk_Rm_append_v3.m``, extended to
 the Pacific. HURDAT2 records the radius of maximum wind (Rmax) only for recent

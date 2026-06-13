@@ -1,6 +1,6 @@
 """gpd_fit - the single GPD fitting primitive shared across PST.
 
-Author / POC : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
+Author : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
 
 Both the QDO location search (``sampling/gpd_threshold.py``) and the hazard
 ensemble (``hazard/curve.py``) fit a Generalized Pareto distribution to

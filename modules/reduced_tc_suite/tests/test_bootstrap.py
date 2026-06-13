@@ -1,10 +1,8 @@
-"""Tests for the tc_data.h5 auto-bootstrap in
-main_reduced_tc_suite._ensure_h5_exists.
+"""test_bootstrap - the tc_data.h5 auto-bootstrap in main_reduced_tc_suite._ensure_h5_exists.
 
-Patches the Preprocessor class so the test doesn't actually need any real
-input files; we only validate the launcher's bootstrap dispatch logic. Raw
-source files are staged as empty dummies under a tmp_path layout so
-_build_preprocess_config can resolve them without touching repo data.
+Author : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
+
+Validates: (1) an existing h5 skips bootstrap; (2) a missing h5 invokes the Preprocessor; (3) a Preprocessor that produces no output raises. The Preprocessor is patched, so no real input files are needed.
 """
 
 import sys

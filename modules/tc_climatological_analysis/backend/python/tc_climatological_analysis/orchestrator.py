@@ -1,7 +1,7 @@
 """Orchestrator - per basin: load CRLs + augmented HURDAT, select storms,
 compute SRR/DSRR (annual + monthly), write tables, and optionally map each CRL.
 
-Author / POC : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
+Author : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
 """
 
 from __future__ import annotations

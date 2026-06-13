@@ -1,4 +1,9 @@
-"""Smoke tests for the tc_climatological_analysis module."""
+"""test_smoke - smoke tests for the tc_climatological_analysis module.
+
+Author : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
+
+Validates: (1) config basin defaults; (2) CRL loading (Atlantic CSV + Pacific tab); (3) Gaussian weights, Haversine distance, azimuth/doy circular wrapping; (4) storm selection within/beyond max_dist and high-pressure dropping; (5) daily and monthly SRR additivity; (6) SRR table/radius writers and units.
+"""
 
 from __future__ import annotations
 

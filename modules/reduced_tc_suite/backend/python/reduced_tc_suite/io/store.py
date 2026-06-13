@@ -1,6 +1,6 @@
 """Read, write, validate, and CSV-export the standard reduced_tc_suite HDF5 store.
 
-Author / POC : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
+Author : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
 
 Standard layout (tc_data.h5)
 -----------------------------

@@ -1,12 +1,18 @@
-// bindings.cpp - pybind11 bindings for the _gpm GP-metamodel kernel engine.
-//
-// Author / POC : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
-//
-// Exposes a single hot-loop accelerator:
-//   corr(A, B, theta, p) -> R   (power-exponential correlation, OpenMP)
-// The GP algebra (Cholesky, GLS, likelihood gradient) stays in NumPy/SciPy,
-// which dispatch the O(n^3) work to LAPACK; only this O(m*n*d) kernel benefits
-// from a hand-written parallel C++ loop.
+/**
+ * @file        bindings.cpp
+ * @brief       pybind11 layer exposing the gpm correlation kernel to Python.
+ *
+ * @author      Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
+ *
+ * Wraps gpm::corr() with numpy <-> C++ buffer conversions and publishes it as the
+ * `_gpm` extension module in the augmented_hurricane_database package. Conduit
+ * only: it exposes engine capability without adding orchestration (CyHAN 4.1).
+ *
+ * Exposes a single hot-loop accelerator: corr(A, B, theta, p) -> R
+ * (power-exponential correlation, OpenMP). The GP algebra (Cholesky, GLS,
+ * likelihood gradient) stays in NumPy/SciPy, which dispatch the O(n^3) work to
+ * LAPACK; only this O(m*n*d) kernel benefits from a hand-written parallel C++ loop.
+ */
 
 #include <pybind11/pybind11.h>
 #include <pybind11/numpy.h>

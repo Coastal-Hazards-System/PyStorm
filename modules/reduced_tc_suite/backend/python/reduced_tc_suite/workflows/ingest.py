@@ -1,6 +1,6 @@
 """Ingestion workflow: load raw source files → validate shapes → write tc_data.h5.
 
-Author / POC : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
+Author : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
 
 Owns the sequence; delegates format I/O to reduced_tc_suite.io.readers and
 store writes to reduced_tc_suite.io.store.

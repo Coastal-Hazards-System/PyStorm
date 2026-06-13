@@ -1,6 +1,6 @@
 """Lightweight map for the bounding-box filter diagnostic.
 
-Author / POC : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
+Author : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
 
 Renders a single PNG with:
   (a) OSM tile basemap

@@ -1,6 +1,6 @@
-"""Per-CRL storm selection (Gaussian-weighted representative point).
+"""selection - per-CRL storm selection (Gaussian-weighted representative point).
 
-Author / POC : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
+Author : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
 
 Port of ``CHS_Atlantic_StormSelection.m``. For every CRL, each tropical cyclone
 whose track passes within ``max_dist`` contributes one record: a representative

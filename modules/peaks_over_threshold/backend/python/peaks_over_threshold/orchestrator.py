@@ -1,6 +1,6 @@
 """orchestrator - end-to-end POT extraction workflow runner.
 
-Author / POC : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
+Author : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
 
 Composes the time-series reader, the iterative threshold-search kernel
 (``_pot`` when built, pure Python otherwise), the peaks writer, and the

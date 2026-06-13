@@ -1,6 +1,6 @@
-"""Per-save-point diagnostic plots for the SSH module.
+"""plots - per-save-point diagnostic plots for the SSH module.
 
-Author / POC : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
+Author : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
 
 Per save point:
   * SSH_SP#####.png  - three panels: the canonical (double-normalized) unit

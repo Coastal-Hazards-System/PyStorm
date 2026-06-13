@@ -1,6 +1,6 @@
 """Bounding-box node/storm filtering for regional RTCS workflows.
 
-Author / POC : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
+Author : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
 """
 
 from __future__ import annotations

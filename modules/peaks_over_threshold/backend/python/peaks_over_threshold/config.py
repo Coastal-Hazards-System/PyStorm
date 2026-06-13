@@ -1,6 +1,6 @@
 """config - pydantic models for the POT job request.
 
-Author / POC : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
+Author : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
 
 Defines the configuration surface for a single Peaks-Over-Threshold extraction
 and for the optional upstream NTR-pipeline stages. Validated on construction;

@@ -1,4 +1,9 @@
-"""Smoke tests for the storm_surge_hydrograph (SSH) module."""
+"""test_smoke - smoke tests for the storm_surge_hydrograph (SSH) module.
+
+Author : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
+
+Validates: (1) config construction and validation; (2) staID sign handling and storm normalization; (3) unit-hydrograph build, scaling, and double-normalization collapse; (4) overland/overwater threshold and duration<->equiv-width conversion; (5) parametric limb fit; (6) writer round-trip.
+"""
 
 from __future__ import annotations
 

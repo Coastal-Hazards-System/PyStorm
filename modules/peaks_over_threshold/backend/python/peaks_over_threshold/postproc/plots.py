@@ -1,6 +1,6 @@
 """plots - NaN-aware time-series plotter for POT diagnostics.
 
-Author / POC : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
+Author : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
 
 Draws the original time series, the selected peaks, and the chosen threshold.
 Long gaps in the input (default > 48 h) are split into separate line segments

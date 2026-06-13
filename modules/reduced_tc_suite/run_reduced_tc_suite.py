@@ -1,6 +1,6 @@
 """run_reduced_tc_suite - RTCS launcher (CyHAN v2.1 §5.3).
 
-Author / POC : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
+Author : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
 
 User-facing entry point for the Reduced TC Suite (formerly
 ``storm_selection``). The operator edits values in the USER OPTIONS block

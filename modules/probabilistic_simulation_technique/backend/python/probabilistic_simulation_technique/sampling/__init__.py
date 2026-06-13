@@ -1,6 +1,6 @@
 """sampling - bootstrap and GPD-threshold selection primitives.
 
-Author / POC : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
+Author : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
 """
 
 from .bootstrap     import BootstrapGenerator

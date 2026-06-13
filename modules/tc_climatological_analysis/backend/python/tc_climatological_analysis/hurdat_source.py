@@ -1,6 +1,6 @@
-"""Locate and load the augmented HURDAT2 source (the AHD module output).
+"""hurdat_source - locate and load the augmented HURDAT2 source (the AHD module output).
 
-Author / POC : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
+Author : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
 
 The storm selection runs on the augmented best-track CSV produced by the sibling
 ``augmented_hurricane_database`` (AHD) module - the HURDAT-like table with

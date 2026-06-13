@@ -1,6 +1,6 @@
 """YAML / JSON configuration loader for the reduced_tc_suite module.
 
-Author / POC : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
+Author : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
 """
 
 from __future__ import annotations

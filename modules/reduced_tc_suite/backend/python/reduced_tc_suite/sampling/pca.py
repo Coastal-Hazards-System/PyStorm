@@ -1,6 +1,6 @@
 """PCA (POD) dimensionality reduction on the surge response matrix Y.
 
-Author / POC : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
+Author : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
 
 Engine contract: arrays in, arrays out.  No config, no I/O.
 """

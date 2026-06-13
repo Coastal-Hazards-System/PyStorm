@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 """build.py - standalone build helper for the _pot pybind11 extension.
 
-Author / POC : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
+Author : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
 
 Builds the C++ kernel defined in ``POTThresholdSearch.hpp`` + ``pot_bindings.cpp``
 and installs the resulting extension into the expanded orchestration package

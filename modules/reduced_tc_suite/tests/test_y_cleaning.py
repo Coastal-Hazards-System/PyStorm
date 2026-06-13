@@ -1,5 +1,9 @@
-"""Tests for the -99999 → NaN conversion in read_store and the
-dry-node strategies in reduce_output."""
+"""test_y_cleaning - the -99999 to NaN conversion in read_store and the dry-node strategies.
+
+Author : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
+
+Validates: (1) -99999 maps to NaN; (2) not-simulated dropped, dry kept; (3) failed storms dropped and storm_ids subset; (4) pass-through without sentinels; (5) the PCA dry-node strategies (drop_always_dry, zero, wet_only, node_mean, wet_ratio_floor) and their clear errors.
+"""
 
 import sys
 from pathlib import Path

@@ -1,6 +1,6 @@
 """Relationship between actual duration (time above threshold) and equivalent width.
 
-Author / POC : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
+Author : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
 
 The actual duration is the time the surge stays above z0 = max(ground, MHHW) + 0.30 m
 (here 0.30 m above ground; all CTXS points are overland). It relates to the equivalent

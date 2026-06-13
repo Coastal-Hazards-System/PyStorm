@@ -1,8 +1,8 @@
-"""Parity tests for the parallel α/β sweep.
+"""test_ab_sweep - parity tests for the parallel alpha/beta sweep.
 
-Validates that sequential (workers=1) and parallel (workers>1) execution of
-``run_ab_sweep`` produce identical numerical results on a synthetic case.
-Determinism comes from the fixed seed; only execution layout changes.
+Author : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
+
+Validates: (1) sequential matches grid order; (2) node-subsample changes nothing when full; (3) parallel (workers>1) matches sequential. Determinism comes from the fixed seed; only execution layout changes.
 """
 
 import sys

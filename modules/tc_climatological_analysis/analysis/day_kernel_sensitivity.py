@@ -1,6 +1,6 @@
 """Sensitivity analysis for the daily-SRR temporal kernel bandwidth (DAY_KERNEL).
 
-Author / POC : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
+Author : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
 
 The daily SRR smooths each CRL's closest-approach day-of-year (doy) values, weighted
 by the same distance kernel the SRR uses (Wi), with a circular (period-365) Gaussian

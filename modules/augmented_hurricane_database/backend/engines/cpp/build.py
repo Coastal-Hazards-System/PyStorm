@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 """build.py - standalone build helper for the _gpm pybind11 extension.
 
-Author / POC : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
+Author : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
 
 Builds the C++ power-exponential correlation kernel (``gpm_kernel.hpp`` +
 ``bindings.cpp``) and installs the extension into the GP-metamodel package

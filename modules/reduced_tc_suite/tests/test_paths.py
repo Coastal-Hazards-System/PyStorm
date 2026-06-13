@@ -1,4 +1,9 @@
-"""Tests for reduced_tc_suite.io.paths.resolve_one_file."""
+"""test_paths - reduced_tc_suite.io.paths.resolve_one_file resolution.
+
+Author : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
+
+Validates: (1) single-match resolution; (2) suffix-variant resolution; (3) missing file raises; (4) missing folder raises; (5) multiple matches raise.
+"""
 
 import sys
 from pathlib import Path

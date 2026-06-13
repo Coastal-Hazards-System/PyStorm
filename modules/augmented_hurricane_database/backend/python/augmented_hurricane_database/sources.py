@@ -1,6 +1,6 @@
 """HURDAT2 source resolution - basin registry, NHC discovery, download.
 
-Author / POC : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
+Author : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
 
 NHC publishes best-track files in a listable directory
 (``https://www.nhc.noaa.gov/data/hurdat/``) with date-stamped names, e.g.

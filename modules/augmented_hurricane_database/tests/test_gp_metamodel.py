@@ -1,4 +1,9 @@
-"""Tests for the GP-metamodel imputation (gp_metamodel subpackage)."""
+"""test_gp_metamodel - tests for the GP-metamodel imputation (gp_metamodel subpackage).
+
+Author : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
+
+Validates: (1) GP recovery of a smooth function; (2) Vecchia/NNGP with a physical trend; (3) the log transform on positive data; (4) end-to-end imputation of missing values; (5) first-fix routing to the small model; (6) model-cache reuse.
+"""
 
 from __future__ import annotations
 

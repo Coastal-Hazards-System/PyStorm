@@ -1,4 +1,9 @@
-"""Smoke tests for the augmented_hurricane_database module."""
+"""test_smoke - smoke tests for the augmented_hurricane_database module.
+
+Author : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
+
+Validates: (1) HURDAT2 parse schema, units, and motion derivation; (2) basin inference and config basin-expansion; (3) offline NHC/EBTRK source discovery and URL resolution; (4) output-stem naming; (5) per-TC imputation plots; (6) EBTRK Rmax parse and backfill.
+"""
 
 from __future__ import annotations
 

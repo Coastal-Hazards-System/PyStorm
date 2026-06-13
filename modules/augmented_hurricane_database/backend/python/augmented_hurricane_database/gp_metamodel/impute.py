@@ -1,6 +1,6 @@
-"""GP-metamodel data imputation for central pressure and radius of max wind.
+"""impute - GP-metamodel data imputation for central pressure and radius of max wind.
 
-Author / POC : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
+Author : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
 
 Port of the CHS DI scripts (CHS_TC_HURDAT_Atlantic_DI_Cp.m /
 CHS_TC_HURDATv2_Atlantic_DI_Rm.m), with three optional upgrades over the

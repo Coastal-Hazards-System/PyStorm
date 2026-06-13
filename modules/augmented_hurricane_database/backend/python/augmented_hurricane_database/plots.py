@@ -1,6 +1,6 @@
-"""Per-TC imputation diagnostic plots.
+"""plots - per-TC imputation diagnostic plots.
 
-Author / POC : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
+Author : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
 
 Renders one PNG per tropical cyclone so the imputed values can be inspected along
 each storm's time history (a Python port of the CHS MATLAB DataImputation plots).

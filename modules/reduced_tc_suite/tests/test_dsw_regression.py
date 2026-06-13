@@ -1,9 +1,8 @@
-"""Numerical regression tests for the DSW pipeline.
+"""test_dsw_regression - numerical regression tests for the DSW pipeline.
 
-Pins compute_global_dsw / reconstruct_hc_global_dsw / evaluate_hc_metrics to
-their current outputs on a seeded synthetic case, so the interp1d→np.interp
-swap (optimisation B) and any future vectorisation can be validated to keep
-numerics identical within float-precision tolerance.
+Author : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
+
+Validates: (1) compute_global_dsw method outputs are pinned; (2) the DSW pipeline snapshot is stable; (3) evaluate_hc_metrics snapshot is stable. Outputs are pinned on a seeded synthetic case so optimisations keep numerics identical within tolerance.
 """
 
 import sys

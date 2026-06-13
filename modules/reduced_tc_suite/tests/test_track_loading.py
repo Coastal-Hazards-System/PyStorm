@@ -1,9 +1,8 @@
-"""Tests for ITCS TROP track loading and Y-row alignment in bbox_filter.
+"""test_track_loading - ITCS TROP track loading and Y-row alignment in bbox_filter.
 
-Covers the two storm-number resolution modes of ``load_tc_tracks``:
-  * sequential 1..n (contiguous suites: na / la / pr / tx)
-  * master-suite storm_ids (non-contiguous SACS subsets: gom / sa)
-and the ``_storm_id_to_int`` coercion helper.
+Author : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
+
+Validates: (1) the _storm_id_to_int coercion; (2) sequential 1..n numbering (contiguous na/la/pr/tx); (3) master-suite storm_ids (non-contiguous gom/sa); (4) unparseable IDs load empty; (5) storm_ids derived from a track folder, subset and contiguous, across file extensions.
 """
 
 import sys

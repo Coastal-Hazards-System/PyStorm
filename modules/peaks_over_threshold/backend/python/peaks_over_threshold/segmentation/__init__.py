@@ -1,6 +1,6 @@
 """segmentation - event segmenters used by the Python fallback.
 
-Author / POC : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
+Author : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
 
 The C++ kernel duplicates these algorithms; the Python copies here are used
 only when ``_pot`` is unavailable. Their numerical behaviour matches the C++

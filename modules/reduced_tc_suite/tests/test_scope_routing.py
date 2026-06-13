@@ -1,4 +1,9 @@
-"""Tests for the scope (local vs regional) dispatch in main_reduced_tc_suite.run."""
+"""test_scope_routing - the scope (local vs regional) dispatch in main_reduced_tc_suite.run.
+
+Author : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
+
+Validates: (1) bad scope rejected; (2) bad mode rejected; (3) regional scope forces bbox to None; (4) local scope invokes the bbox filter when given; (5) local scope without a bbox skips the filter.
+"""
 
 import sys
 from importlib import import_module

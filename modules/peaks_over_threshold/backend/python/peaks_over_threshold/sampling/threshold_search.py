@@ -1,6 +1,6 @@
 """threshold_search - iterative percentile-threshold search (C++ or Python).
 
-Author / POC : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
+Author : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
 
 Increments a percentile threshold from ``start_percentile`` in steps of
 ``step_size`` until the segmentation-derived event rate is within

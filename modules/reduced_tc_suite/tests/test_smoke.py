@@ -1,6 +1,8 @@
-"""Smoke tests: package imports + a tiny end-to-end sampling round-trip.
+"""test_smoke - package imports plus a tiny end-to-end sampling round-trip.
 
-Author / POC : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
+Author : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
+
+Validates: (1) package imports; (2) k-medoids round-trip; (3) forced-indices path.
 """
 
 import sys

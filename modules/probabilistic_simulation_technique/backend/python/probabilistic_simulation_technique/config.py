@@ -1,6 +1,6 @@
 """config - pydantic models for the PST job request.
 
-Author / POC : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
+Author : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
 
 Defines the configuration surface for a single PST run. Values are validated
 on construction; downstream code may assume types and ranges are honoured.

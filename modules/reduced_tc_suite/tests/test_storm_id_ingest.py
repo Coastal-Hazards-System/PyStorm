@@ -1,8 +1,8 @@
-"""Tests for preprocess-time storm-ID resolution (option B).
+"""test_storm_id_ingest - preprocess-time storm-ID resolution (Preprocessor._resolve_storm_ids).
 
-Covers Preprocessor._resolve_storm_ids: keep X-source IDs, derive from the
-track folder when absent, raise on file-count mismatch, tolerate a missing or
-empty folder; plus the validate_store /storm_ids length assertion.
+Author : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
+
+Validates: (1) keep X-source IDs; (2) derive a subset from track filenames; (3) contiguous yields 1..n; (4) raise on file-count mismatch; (5) tolerate a missing or empty track folder; (6) store round-trip and the validate_store /storm_ids length assertion.
 """
 
 import sys

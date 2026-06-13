@@ -1,6 +1,6 @@
 """test_preprocessing - tests for the NTR-pipeline engines.
 
-Author / POC : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
+Author : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
 
 Validates the pure engines that build the POT input:
   (1) detrend recovers a known linear trend and preserves NaN gaps;

@@ -1,6 +1,6 @@
 """Space-filling quality metrics for a selected storm subset.
 
-Author / POC : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
+Author : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
 
   Coverage     - fraction of Y-space k-means clusters represented by subset
   Discrepancy  - centered L2 discrepancy of the subset in X-space (full-data scaled)

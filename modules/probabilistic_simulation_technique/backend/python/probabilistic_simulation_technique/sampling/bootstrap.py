@@ -1,6 +1,6 @@
 """bootstrap - smoothed bootstrap of descending-sorted POT exceedances.
 
-Author / POC : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
+Author : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
 
 Generates an (n_pot x n_sims) matrix of smoothed-bootstrap POT realizations.
 Each column is one resample (with replacement) of the exceedances, perturbed by

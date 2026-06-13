@@ -1,6 +1,6 @@
 """run_peaks_over_threshold - POT launcher (CyHAN v2.1 §5.3).
 
-Author / POC : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
+Author : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
 
 User-facing entry for the Peaks-Over-Threshold (POT) module. The operator edits
 the USER OPTIONS block (at the top of this file) and runs the script. No

@@ -1,6 +1,6 @@
 """solver - thin wrappers around the _pot pybind11 extension.
 
-Author / POC : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
+Author : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
 
 CyHAN v2.1 §4.1 specifies the binding role: a conduit exposing engine
 capability without leaking engine internals upward and without absorbing

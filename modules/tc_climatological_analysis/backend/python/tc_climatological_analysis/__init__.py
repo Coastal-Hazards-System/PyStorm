@@ -1,5 +1,7 @@
 """tc_climatological_analysis - CRL-based tropical-cyclone storm recurrence rates.
 
+Author : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
+
 For each CHS Coastal Reference Location (CRL), selects the tropical cyclones from
 the augmented HURDAT2 best-track (the augmented_hurricane_database output) within
 a cutoff distance, then computes the omnidirectional storm recurrence rate (SRR,

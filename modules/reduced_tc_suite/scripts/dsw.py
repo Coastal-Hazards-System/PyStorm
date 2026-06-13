@@ -1,6 +1,6 @@
 """reduced_tc_suite - post-selection DSW + HC reconstruction.
 
-Author / POC : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
+Author : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
 
 Compute Discrete Storm Weights and reconstruct hazard curves for a previously
 selected storm subset (the selected_storms.csv emitted by run_reduced_tc_suite.py).

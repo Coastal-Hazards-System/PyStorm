@@ -1,6 +1,6 @@
-"""Configuration model for the tc_climatological_analysis module.
+"""config - configuration model for the tc_climatological_analysis module.
 
-Author / POC : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
+Author : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
 
 A single validated ``TCAConfig`` carries the operator options from the launcher
 to the orchestrator. Paths are coerced to ``Path``; ``basins`` is normalized to

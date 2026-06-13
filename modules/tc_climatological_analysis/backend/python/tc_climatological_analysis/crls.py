@@ -1,6 +1,6 @@
-"""CRL (Coastal Reference Location) loading.
+"""crls - CRL (Coastal Reference Location) loading.
 
-Author / POC : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
+Author : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
 
 A CRL set is a CSV of coastal nodes (``ID,lat,lon``) along which the storm
 recurrence rate is evaluated. This is the CHS ``CHS_Atl_CRLs_v1.6.csv`` format.

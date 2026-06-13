@@ -1,6 +1,6 @@
 """reduced_tc_suite - Reduced Tropical Cyclone Suite (RTCS) selection module.
 
-Author / POC : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
+Author : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
 
 CyHAN v1.1 module realizing the Python Orchestration role (§4.2 package form)
 for the reduced_tc_suite capability.

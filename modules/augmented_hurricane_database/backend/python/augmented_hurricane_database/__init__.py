@@ -1,5 +1,7 @@
 """augmented_hurricane_database - NHC HURDAT2 best-track ingest.
 
+Author : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
+
 Downloads the Atlantic and/or NE-Pacific HURDAT2 best-track files from NHC,
 parses them, derives translation speed and heading, and writes a HURDAT-like
 CSV per basin.

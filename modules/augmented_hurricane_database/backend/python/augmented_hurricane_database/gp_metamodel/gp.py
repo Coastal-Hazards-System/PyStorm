@@ -1,6 +1,6 @@
-"""Universal-kriging Gaussian-process metamodel.
+"""gp - universal-kriging Gaussian-process metamodel.
 
-Author / POC : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
+Author : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
 
 Python re-implementation of the Taflanidis-group GP surrogate used by the CHS
 HURDAT data-imputation codes (``calibration_GP.m`` / ``sur_model_GP.m``), with

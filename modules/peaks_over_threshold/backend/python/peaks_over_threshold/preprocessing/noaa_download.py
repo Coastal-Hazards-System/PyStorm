@@ -1,6 +1,6 @@
 """noaa_download - fetch NOAA water level / tide prediction CSVs.
 
-Author / POC : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
+Author : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
 
 Downloads a NOAA Tides & Currents product for a station, one calendar year at
 a time, and concatenates the valid years into a single CSV in NOAA's original

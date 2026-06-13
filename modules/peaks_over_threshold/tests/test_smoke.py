@@ -1,6 +1,6 @@
 """test_smoke - smoke tests for the POT module.
 
-Author / POC : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
+Author : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
 
 Validates: (1) config construction; (2) segmenters produce sane output on a
 synthetic record; (3) the threshold search converges on a synthetic series

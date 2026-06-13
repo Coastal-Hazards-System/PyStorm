@@ -1,6 +1,6 @@
 """main_augmented_hurricane_database - orchestrator entry (CyHAN v2.1 §5.3).
 
-Author / POC : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
+Author : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
 
 Non-user-facing realization of the Python Orchestration role (§4.2).
 ``run_augmented_hurricane_database.py`` at the module root imports ``run`` from

@@ -1,6 +1,6 @@
 """orchestrator - end-to-end PST workflow runner.
 
-Author / POC : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
+Author : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
 
 Composes the bootstrap kernel, GPD-threshold selector, hazard-curve assembly,
 I/O, and plotting layers into a single deterministic run. CyHAN v2 §1 places

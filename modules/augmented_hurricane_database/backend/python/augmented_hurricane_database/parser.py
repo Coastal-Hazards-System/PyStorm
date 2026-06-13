@@ -1,6 +1,6 @@
 """HURDAT2 parser - best-track records into tidy track points.
 
-Author / POC : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
+Author : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
 
 Object-oriented re-implementation of the CHS hurricane track pre-processor
 (``CHS_TC_HURDAT_Atlantic.m``). Reads an NHC HURDAT2 best-track text file into

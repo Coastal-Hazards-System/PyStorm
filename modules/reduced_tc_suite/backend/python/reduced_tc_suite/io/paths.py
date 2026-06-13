@@ -1,4 +1,6 @@
-"""Small path-resolution helpers for user-facing launcher scripts.
+"""paths - small path-resolution helpers for user-facing launcher scripts.
+
+Author : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
 
 Keeps the launcher CONFIG blocks tolerant of naming variations within a
 dataset folder (e.g. ``CHS-LA_nodeID.mat`` vs ``CHS-LA_nodeID_probQ.mat``)

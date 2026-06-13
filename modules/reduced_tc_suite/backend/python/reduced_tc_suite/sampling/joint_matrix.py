@@ -1,6 +1,6 @@
 """Joint input-output feature matrix  Z = [alpha * X~  |  beta * Y_r~].
 
-Author / POC : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
+Author : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
 
 Engine contract: arrays in, arrays out.  No config, no I/O.
 """

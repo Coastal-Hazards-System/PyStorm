@@ -1,6 +1,6 @@
-"""Unit / scalable storm-surge hydrographs (the SSH method core).
+"""hydrograph - unit / scalable storm-surge hydrographs (the SSH method core).
 
-Author / POC : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
+Author : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
 
 A scalable hydrograph reconstructs the surge time history from a fixed dimensionless
 shape and a few per-storm scaling parameters. The peak-aligned, amplitude-normalized

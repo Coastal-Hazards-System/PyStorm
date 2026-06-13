@@ -1,6 +1,6 @@
-"""Output writers for the parsed HURDAT2 DataFrame.
+"""writer - output writers for the parsed HURDAT2 DataFrame.
 
-Author / POC : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
+Author : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
 """
 
 from __future__ import annotations

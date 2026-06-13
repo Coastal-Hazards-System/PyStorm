@@ -1,6 +1,6 @@
 """Comparison of unit-hydrograph shape models for the SSH module.
 
-Author / POC : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
+Author : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
 
 The peak-aligned, amplitude-normalized surge ensemble still varies strongly in
 DURATION (FWHM coefficient of variation ~0.8, weakly correlated with peak), so a

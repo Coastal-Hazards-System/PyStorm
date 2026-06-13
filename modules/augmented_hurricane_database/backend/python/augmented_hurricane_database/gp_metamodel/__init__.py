@@ -1,5 +1,7 @@
 """gp_metamodel - Gaussian-process metamodels for HURDAT data imputation.
 
+Author : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
+
 Python re-implementation of the GP metamodel of Taflanidis et al. (universal
 kriging with an anisotropic power-exponential kernel) as used by the CHS
 HURDAT central-pressure and radius-of-maximum-wind imputation codes. Trains the

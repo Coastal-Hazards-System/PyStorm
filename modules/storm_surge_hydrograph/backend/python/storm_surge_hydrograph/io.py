@@ -1,6 +1,6 @@
-"""Input loaders for the storm_surge_hydrograph (SSH) module.
+"""io - input loaders for the storm_surge_hydrograph (SSH) module.
 
-Author / POC : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
+Author : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
 
 Reads the CTXS (Coastal Texas Study) save-point metadata and the per-save-point synthetic-TC surge
 matrices. Surge values are water-surface elevation in metres above NAVD88, with

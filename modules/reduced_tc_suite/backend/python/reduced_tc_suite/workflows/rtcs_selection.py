@@ -1,6 +1,6 @@
 """RTCS Selection (fixed k) - Reduced Tropical Cyclone Suite selection workflow.
 
-Author / POC : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
+Author : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
 
 Selects a fixed number of storms that best covers both the TC parameter
 space (X) and the hydrodynamic response space (Y) using PCA + k-medoids

@@ -1,6 +1,6 @@
 """plots - hazard-curve and QDO-diagnostic renderers for PST results.
 
-Author / POC : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
+Author : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
 
 Two renderers share one cohesive, publication-grade palette:
 

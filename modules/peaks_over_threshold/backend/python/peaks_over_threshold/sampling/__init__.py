@@ -1,6 +1,6 @@
 """sampling - iterative percentile-threshold search.
 
-Author / POC : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
+Author : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
 """
 
 from .threshold_search import IterativeThresholdSearch, ThresholdSearchResult

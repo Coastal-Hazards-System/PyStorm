@@ -1,6 +1,6 @@
 """gpd_threshold - Quantile Delta Optimization (QDO) GPD-location search.
 
-Author / POC : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
+Author : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
 
 Picks the Generalized-Pareto location μ by minimizing a frequency-weighted
 mean-square error (WMSE) between Weibull-plotting-position empirical AERs and

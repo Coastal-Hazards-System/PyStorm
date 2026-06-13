@@ -1,6 +1,6 @@
 """ntr - non-tidal residual (NTR) estimation.
 
-Author / POC : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
+Author : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
 
 Engine contract: DataFrames in, DataFrame out. No I/O, no plotting.
 

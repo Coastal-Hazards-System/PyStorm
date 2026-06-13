@@ -1,6 +1,6 @@
 """RTCS Selection (optimal k) - RMSE-driven growth sweep.
 
-Author / POC : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
+Author : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
 
 Sweeps subset size from k_min to k_max in steps of k_step.  At each k:
 

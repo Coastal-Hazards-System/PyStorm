@@ -1,6 +1,6 @@
 """probabilistic_simulation_technique - PST orchestration package (CyHAN v2.1 §5.3 expanded form).
 
-Author / POC : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
+Author : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
 
 The orchestrator entry point per §5.3 is the ``main_probabilistic_simulation_technique``
 module one level up (``backend/python/main_probabilistic_simulation_technique.py``);

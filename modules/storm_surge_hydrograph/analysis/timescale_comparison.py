@@ -1,6 +1,6 @@
 """Apples-to-apples comparison of time-normalization scales for the SSH module.
 
-Author / POC : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
+Author : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
 
 Double normalization scales each storm's time axis by a per-storm timescale T so the
 shapes collapse. The timescale D = area/peak used in the shape-model study is one

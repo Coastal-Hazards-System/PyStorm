@@ -1,6 +1,6 @@
-"""Orchestrator for the storm_surge_hydrograph (SSH) module.
+"""orchestrator - per-save-point unit-hydrograph workflow for the storm_surge_hydrograph (SSH) module.
 
-Author / POC : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
+Author : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
 
 Per save point: load the synthetic-TC surge matrix, build the peak-aligned unit
 hydrograph (optionally with a rising/falling parametric fit), write the normalized

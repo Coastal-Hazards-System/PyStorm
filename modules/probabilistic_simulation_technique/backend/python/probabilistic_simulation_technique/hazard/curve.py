@@ -1,6 +1,6 @@
 """curve - GPD ensemble construction, empirical-tail blending, AER interpolation.
 
-Author / POC : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
+Author : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
 
 Builds the hazard-curve ensemble from a bootstrap matrix of POT exceedances,
 splices the GPD upper tail onto the empirical lower tail, and interpolates

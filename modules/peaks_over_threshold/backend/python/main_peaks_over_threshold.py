@@ -1,6 +1,6 @@
 """main_peaks_over_threshold - orchestrator entry (CyHAN v2.1 §5.3).
 
-Author / POC : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
+Author : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
 
 Non-user-facing realization of the Python Orchestration role (§4.2).
 ``run_peaks_over_threshold.py`` at the module root imports ``run`` from this

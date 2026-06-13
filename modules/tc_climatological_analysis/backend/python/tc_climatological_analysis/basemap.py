@@ -1,6 +1,6 @@
-"""Natural Earth basemap (coastline + political boundaries) via pyshp.
+"""basemap - Natural Earth basemap (coastline + political boundaries) via pyshp.
 
-Author / POC : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
+Author : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
 
 Replaces the low-resolution legacy ``NOAA_WCL_Coastline_LowRes.mat`` /
 ``NOAA_WDB_Political.mat`` with Natural Earth vector data (coastline, country

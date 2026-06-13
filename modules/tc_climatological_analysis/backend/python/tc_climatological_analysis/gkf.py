@@ -1,6 +1,6 @@
-"""Gaussian Kernel Function (GKF) storm recurrence rates.
+"""gkf - Gaussian Kernel Function (GKF) storm recurrence rates.
 
-Author / POC : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
+Author : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
 
 Port of ``CHS_SRR_GKF.m`` (with ``AzimuthDiff.m`` and ``headingZeroDegree_adj.m``).
 For each CRL and intensity bin:

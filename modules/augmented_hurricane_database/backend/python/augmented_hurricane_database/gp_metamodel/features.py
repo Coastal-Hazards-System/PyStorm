@@ -1,6 +1,6 @@
-"""Feature engineering and model specs for the Cp / Rmax GP metamodels.
+"""features - feature engineering and model specs for the Cp / Rmax GP metamodels.
 
-Author / POC : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
+Author : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
 
 Mirrors the predictor sets of GPM_Cp.m / the DI scripts:
 

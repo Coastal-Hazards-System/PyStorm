@@ -1,4 +1,7 @@
 """One-off benchmark - times the α/β sweep on real data with all
+
+Author : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
+
 optimisations on, comparing sequential vs parallel.
 
 Honors SCOPE in the launcher (local applies the bbox filter; regional uses

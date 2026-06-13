@@ -1,6 +1,6 @@
 """test_smoke - smoke tests for the PST module (config, bootstrap, threshold).
 
-Author / POC : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
+Author : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
 
 Validates: (1) config construction + invariants, (2) BootstrapGenerator
 contract (C++ when available, pure-Python fallback otherwise), (3) GPD

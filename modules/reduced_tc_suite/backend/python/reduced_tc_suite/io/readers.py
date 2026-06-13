@@ -1,6 +1,6 @@
 """Low-level array loaders for every supported source format.
 
-Author / POC : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
+Author : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
 
 These functions are intentionally dumb: receive a path, return a numpy array.
 No domain knowledge, no pipeline config, no HDF5 schema awareness.

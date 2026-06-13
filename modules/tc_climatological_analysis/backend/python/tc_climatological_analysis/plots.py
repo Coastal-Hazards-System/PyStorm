@@ -1,6 +1,6 @@
-"""Per-CRL selected-TC maps (annual and monthly).
+"""plots - per-CRL selected-TC maps (annual and monthly).
 
-Author / POC : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
+Author : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
 
 Port of the map figure in ``CHS_Atlantic_StormSelection.m``: one PNG per CRL
 showing every selected tropical cyclone (the representative point) colored by

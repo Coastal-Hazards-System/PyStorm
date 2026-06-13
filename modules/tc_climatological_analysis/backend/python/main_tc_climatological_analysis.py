@@ -1,6 +1,6 @@
 """main_tc_climatological_analysis - orchestrator entry (CyHAN v2.1 §5.3).
 
-Author / POC : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
+Author : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
 
 Receives the launcher's option dict, validates it into a ``TCAConfig``, and runs
 the analysis. No user options live here.
