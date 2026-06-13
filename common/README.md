@@ -4,7 +4,7 @@ Shared, cross-module presentation helpers for PyStorm: the canonical Wave Maker
 design palette, the clean-axes styling helper (`style_ax`), and the standard
 figure writer (`save_figure`, which fixes the PyStorm figure DPI standard).
 
-This is the CyHAN v2.1 shared **common library** (CyHAN-Standard-v2.1 §5.2 /
+This is the CyHAN v2.2 shared **common library** (CyHAN-Standard-v2.2 §5.2 /
 §16.10). It holds presentation and pure-utility code only: no module domain
 logic, numerical kernels, or orchestration. A module may depend on it and still
 run in isolation through its launcher, because `common/` is an integration-tier

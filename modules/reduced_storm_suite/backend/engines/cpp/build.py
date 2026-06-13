@@ -5,7 +5,7 @@ Author : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.arm
 
 Builds the C++ k-medoids kernel (``kmedoids_core.hpp`` + ``bindings.cpp``) and
 installs the resulting extension into the expanded orchestration package
-(``backend/python/reduced_storm_suite/``) per CyHAN v2.1 §16.2 / §16.5.
+(``backend/python/reduced_storm_suite/``) per CyHAN v2.2 §16.2 / §16.5.
 
 Usage
 -----

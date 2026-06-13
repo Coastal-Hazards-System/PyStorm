@@ -1,10 +1,10 @@
-"""run_coastal_storm_hydrograph - CSH launcher (CyHAN v2.1 5.3).
+"""run_coastal_storm_hydrograph - CSH launcher (CyHAN v2.2 5.3).
 
 Author : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
 
 User-facing entry for the Coastal Storm Hydrograph (CSH) module. The operator edits
 the USER OPTIONS block below and runs the script. No orchestration logic lives here
-- the launcher hands the option block to ``main_coastal_storm_hydrograph.run``.
+- the launcher hands the option block to ``api_coastal_storm_hydrograph.run``.
 
 ================================================================================
 WHAT CSH PRODUCES
@@ -184,7 +184,7 @@ if __name__ == "__main__":
     cfg = _apply_cli(CONFIG)
     from importlib import import_module
     try:
-        result = import_module("main_coastal_storm_hydrograph").run(cfg)
+        result = import_module("api_coastal_storm_hydrograph").run(cfg)
     except NotImplementedError as exc:
         raise SystemExit(f"[csh] {exc}")
     print("\n[csh] done:")

@@ -1,12 +1,12 @@
 # CyHAN engine manifest - coastal_storm_hydrograph
 # Per-save-point unit (scalable) storm-surge hydrographs (CSH).
-# Pure-Python module: no C++ engine (CyHAN v2.1 5.1; no performance-critical kernel).
+# Pure-Python module: no C++ engine (CyHAN v2.2 5.1; no performance-critical kernel).
 
 [module]
 name        = "coastal_storm_hydrograph"
 version     = "0.1.0"
 launcher    = "run_coastal_storm_hydrograph.py"
-entry       = "backend/python/main_coastal_storm_hydrograph.py:run"
+entry       = "backend/python/api_coastal_storm_hydrograph.py:run"
 
 [pipeline]
 # Per save point: build one dimensionless surge shape, scale it, write + plot.

@@ -210,7 +210,7 @@ storm_climatology_analysis/
 ├── analysis/
 │   └── day_kernel_sensitivity.py            # DAY_KERNEL bandwidth LOO-CV sensitivity
 ├── backend/python/
-│   ├── main_storm_climatology_analysis.py   # orchestrator entry: run(config)
+│   ├── api_storm_climatology_analysis.py   # orchestrator entry: run(config)
 │   └── storm_climatology_analysis/
 │       ├── config.py        # SCAConfig (pydantic)
 │       ├── crls.py          # CRL loader (CSV + tab-delimited)

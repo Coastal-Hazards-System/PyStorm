@@ -1,4 +1,4 @@
-"""test_scope_routing - the scope (local vs regional) dispatch in main_reduced_storm_suite.run.
+"""test_scope_routing - the scope (local vs regional) dispatch in api_reduced_storm_suite.run.
 
 Author : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
 
@@ -18,7 +18,7 @@ if str(_PKG_PATH) not in sys.path:
 
 # Orchestrator entry lives in backend/python (added to sys.path above); resolve
 # it dynamically so there is no static import for the IDE to flag as unresolved.
-rss_main = import_module("main_reduced_storm_suite")
+rss_main = import_module("api_reduced_storm_suite")
 
 
 def test_run_rejects_bad_scope():

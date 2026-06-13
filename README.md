@@ -12,7 +12,7 @@ orchestration, configuration, I/O, and plotting; C++ engines carry the inner
 numerical kernels that dominate runtime. Workflows stay script-driven and
 reproducible.
 
-Following CyHAN v2.1, a C++ engine is shipped where a module has
+Following CyHAN v2.2, a C++ engine is shipped where a module has
 performance-critical computation, and is omitted where it does not. Compute-heavy
 modules (POT, PST, RSS) ship a C++ kernel with a pure-Python fallback so each
 workflow runs whether or not the extension is built; pure-Python modules (SCA,
@@ -36,7 +36,7 @@ per-station peak files that PST reads.** RSS and CSH are independent.
 
 ## Architecture
 
-Every module is a self-contained vertical (CyHAN v2.1 §5) with the same core
+Every module is a self-contained vertical (CyHAN v2.2 §5) with the same core
 shape: a user-facing launcher at the module root that calls a non-user-facing
 orchestrator under `backend/python/`.
 
@@ -138,8 +138,8 @@ PyStorm/
 │     data/                      inputs/{raw,processed}/ & outputs/ (gitignored)
 │
 ├── docs/
-│   ├── CyHAN-Standard-v2.1.md                architecture standard
-│   └── CyHAN-Comment-Standard-v0.5.1.md        comment and docstring conventions
+│   ├── CyHAN-Standard-v2.2.md                architecture standard
+│   └── CyHAN-Comment-Standard-v0.5.2.md        comment and docstring conventions
 │
 ├── backend/   (planned, CyHAN §6.1)          shared API surface above the modules
 ├── common/    (CyHAN §5.2 / §16.10)          shared library: pystorm_common
@@ -148,7 +148,7 @@ PyStorm/
 ```
 
 The root-level integration tier (`backend/api/`, `frontend/`) and the shared
-`common/` library are permitted by CyHAN v2.1 but are not required for any module
+`common/` library are permitted by CyHAN v2.2 but are not required for any module
 to build or run; each module remains independently operable through its launcher.
 See [Shared common library](#shared-common-library).
 
@@ -212,9 +212,9 @@ copies. All six modules write their figures through it.
 
 ## Standards
 
-The architecture follows CyHAN Standard v2.1: each capability is a self-contained
+The architecture follows CyHAN Standard v2.2: each capability is a self-contained
 module with its own Python orchestration and, where it has performance-critical
 computation, a C++ engine. See
-[docs/CyHAN-Standard-v2.1.md](docs/CyHAN-Standard-v2.1.md). Source comments and
+[docs/CyHAN-Standard-v2.2.md](docs/CyHAN-Standard-v2.2.md). Source comments and
 docstrings follow the
-[Comment and Docstring Standard](docs/CyHAN-Comment-Standard-v0.5.1.md).
+[Comment and Docstring Standard](docs/CyHAN-Comment-Standard-v0.5.2.md).

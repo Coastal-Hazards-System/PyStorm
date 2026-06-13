@@ -6,7 +6,7 @@
  *
  * Wraps kmedoids::pam() with numpy ↔ C++ buffer conversions and publishes it
  * as the `_rss` extension module installed into the `reduced_storm_suite`
- * Python package (CyHAN v2.1 §16.2 / §16.5).
+ * Python package (CyHAN v2.2 §16.2 / §16.5).
  */
 
 #include <pybind11/pybind11.h>

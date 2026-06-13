@@ -1,6 +1,8 @@
 # CyHAN - Comment & Docstring Standard (Python + C++)
 
-*Draft v0.5.1*
+*Draft v0.5.2*
+
+*(v0.5.2: orchestrator-entry file renamed `main_<name>.py` -> `api_<name>.py`, per CyHAN Standard v2.2.)*
 
 This document codifies the comment, docstring, and section-divider conventions
 for every CyHAN source file, organized by **file role** (launcher, orchestrator
@@ -56,14 +58,14 @@ same way across all modules. Nothing here changes runtime behavior.
 | Role | File pattern | Audience | Header template | Defining convention |
 |------|--------------|----------|-----------------|---------------------|
 | Launcher | `run_<name>.py` | Operator | 3.1 | USER OPTIONS block; operator voice |
-| Orchestrator entry | `backend/python/main_<name>.py` | Developer | 3.2 | Public API; no user options |
+| Orchestrator entry | `backend/python/api_<name>.py` | Developer | 3.2 | Public API; no user options |
 | Orchestration package | `backend/python/<name>/*.py` | Developer | 3.3 | Library docstrings; dividers |
 | C++ engine / bindings | `backend/engines/**` | Developer | 3.4 | Doxygen; engine contract |
 | Script / analysis tool | `scripts/*.py`, `analysis/*.py` | Operator/dev | 3.5 | Standalone `Run` usage |
 | Test | `tests/*.py`, `conftest.py` | Developer | 3.6 | What is validated |
 
 The naming, layer placement, and role obligations of each file come from the
-architecture standard (`CyHAN-Standard-v2.1.md`). This document covers only how
+architecture standard (`CyHAN-Standard-v2.2.md`). This document covers only how
 each is commented.
 
 ---
@@ -86,7 +88,7 @@ Author : <Full Name>  <email>
 
 User-facing entry for the <Full Name> (<ABBREV>) module. The operator edits the
 USER OPTIONS block below and runs the script. No orchestration logic lives here;
-the launcher hands the option block to ``main_<name>.run`` per 5.3.
+the launcher hands the option block to ``api_<name>.run`` per 5.3.
 
 ================================================================================
 WHAT <ABBREV> PRODUCES
@@ -155,7 +157,7 @@ Per-option conventions:
   `__main__` dispatch) is launcher plumbing; comment it as developer code (3.3),
   not operator prose.
 
-### 3.2 Orchestrator entry (`backend/python/main_<name>.py`)
+### 3.2 Orchestrator entry (`backend/python/api_<name>.py`)
 
 Non-user-facing realization of the orchestration role. The header states the
 role, the entry point the launcher calls, and (when expanded) a short Public API.
@@ -164,7 +166,7 @@ No user options appear here.
 **Thin entry** (workflow reduces to a validated dispatch):
 
 ```python
-"""main_<name> - orchestrator entry (CyHAN v2.1 5.3).
+"""api_<name> - orchestrator entry (CyHAN v2.1 5.3).
 
 Author : <Full Name>  <email>
 
@@ -474,5 +476,5 @@ are allowed inside title strings (4.4); the brand prefix itself is hyphenated.
    single pass per module.
 4. For any file missing an Author line, **ask before assigning**; do not
    auto-populate from `git blame`.
-5. Keep this document in `docs/` alongside `CyHAN-Standard-v2.1.md` as the
+5. Keep this document in `docs/` alongside `CyHAN-Standard-v2.2.md` as the
    long-lived reference.

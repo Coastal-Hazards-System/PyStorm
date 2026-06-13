@@ -28,7 +28,7 @@ pybind11_add_module(_rss bindings.cpp)
 
 target_include_directories(_rss PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 
-# CyHAN v2.1 §16.2 / §16.5: install into the expanded orchestration package
+# CyHAN v2.2 §16.2 / §16.5: install into the expanded orchestration package
 # so callers write `from reduced_storm_suite import _rss`.
 install(TARGETS _rss
         LIBRARY DESTINATION

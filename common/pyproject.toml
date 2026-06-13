@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name            = "pystorm_common"
 version         = "0.1.0"
-description     = "Shared cross-module presentation helpers for PyStorm (design palette, axes styling, figure saving). CyHAN v2.1 common library (5.2)."
+description     = "Shared cross-module presentation helpers for PyStorm (design palette, axes styling, figure saving). CyHAN v2.2 common library (5.2)."
 readme          = "README.md"
 requires-python = ">=3.10"
 authors = [

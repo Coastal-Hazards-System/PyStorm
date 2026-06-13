@@ -280,7 +280,7 @@ year, and storm number, e.g. `..._atlantic_AL1880_02.png`).
 augmented_hurricane_database/
 ├── run_augmented_hurricane_database.py        # launcher (USER OPTIONS)
 ├── backend/python/
-│   ├── main_augmented_hurricane_database.py   # orchestrator entry: run(config)
+│   ├── api_augmented_hurricane_database.py   # orchestrator entry: run(config)
 │   └── augmented_hurricane_database/
 │       ├── config.py          # AHDConfig (pydantic)
 │       ├── sources.py         # NHC discovery + download

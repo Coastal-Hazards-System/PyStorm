@@ -1,4 +1,4 @@
-"""run_reduced_storm_suite - RSS launcher (CyHAN v2.1 §5.3).
+"""run_reduced_storm_suite - RSS launcher (CyHAN v2.2 §5.3).
 
 Author : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
 
@@ -6,8 +6,8 @@ User-facing entry point for the Reduced Storm Suite (formerly
 ``storm_selection``). The operator edits values in the USER OPTIONS block
 below and runs the script. This file holds ONLY declarative options - every
 code element (path wiring, store bootstrap, bbox assembly, CLI parsing,
-dispatch) lives in ``main_reduced_storm_suite``; the launcher simply calls
-``main_reduced_storm_suite.launch_batch`` with the option block per §5.3.
+dispatch) lives in ``api_reduced_storm_suite``; the launcher simply calls
+``api_reduced_storm_suite.launch_batch`` with the option block per §5.3.
 
 ================================================================================
 WHAT RSS PRODUCES
@@ -110,7 +110,7 @@ from pathlib import Path
 os.environ.setdefault("MPLBACKEND", "Agg")
 
 
-# ── Module-root path anchoring (CyHAN v2.1 §A.5) ──────────────────────────
+# ── Module-root path anchoring (CyHAN v2.2 §A.5) ──────────────────────────
 # All paths below are constructed relative to ROOT so the launcher can be
 # invoked from any working directory (e.g. an IDE run-config, a Jenkins job,
 # or a parent directory `python modules/.../run_*.py`).
@@ -308,7 +308,7 @@ TRACK_FILE_PATTERNS = {
 #   2. Keep only storms whose ITCS track passes within max_track_dist_km of
 #      the geographic medoid of the kept nodes.
 # Only the geographic window and node-coord decode options live here; the
-# launcher (main_reduced_storm_suite._build_bbox_config) completes the block
+# launcher (api_reduced_storm_suite._build_bbox_config) completes the block
 # with resolved paths - node_coord_source, track_dir, track_file_pattern.
 #
 # When switching to a non-CHS-LA dataset in local mode you MUST update the
@@ -512,17 +512,17 @@ CONFIG["alpha_beta_grid"] = AB_GRID if AB_SWEEP else None
 #
 # All procedural logic (CLI parsing, dataset resolution, batch iteration, path
 # wiring, store bootstrap, bbox assembly, dispatch) lives in
-# main_reduced_storm_suite.launch_batch. This file only hands it the operator
+# api_reduced_storm_suite.launch_batch. This file only hands it the operator
 # option block above.
 
 if __name__ == "__main__":
     _ensure_cpp_extension()   # build _rss on first run if needed
 
-    # The orchestrator entry (main_reduced_storm_suite) lives in backend/python,
+    # The orchestrator entry (api_reduced_storm_suite) lives in backend/python,
     # added to sys.path above at runtime. Resolve it dynamically so there is no
     # static import for the IDE to flag as unresolved.
     from importlib import import_module
-    launch_batch = import_module("main_reduced_storm_suite").launch_batch
+    launch_batch = import_module("api_reduced_storm_suite").launch_batch
 
     raise SystemExit(launch_batch(
         root                 = ROOT,

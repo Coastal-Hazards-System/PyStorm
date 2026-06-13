@@ -1,11 +1,11 @@
-"""run_probabilistic_simulation_technique - PST launcher (CyHAN v2.1 §5.3).
+"""run_probabilistic_simulation_technique - PST launcher (CyHAN v2.2 §5.3).
 
 Author : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
 
 User-facing entry for the Probabilistic Simulation Technique (PST). The
 operator edits the USER OPTIONS block (at the top of this file) and runs the
 script; no orchestration logic lives here - the launcher hands the option block
-to ``main_probabilistic_simulation_technique.run`` per §5.3, which resolves the
+to ``api_probabilistic_simulation_technique.run`` per §5.3, which resolves the
 input(s) and runs PST on each.
 
 ================================================================================
@@ -333,7 +333,7 @@ PLOTS_DIR  = ROOT / "data" / "outputs" / "plots"
 # ===========================================================================
 
 
-# ── Launcher plumbing (CyHAN v2.1 §A.5 path anchoring; no user options) ─────
+# ── Launcher plumbing (CyHAN v2.2 §A.5 path anchoring; no user options) ─────
 import os
 import sys
 
@@ -432,4 +432,4 @@ if __name__ == "__main__":
     # Orchestrator entry lives in backend/python (added to sys.path above);
     # resolve it dynamically so there is no static import for the IDE to flag.
     from importlib import import_module
-    import_module("main_probabilistic_simulation_technique").run(_apply_cli(CONFIG))
+    import_module("api_probabilistic_simulation_technique").run(_apply_cli(CONFIG))

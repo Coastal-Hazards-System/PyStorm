@@ -32,7 +32,7 @@ dev = [
 ]
 
 [tool.setuptools]
-py-modules = ["main_augmented_hurricane_database"]
+py-modules = ["api_augmented_hurricane_database"]
 
 [tool.setuptools.packages.find]
 where    = ["backend/python"]

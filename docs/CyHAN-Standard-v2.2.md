@@ -1,12 +1,12 @@
 # C++/Python Hybrid Architecture Network (CyHAN)
-# Standard v2.1
+# Standard v2.2
 
 ---
 
 ## Document Control
 
-**Title:** C++/Python Hybrid Architecture Network (CyHAN) Standard v2.1
-**Status:** Minor Release (Compute-conditional engine; orchestrator-side batch marshaling)
+**Title:** C++/Python Hybrid Architecture Network (CyHAN) Standard v2.2
+**Status:** Minor Release (Orchestrator file named api_<name>.py; single run(config) module API)
 **Scope:** Desktop and Cloud Scientific Computing Platforms
 **Audience:** System architects, HPC developers, scientific software engineers, technical leadership
 
@@ -444,7 +444,7 @@ The launcher is, in effect, a readable substitute for a long command-line
 invocation: the operator edits values in one file rather than supplying every
 path and option as a CLI flag.
 
-**The orchestrator: `main_<name>.py`.**
+**The orchestrator (the module's programmatic API): `api_<name>.py`.**
 
 The orchestrator is the **non-user-facing** realization of the Python
 Orchestration role (§4.2). It is visible to developers but is not part of the
@@ -452,7 +452,7 @@ operator-facing surface.
 
 The orchestrator **SHALL**:
 
-- Reside under the module backend: `modules/<name>/backend/python/main_<name>.py`
+- Reside under the module backend: `modules/<name>/backend/python/api_<name>.py`
 - Be importable and expose the entry point the launcher calls
 - Fulfill the orchestration responsibilities and prohibitions of §4.2
 - Own dataset/input resolution and any batch or ensemble iteration over inputs,
@@ -466,9 +466,10 @@ The launcher **SHALL** import and call the orchestrator. The orchestration role
 separation of the user-facing launcher from the non-user-facing orchestrator is
 invariant across module complexity.
 
-> *(Non-normative.)* The names `run_` (launcher) and `main_` (orchestrator) share
-> a deliberate pairing: `run_<name>.py` is what the operator runs; `main_<name>.py`
-> is the substantive logic it drives.
+> *(Non-normative.)* The names `run_` (launcher) and `api_` (orchestrator) share
+> a deliberate pairing: `run_<name>.py` is what the operator runs; `api_<name>.py`
+> is the substantive logic it drives, named for its role as the module's stable
+> programmatic entry point (the `run(config) -> <Module>Result` API).
 
 ### 5.4 Naming
 
@@ -572,7 +573,7 @@ Caller (CLI, script, or external Python code)
 ↓
 Launcher (run_<name>.py)  : user options
 ↓
-Module Orchestration (main_<name>.py)
+Module Orchestration (api_<name>.py)
 ↓
 C++ Engine
 ↓
@@ -611,7 +612,7 @@ Command-Line Interface or Launcher → Module Orchestration → C++ Engine
 ```
 
 CLI or launcher invocation **MAY** bypass the API role but **SHALL NOT** bypass
-the orchestration role. The orchestrator (`main_<name>.py`) fulfills this role.
+the orchestration role. The orchestrator (`api_<name>.py`) fulfills this role.
 
 ---
 
@@ -653,7 +654,7 @@ The following practices violate this standard:
 
 ## 11. Conformance Criteria
 
-A system **SHALL** be considered CyHAN v2.1 compliant if:
+A system **SHALL** be considered CyHAN v2.2 compliant if:
 
 - Heavy numerical computation resides in C++
 - The orchestration role is realized in Python, in a non-user-facing
@@ -712,6 +713,13 @@ marshaling in the orchestrator rather than the launcher, and notes in §16 that
 modules and that a shared `common/` library (§5.2) MAY hold cross-module
 presentation helpers. It is backward compatible: every v2.0-conformant module
 remains conformant under v2.1.
+
+Version 2.2 is a **MINOR** increment. It renames the orchestrator file from
+`main_<name>.py` to `api_<name>.py` so the filename names the module's programmatic
+entry point, and states that every module exposes a single `run(config) -> <Module>Result` API as that entry point (§5.3). The orchestration role, its
+responsibilities and prohibitions (§4.2), and the launcher/orchestrator entry
+contract are unchanged. The change is architecturally backward compatible; the
+orchestrator filename change is a mechanical rename applied repo-wide.
 
 ---
 
@@ -799,8 +807,8 @@ deployment environments, compute nodes, and modules.
 
 ## 16. Recommended Folder Structure
 
-CyHAN v2.1 prescribes a **module-first** layout with a defined root-level
-integration tier. This structure is recommended for all v2.1-compliant
+CyHAN v2.2 prescribes a **module-first** layout with a defined root-level
+integration tier. This structure is recommended for all v2.2-compliant
 implementations; conformance remains behavioral per §0.3.
 
 ### 16.1 Canonical Layout
@@ -816,7 +824,7 @@ project-root/
 │   │   │   ├── engines/
 │   │   │   │   └── cpp/                    ← C++ engine + bindings
 │   │   │   └── python/
-│   │   │       └── main_<name>.py          ← orchestrator (non-user-facing)
+│   │   │       └── api_<name>.py          ← orchestrator (non-user-facing)
 │   │   │                                     expands to backend/python/<name>/
 │   │   ├── frontend/                       (optional)
 │   │   │   ├── desktop/                    (optional, module-scoped Qt)
@@ -839,7 +847,7 @@ project-root/
 │   └── web/                                ← shared web frontend (§6.2, optional)
 │
 ├── docs/
-│   └── CyHAN-Standard-v2.1.md
+│   └── CyHAN-Standard-v2.2.md
 │
 └── tests/                                  (optional, cross-module)
 ```
@@ -854,7 +862,7 @@ project-root/
 |---|---|
 | `modules/<name>/run_<name>.py` | Launcher (user-facing entry, §5.3) |
 | `modules/<name>/backend/engines/cpp/` | C++ Engine |
-| `modules/<name>/backend/python/main_<name>.py` | Python Orchestration (orchestrator, §5.3) |
+| `modules/<name>/backend/python/api_<name>.py` | Python Orchestration (orchestrator, §5.3) |
 | `modules/<name>/backend/python/<name>/` | Python Orchestration (expanded package form) |
 | `modules/<name>/frontend/desktop/` | Qt Desktop component (module-scoped) |
 | `modules/<name>/frontend/web/` | Web component (module-scoped) |
@@ -884,7 +892,7 @@ Per §5.3:
 
 - The launcher **SHALL** sit at the module root as `run_<name>.py`, the
   user-facing surface, maximally discoverable.
-- The orchestrator **SHALL** sit under `backend/python/` as `main_<name>.py`,
+- The orchestrator **SHALL** sit under `backend/python/` as `api_<name>.py`,
   non-user-facing, importable by the launcher and (when deployed) by the shared
   API.
 
@@ -993,7 +1001,7 @@ framework names, and the `<prefix>` value are implementation choices.
 |---|---|---|
 | Module directory | `modules/<name>/` | `modules/wave1d/` |
 | Launcher | `modules/<name>/run_<name>.py` | `run_wave1d.py` |
-| Orchestrator | `modules/<name>/backend/python/main_<name>.py` | `main_wave1d.py` |
+| Orchestrator | `modules/<name>/backend/python/api_<name>.py` | `main_wave1d.py` |
 | Orchestrator (expanded) | `modules/<name>/backend/python/<name>/` | `.../wave1d/` |
 | Python package (if prefixed) | `<prefix>_<name>` | `<prefix>_wave1d` |
 | Engine binding module | `_<short>.<py>-<plat>.<ext>` | `_cw1d.cpython-312-...` |
@@ -1037,12 +1045,12 @@ Preserve history with a history-aware move (e.g. `git mv`).
 | `engines/<name>/cpp/gui/*` | `modules/<name>/frontend/desktop/` |
 | `engines/<name>/src/<pkg>/*.py` | `modules/<name>/backend/python/` |
 | `engines/<name>/run.py` | `modules/<name>/run_<name>.py` |
-| orchestration logic (extracted from old run/driver) | `modules/<name>/backend/python/main_<name>.py` |
+| orchestration logic (extracted from old run/driver) | `modules/<name>/backend/python/api_<name>.py` |
 | `tests/engines/<name>/*` | `modules/<name>/tests/` |
 | `engines/<name>/build/` | delete (build artifact) |
 
 Note the v2.0-specific step: any orchestration logic that previously lived in a
-run/driver script **MUST** be extracted into `main_<name>.py`; the new
+run/driver script **MUST** be extracted into `api_<name>.py`; the new
 `run_<name>.py` retains only the user-options block and the launch call (§5.3).
 
 ### A.3 Build Configuration Changes
@@ -1081,7 +1089,7 @@ ROOT = Path(__file__).resolve().parent      # run_<name>.py sits at module root
 The launcher imports and calls the orchestrator:
 
 ```python
-from backend.python.main_<name> import run   # entry point
+from backend.python.api_<name> import run   # entry point
 ```
 
 ### A.6 Validation Scripts
@@ -1100,7 +1108,7 @@ commands.
 
 ```bash
 # 1. C++ build           (illustrative)
-# 2. Imports resolve:     python -c "import backend.python.main_<name>"
+# 2. Imports resolve:     python -c "import backend.python.api_<name>"
 # 3. Headless run:        python modules/<name>/run_<name>.py --no-gui
 # 4. GUI launches:        python modules/<name>/run_<name>.py
 # 5. Validation regression: expect the same baseline error number as before

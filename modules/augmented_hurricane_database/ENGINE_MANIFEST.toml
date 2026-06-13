@@ -1,13 +1,13 @@
-# CyHAN v2.1 - structured manifest for the Augmented Hurricane Database module.
+# CyHAN v2.2 - structured manifest for the Augmented Hurricane Database module.
 #
 # Author : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
 
 [module]
 name              = "augmented_hurricane_database"
 short_tag         = "ahd"
-cyhan_version     = "v2.1"
+cyhan_version     = "v2.2"
 launcher          = "run_augmented_hurricane_database.py"
-orchestrator      = "backend/python/main_augmented_hurricane_database.py"
+orchestrator      = "backend/python/api_augmented_hurricane_database.py"
 python_package    = "augmented_hurricane_database"
 cmake_flag        = ""                          # pure Python; no C++ engine
 
@@ -24,7 +24,7 @@ install_dir       = "backend/python/augmented_hurricane_database/gp_metamodel/"
 [orchestrator_entry]
 config_model      = "augmented_hurricane_database.config:AHDConfig"
 runner            = "augmented_hurricane_database.orchestrator:AHDOrchestrator"
-entry             = "main_augmented_hurricane_database:run"
+entry             = "api_augmented_hurricane_database:run"
 
 [stages]
 # Linear pass per basin; "ebtrk_rmax" is opt-in (append_ebtrk_rmax).

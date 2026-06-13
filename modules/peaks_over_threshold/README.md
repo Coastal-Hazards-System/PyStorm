@@ -121,7 +121,7 @@ peaks_over_threshold/
 │   │   ├── CMakeLists.txt
 │   │   └── build.py
 │   └── python/
-│       ├── main_peaks_over_threshold.py    Orchestrator entry (stage dispatch)
+│       ├── api_peaks_over_threshold.py    Orchestrator entry (stage dispatch)
 │       └── peaks_over_threshold/           Orchestration package
 │           ├── config.py                   POTConfig + PreprocessConfig (pydantic)
 │           ├── orchestrator.py             POTOrchestrator
@@ -135,8 +135,8 @@ peaks_over_threshold/
 └── data/                                   inputs/{raw,processed}/ & outputs/ (gitignored)
 ```
 
-Per CyHAN v2.1, the launcher (`run_peaks_over_threshold.py`) holds user options
-only and calls the orchestrator (`backend/python/main_peaks_over_threshold.py`),
+Per CyHAN v2.2, the launcher (`run_peaks_over_threshold.py`) holds user options
+only and calls the orchestrator (`backend/python/api_peaks_over_threshold.py`),
 which dispatches the stages. The module is self-contained.
 
 ## Acronyms

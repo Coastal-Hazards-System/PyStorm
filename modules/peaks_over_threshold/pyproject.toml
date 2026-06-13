@@ -27,7 +27,7 @@ dev = [
 ]
 
 [tool.setuptools]
-py-modules = ["main_peaks_over_threshold"]
+py-modules = ["api_peaks_over_threshold"]
 
 [tool.setuptools.packages.find]
 where    = ["backend/python"]

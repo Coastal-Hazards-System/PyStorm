@@ -188,7 +188,7 @@ probabilistic_simulation_technique/
 │   │   ├── CMakeLists.txt
 │   │   └── build.py
 │   └── python/
-│       ├── main_probabilistic_simulation_technique.py   Orchestrator entry (input resolution)
+│       ├── api_probabilistic_simulation_technique.py   Orchestrator entry (input resolution)
 │       └── probabilistic_simulation_technique/          Orchestration package
 │           ├── config.py                       PSTConfig + BootstrapConfig (pydantic)
 │           ├── orchestrator.py                 PSTOrchestrator
@@ -203,8 +203,8 @@ probabilistic_simulation_technique/
 └── data/                                       inputs/{raw,processed}/ & outputs/ (gitignored)
 ```
 
-Per CyHAN v2.1, the launcher holds user options only and calls the orchestrator
-(`backend/python/main_probabilistic_simulation_technique.py`), which resolves the
+Per CyHAN v2.2, the launcher holds user options only and calls the orchestrator
+(`backend/python/api_probabilistic_simulation_technique.py`), which resolves the
 inputs and runs PST on each. The module is self-contained.
 
 ## Acronyms

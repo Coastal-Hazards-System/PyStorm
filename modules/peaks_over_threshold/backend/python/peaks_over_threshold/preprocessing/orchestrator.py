@@ -5,7 +5,7 @@ Author : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.arm
 Wraps the pure preprocessing engines (download / detrend / ntr) with file
 reads, writes, and diagnostic plots, executing only the stages requested in
 ``PreprocessConfig.stages``. The POT stage itself is run by the module
-orchestrator (``main_peaks_over_threshold``); this class stops at the NTR CSV
+orchestrator (``api_peaks_over_threshold``); this class stops at the NTR CSV
 and reports the path so POT can consume it.
 
 Public API

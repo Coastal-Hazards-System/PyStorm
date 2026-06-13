@@ -5,7 +5,7 @@
 name        = "storm_climatology_analysis"
 version     = "0.1.0"
 launcher    = "run_storm_climatology_analysis.py"
-entry       = "backend/python/main_storm_climatology_analysis.py:run"
+entry       = "backend/python/api_storm_climatology_analysis.py:run"
 ported_from = ["CHS_Atlantic_StormSelection.m", "CHS_SRR_GKF.m"]   # CHS MATLAB (not bundled)
 
 [pipeline]

@@ -1,11 +1,11 @@
-"""run_augmented_hurricane_database - AHD launcher (CyHAN v2.1 §5.3).
+"""run_augmented_hurricane_database - AHD launcher (CyHAN v2.2 §5.3).
 
 Author : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
 
 User-facing entry for the Augmented Hurricane Database (AHD) module. The
 operator edits the USER OPTIONS block below and runs the script. No
 orchestration logic lives here - the launcher hands the option block to
-``main_augmented_hurricane_database.run`` per §5.3.
+``api_augmented_hurricane_database.run`` per §5.3.
 
 ================================================================================
 WHAT AHD PRODUCES
@@ -291,7 +291,7 @@ OUTPUT_STEM   = "augmented_hurdat2_{basin}_{start_year}-{end_year}_{created}"
 # ===========================================================================
 
 
-# ── Launcher setup (CyHAN v2.1 §A.5 path anchoring; no user options) ─────────
+# ── Launcher setup (CyHAN v2.2 §A.5 path anchoring; no user options) ─────────
 import sys
 
 _BACKEND_PY = ROOT / "backend" / "python"
@@ -410,7 +410,7 @@ if __name__ == "__main__":
     # The orchestrator entry lives in backend/python, added to sys.path above.
     # Resolve it dynamically so there is no static import for the IDE to flag.
     from importlib import import_module
-    result = import_module("main_augmented_hurricane_database").run(cfg)
+    result = import_module("api_augmented_hurricane_database").run(cfg)
     print("\n[ahd] done:")
     for basin, r in result.results.items():
         extra = ""

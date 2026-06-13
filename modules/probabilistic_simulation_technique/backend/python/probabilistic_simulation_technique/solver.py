@@ -2,7 +2,7 @@
 
 Author : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
 
-CyHAN v2.1 §4.1 specifies the binding role: a conduit that exposes engine
+CyHAN v2.2 §4.1 specifies the binding role: a conduit that exposes engine
 capability without leaking engine internals upward and without absorbing
 orchestration responsibility. This file is intentionally minimal - the
 higher-level dispatch/fallback (pure-Python bootstrap, configuration mapping)

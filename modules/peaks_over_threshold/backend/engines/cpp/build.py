@@ -5,7 +5,7 @@ Author : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.arm
 
 Builds the C++ kernel defined in ``POTThresholdSearch.hpp`` + ``pot_bindings.cpp``
 and installs the resulting extension into the expanded orchestration package
-(``backend/python/peaks_over_threshold/``) per CyHAN v2.1 §16.2 / §16.5.
+(``backend/python/peaks_over_threshold/``) per CyHAN v2.2 §16.2 / §16.5.
 
 Usage
 -----

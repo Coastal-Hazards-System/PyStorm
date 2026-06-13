@@ -1,11 +1,11 @@
-"""run_peaks_over_threshold - POT launcher (CyHAN v2.1 §5.3).
+"""run_peaks_over_threshold - POT launcher (CyHAN v2.2 §5.3).
 
 Author : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
 
 User-facing entry for the Peaks-Over-Threshold (POT) module. The operator edits
 the USER OPTIONS block (at the top of this file) and runs the script. No
 orchestration logic lives here - the launcher hands the option block to
-``main_peaks_over_threshold.run`` per §5.3, which dispatches the requested stages.
+``api_peaks_over_threshold.run`` per §5.3, which dispatches the requested stages.
 
 Stages (canonical order)
 -------------------------
@@ -181,7 +181,7 @@ PLOTS_DIR     = DATA / "outputs" / "plots"
 # ===========================================================================
 
 
-# ── Launcher plumbing (CyHAN v2.1 §A.5 path anchoring; no user options) ─────
+# ── Launcher plumbing (CyHAN v2.2 §A.5 path anchoring; no user options) ─────
 import os
 import sys
 
@@ -275,8 +275,8 @@ def _apply_cli(config: dict) -> dict:
 
 if __name__ == "__main__":
     _ensure_cpp_extension()   # build _pot on first run if needed
-    # The orchestrator entry (main_peaks_over_threshold) lives in backend/python,
+    # The orchestrator entry (api_peaks_over_threshold) lives in backend/python,
     # added to sys.path above at runtime. Resolve it dynamically so there is no
     # static import for the IDE to flag as unresolved.
     from importlib import import_module
-    import_module("main_peaks_over_threshold").run(_apply_cli(CONFIG))
+    import_module("api_peaks_over_threshold").run(_apply_cli(CONFIG))

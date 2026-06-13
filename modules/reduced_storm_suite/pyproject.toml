@@ -30,8 +30,8 @@ dev = [
 ]
 
 [tool.setuptools]
-# CyHAN v2.1 §5.3 / §16.2 orchestrator entry, sibling of the expanded package.
-py-modules = ["main_reduced_storm_suite"]
+# CyHAN v2.2 §5.3 / §16.2 orchestrator entry, sibling of the expanded package.
+py-modules = ["api_reduced_storm_suite"]
 
 [tool.setuptools.packages.find]
 where    = ["backend/python"]

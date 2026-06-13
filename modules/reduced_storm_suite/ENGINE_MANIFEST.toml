@@ -1,13 +1,13 @@
-# CyHAN v2.1 - structured manifest for the Reduced Storm Suite module.
+# CyHAN v2.2 - structured manifest for the Reduced Storm Suite module.
 #
 # Author : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
 
 [module]
 name              = "reduced_storm_suite"
 short_tag         = "rss"
-cyhan_version     = "v2.1"
+cyhan_version     = "v2.2"
 launcher          = "run_reduced_storm_suite.py"
-orchestrator      = "backend/python/main_reduced_storm_suite.py"
+orchestrator      = "backend/python/api_reduced_storm_suite.py"
 python_package    = "reduced_storm_suite"
 cmake_flag        = "BUILD_RSS"
 
@@ -18,7 +18,7 @@ classes           = []                                # header-only; functions i
 acceleration      = "PAM k-medoids (BUILD + FastPAM1 SWAP) with forced-medoid support"
 
 [orchestrator_entry]
-entry             = "main_reduced_storm_suite:run"
+entry             = "api_reduced_storm_suite:run"
 fixed_workflow    = "reduced_storm_suite.workflows.rss_selection:run_rss_selection"
 optimal_workflow  = "reduced_storm_suite.workflows.growth_evaluation:run_growth_evaluation"
 

@@ -548,7 +548,7 @@ Outputs land under `data/outputs/<dataset>/<scope>/<mode>/`.
 
 ---
 
-## 8. Module Layout (CyHAN v2.1 §16.1)
+## 8. Module Layout (CyHAN v2.2 §16.1)
 
 ```
 reduced_storm_suite/
@@ -562,7 +562,7 @@ reduced_storm_suite/
 │   │   ├── CMakeLists.txt
 │   │   └── build.py
 │   └── python/
-│       ├── main_reduced_storm_suite.py   Orchestrator entry (input + path wiring)
+│       ├── api_reduced_storm_suite.py   Orchestrator entry (input + path wiring)
 │       └── reduced_storm_suite/          Orchestration package
 │           ├── config/                   defaults, YAML loader, templates
 │           ├── io/                       HDF5 store, multi-format readers
@@ -578,12 +578,12 @@ reduced_storm_suite/
 └── data/                                inputs/{raw,processed}/ & outputs/<dataset>/<scope>/<mode>/ (gitignored)
 ```
 
-The two mandatory entry artifacts per CyHAN v2.1 §5.3:
+The two mandatory entry artifacts per CyHAN v2.2 §5.3:
 
 | Artifact     | Location                                       | Role               |
 |--------------|------------------------------------------------|--------------------|
 | Launcher     | `run_reduced_storm_suite.py`                   | user-facing entry  |
-| Orchestrator | `backend/python/main_reduced_storm_suite.py`   | non-user-facing    |
+| Orchestrator | `backend/python/api_reduced_storm_suite.py`   | non-user-facing    |
 
 ---
 

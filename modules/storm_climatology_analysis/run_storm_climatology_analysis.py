@@ -1,11 +1,11 @@
-"""run_storm_climatology_analysis - SCA launcher (CyHAN v2.1 §5.3).
+"""run_storm_climatology_analysis - SCA launcher (CyHAN v2.2 §5.3).
 
 Author : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
 
 User-facing entry for the Storm Climatology Analysis (SCA) module.
 The operator edits the USER OPTIONS block below and runs the script. No
 orchestration logic lives here - the launcher hands the option block to
-``main_storm_climatology_analysis.run`` per §5.3.
+``api_storm_climatology_analysis.run`` per §5.3.
 
 ================================================================================
 WHAT SCA PRODUCES
@@ -297,7 +297,7 @@ if __name__ == "__main__":
     cfg = _apply_cli(CONFIG)
     from importlib import import_module
     try:
-        result = import_module("main_storm_climatology_analysis").run(cfg)
+        result = import_module("api_storm_climatology_analysis").run(cfg)
     except NotImplementedError as exc:
         raise SystemExit(f"[sca] {exc}")
     print("\n[sca] done:")

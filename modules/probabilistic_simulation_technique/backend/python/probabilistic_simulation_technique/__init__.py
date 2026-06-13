@@ -1,14 +1,14 @@
-"""probabilistic_simulation_technique - PST orchestration package (CyHAN v2.1 §5.3 expanded form).
+"""probabilistic_simulation_technique - PST orchestration package (CyHAN v2.2 §5.3 expanded form).
 
 Author : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
 
-The orchestrator entry point per §5.3 is the ``main_probabilistic_simulation_technique``
-module one level up (``backend/python/main_probabilistic_simulation_technique.py``);
+The orchestrator entry point per §5.3 is the ``api_probabilistic_simulation_technique``
+module one level up (``backend/python/api_probabilistic_simulation_technique.py``);
 this package is its expanded, multi-file realization. Submodules:
 
   config        pydantic configuration models
   orchestrator  PSTOrchestrator workflow runner
-  solver        thin _pst binding wrapper (CyHAN v2.1 §4.1 binding role)
+  solver        thin _pst binding wrapper (CyHAN v2.2 §4.1 binding role)
   sampling      bootstrap kernel + GPD-threshold search
   hazard        ensemble fit + tail splice + AER-table interpolation
   postproc      hazard-curve plotting

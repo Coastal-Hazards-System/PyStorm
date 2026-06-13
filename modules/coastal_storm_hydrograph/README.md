@@ -146,7 +146,7 @@ coastal_storm_hydrograph/
 |  |- timescale_comparison.py               # equivalent width vs FWHM vs 2nd-moment
 |  |- actual_duration_relationship.py       # actual duration <-> equivalent width
 |- backend/python/
-|  |- main_coastal_storm_hydrograph.py        # orchestrator entry: run(config)
+|  |- api_coastal_storm_hydrograph.py        # orchestrator entry: run(config)
 |  |- coastal_storm_hydrograph/
 |     |- config.py        # CSHConfig (pydantic)
 |     |- io.py            # staID + surge/time matrix loaders

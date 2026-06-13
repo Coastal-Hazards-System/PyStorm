@@ -1,4 +1,4 @@
-"""main_probabilistic_simulation_technique - orchestrator entry (CyHAN v2.1 §5.3).
+"""api_probabilistic_simulation_technique - orchestrator entry (CyHAN v2.2 §5.3).
 
 Author : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
 

@@ -29,7 +29,7 @@ dev = [
 ]
 
 [tool.setuptools]
-py-modules = ["main_coastal_storm_hydrograph"]
+py-modules = ["api_coastal_storm_hydrograph"]
 
 [tool.setuptools.packages.find]
 where    = ["backend/python"]
