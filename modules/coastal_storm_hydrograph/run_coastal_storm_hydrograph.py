@@ -1,21 +1,33 @@
-"""run_storm_surge_hydrograph - SSH launcher (CyHAN v2.1 5.3).
+"""run_coastal_storm_hydrograph - CSH launcher (CyHAN v2.1 5.3).
 
 Author : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
 
-User-facing entry for the Storm Surge Hydrograph (SSH) module. The operator edits
+User-facing entry for the Coastal Storm Hydrograph (CSH) module. The operator edits
 the USER OPTIONS block below and runs the script. No orchestration logic lives here
-- the launcher hands the option block to ``main_storm_surge_hydrograph.run``.
+- the launcher hands the option block to ``main_coastal_storm_hydrograph.run``.
 
 ================================================================================
-WHAT SSH PRODUCES
+WHAT CSH PRODUCES
 ================================================================================
-For each coastal save point, SSH reads the synthetic-TC storm-surge time series
-(one CSV per save point, 15-min steps, metres above NAVD88; -99999 = dry) and
+CSH reduces an ensemble of synthetic-TC coastal time series at each save point to a
+scalable UNIT HYDROGRAPH: a fixed dimensionless shape plus a few per-storm scaling
+parameters. It runs in one of three MODES (set by the MODE option below):
+
+  surge       storm-surge (water-level) hydrograph.  IMPLEMENTED.
+  wave        wave-height (Hs) hydrograph.            PLACEHOLDER (not yet implemented).
+  surge_wave  joint surge + wave, evaluated synoptically with the time lag between
+              the surge peak and the wave peak.       PLACEHOLDER (not yet implemented).
+
+The surge mode is the implemented method and is described below; the wave and
+surge_wave modes are defined slots that currently raise a clear NotImplementedError.
+
+For each coastal save point, the surge mode reads the synthetic-TC storm-surge time
+series (one CSV per save point, 15-min steps, metres above NAVD88; -99999 = dry) and
 builds a UNIT (scalable) HYDROGRAPH: a single dimensionless surge shape, peak = 1,
 scaled by TWO parameters, a peak surge elevation and an equivalent width (a
 timescale), to reconstruct a hydrograph (double normalization).
 
-Method (per save point):
+Surge method (per save point):
   1. Ground elevation above NAVD88 = -depth (the staID depth column is positive
      down). Surge above ground a(t) = elevation - ground; dry (-99999) -> 0.
   2. Each storm is normalized by its own peak surge (n = a/peak), shifted so time
@@ -34,14 +46,14 @@ Outputs (data/outputs/):
   unit_hydrograph_SP#####.csv     - s_dimensionless, u_empirical, u_parametric
   scaled/hydrograph_SP#####_peak<P>m.csv     - peak-scaling examples (m NAVD88)
   scaled/hydrograph_SP#####_widthenv_*.csv   - equivalent-width envelope (P25/P50/P75)
-  ssh_parameters.csv              - per save point: geometry, peaks, equiv-width, duration, limb fit
-  plots/SSH_SP#####.png           - canonical shape + fit, peak scaling, width envelope
-  plots/SSH_ensemble_SP#####.png  - unnormalized peak-aligned ensemble (m NAVD88)
+  csh_parameters.csv              - per save point: geometry, peaks, equiv-width, duration, limb fit
+  plots/CSH_SP#####.png           - canonical shape + fit, peak scaling, width envelope
+  plots/CSH_ensemble_SP#####.png  - unnormalized peak-aligned ensemble (m NAVD88)
 
 Run
 ---
   1. pip install -r requirements.txt  (numpy, pandas, pydantic, scipy, matplotlib)
-  2. Edit the USER OPTIONS below, then:  python run_storm_surge_hydrograph.py
+  2. Edit the USER OPTIONS below, then:  python run_coastal_storm_hydrograph.py
 """
 
 from pathlib import Path
@@ -54,6 +66,14 @@ DATA = ROOT / "data"
 # ===========================================================================
 # USER OPTIONS  - edit anything in this block, then run the script
 # ===========================================================================
+
+# ── Mode ─────────────────────────────────────────────────────────────────────
+# "surge"      - storm-surge (water-level) hydrograph (implemented).
+# "wave"       - wave-height (Hs) hydrograph (PLACEHOLDER; not yet implemented).
+# "surge_wave" - joint surge + wave, evaluated synoptically with the lag between the
+#                surge peak and the wave peak (PLACEHOLDER; not yet implemented).
+# Overridable on the command line with --mode.
+MODE            = "surge"
 
 # ── Input files (under data/inputs/raw/) ─────────────────────────────────────
 STAID_FILE      = "CTXCS_staID.csv"
@@ -114,6 +134,7 @@ for _p in (_BACKEND_PY, _COMMON_PY):
 
 
 CONFIG = {
+    "mode":                   MODE,
     "input_dir":              DATA / "inputs",
     "output_dir":             OUTPUT_DIR,
     "staid_file":             STAID_FILE,
@@ -139,13 +160,17 @@ CONFIG = {
 def _apply_cli(config: dict) -> dict:
     import argparse
     p = argparse.ArgumentParser(
-        description="Unit / scalable storm-surge hydrographs per save point (SSH).")
+        description="Scalable coastal-storm hydrographs per save point (CSH).")
+    p.add_argument("--mode", choices=["surge", "wave", "surge_wave"],
+                   help="Override MODE (wave / surge_wave are placeholders).")
     p.add_argument("--no-plots", dest="plots", action="store_false", default=None,
                    help="Disable the per-save-point plots.")
     p.add_argument("--aggregate", choices=["mean", "median"], help="Override AGGREGATE.")
     p.add_argument("--method", choices=["double_norm", "amplitude"], help="Override METHOD.")
     args = p.parse_args()
     config = dict(config)
+    if args.mode:
+        config["mode"] = args.mode
     if args.plots is not None:
         config["plots"] = args.plots
     if args.aggregate:
@@ -158,8 +183,11 @@ def _apply_cli(config: dict) -> dict:
 if __name__ == "__main__":
     cfg = _apply_cli(CONFIG)
     from importlib import import_module
-    result = import_module("main_storm_surge_hydrograph").run(cfg)
-    print("\n[ssh] done:")
+    try:
+        result = import_module("main_coastal_storm_hydrograph").run(cfg)
+    except NotImplementedError as exc:
+        raise SystemExit(f"[csh] {exc}")
+    print("\n[csh] done:")
     for spid, r in sorted(result.results.items()):
         print(f"      SP{spid:05d}  {r.n_storms:3d} storms  ground={r.ground_elev:+.2f} m  "
               f"W_eq={r.median_equiv_width:.1f} h  -> {r.unit_path.name}")

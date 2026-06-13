@@ -1,13 +1,13 @@
-"""plots - per-save-point diagnostic plots for the SSH module.
+"""plots - per-save-point diagnostic plots for the CSH module.
 
 Author : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
 
 Per save point:
-  * SSH_SP#####.png  - three panels: the canonical (double-normalized) unit
+  * CSH_SP#####.png  - three panels: the canonical (double-normalized) unit
     hydrograph with the normalized ensemble and the rising/falling parametric fit;
     a peak-scaling family (median duration, several peaks); and a duration envelope
     (median peak, P25/P50/P75 equivalent widths).
-  * SSH_ensemble_SP#####.png - every storm's unnormalized hydrograph (m NAVD88)
+  * CSH_ensemble_SP#####.png - every storm's unnormalized hydrograph (m NAVD88)
     aligned at its peak, colored by peak elevation.
 """
 
@@ -18,7 +18,7 @@ from typing import Optional, Sequence
 
 import numpy as np
 
-from storm_surge_hydrograph.hydrograph import UnitHydrograph, scale_to_peak, width_stats
+from coastal_storm_hydrograph.hydrograph import UnitHydrograph, scale_to_peak, width_stats
 
 from pystorm_common import save_figure
 
@@ -30,7 +30,7 @@ def _pyplot():
         import matplotlib.pyplot as plt
         return plt
     except Exception as exc:                                   # noqa: BLE001
-        raise RuntimeError("matplotlib is required for SSH plots "
+        raise RuntimeError("matplotlib is required for CSH plots "
                            "(pip install matplotlib).") from exc
 
 
@@ -58,7 +58,7 @@ def plot_aligned_ensemble(uh: UnitHydrograph, out_path, *, lat=None, lon=None,
     fig, ax = plt.subplots(figsize=(8, 5))
     fig.subplots_adjust(left=0.10, right=0.99, top=0.92, bottom=0.11)
     loc = f"  ({lat:.4f}, {lon:.4f})" if lat is not None and lon is not None else ""
-    ax.set_title(f"CHS — SSH SP{uh.sp_id:05d} peak-aligned hydrographs (n={uh.n_storms})"
+    ax.set_title(f"PyStorm-CSH SP{uh.sp_id:05d} peak-aligned hydrographs (n={uh.n_storms})"
                  f"{loc}", fontweight="bold")
     order = np.argsort(peaks)
     for i in order:
@@ -93,7 +93,7 @@ def plot_save_point(uh: UnitHydrograph, out_path, *, lat=None, lon=None,
     fig, (ax1, ax2, ax3) = plt.subplots(3, 1, figsize=(8, 11))
     fig.subplots_adjust(left=0.11, right=0.97, top=0.95, bottom=0.06, hspace=0.30)
     loc = f"  ({lat:.4f}, {lon:.4f})" if lat is not None and lon is not None else ""
-    fig.suptitle(f"CHS — SSH save point SP{uh.sp_id:05d}{loc}", fontweight="bold")
+    fig.suptitle(f"PyStorm-CSH save point SP{uh.sp_id:05d}{loc}", fontweight="bold")
 
     # Panel 1: canonical (double-normalized) unit hydrograph.
     if uh.stack is not None:

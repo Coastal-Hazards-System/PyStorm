@@ -1,8 +1,9 @@
-"""test_smoke - smoke tests for the storm_surge_hydrograph (SSH) module.
+"""test_smoke - smoke tests for the coastal_storm_hydrograph (CSH) module.
 
 Author : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
 
-Validates: (1) config construction and validation; (2) staID sign handling and storm normalization; (3) unit-hydrograph build, scaling, and double-normalization collapse; (4) overland/overwater threshold and duration<->equiv-width conversion; (5) parametric limb fit; (6) writer round-trip.
+Validates: (1) config construction and validation; (2) staID sign handling and storm normalization; (3) unit-hydrograph build, scaling, and double-normalization collapse; (4) overland/overwater threshold and duration<->equiv-width conversion; (5) parametric limb fit; (6) writer round-trip; (7) mode dispatch (surge default;
+wave/surge_wave placeholders raise NotImplementedError).
 """
 
 from __future__ import annotations
@@ -11,9 +12,9 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from storm_surge_hydrograph.config import SSHConfig
-from storm_surge_hydrograph import io
-from storm_surge_hydrograph.hydrograph import (
+from coastal_storm_hydrograph.config import CSHConfig
+from coastal_storm_hydrograph import io
+from coastal_storm_hydrograph.hydrograph import (
     normalize_storm, build_unit_hydrograph, fit_limbs, scale_to_peak, _gen_gauss,
     width_at_level, threshold_depth, actual_durations,
     equiv_width_from_actual_duration, actual_duration_from_equiv_width,
@@ -40,12 +41,12 @@ def _gauss_storm(n=400, peak_idx=200, peak_elev=3.0, ground=1.0, width=20.0,
 
 
 def test_config_defaults_and_validation():
-    cfg = SSHConfig()
+    cfg = CSHConfig()
     assert cfg.dt_hours == 0.25
     assert cfg.depth_is_positive_down is True
     assert cfg.raw_dir.name == "raw" and cfg.processed_dir.name == "processed"
     with pytest.raises(ValueError):
-        SSHConfig(aggregate="rms")
+        CSHConfig(aggregate="rms")
 
 
 def test_load_staid_sign(tmp_path):
@@ -171,7 +172,7 @@ def test_fit_limbs_recovers_gaussian():
 
 
 def test_writer_roundtrip(tmp_path):
-    from storm_surge_hydrograph import writer
+    from coastal_storm_hydrograph import writer
     cols = [_gauss_storm(peak_elev=p, ground=1.0) for p in (3.0, 4.0, 5.0)]
     surge = np.full((max(c.size for c in cols), len(cols)), np.nan)
     for j, c in enumerate(cols):
@@ -188,3 +189,13 @@ def test_writer_roundtrip(tmp_path):
     sp = writer.write_scaled_hydrograph(uh, 6.0, tmp_path / "s.csv")
     ds = pd.read_csv(sp)
     assert ds["elevation_m_navd88"].max() == pytest.approx(6.0, abs=1e-6)
+
+
+def test_mode_dispatch_and_placeholders():
+    from coastal_storm_hydrograph.orchestrator import CSHOrchestrator
+    assert CSHConfig().mode == "surge"                 # default is the implemented mode
+    with pytest.raises(Exception):                     # invalid mode rejected by validator
+        CSHConfig(mode="bogus")
+    for m in ("wave", "surge_wave"):                   # placeholders raise on run
+        with pytest.raises(NotImplementedError):
+            CSHOrchestrator(CSHConfig(mode=m)).run()

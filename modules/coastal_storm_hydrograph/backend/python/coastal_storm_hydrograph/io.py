@@ -1,4 +1,4 @@
-"""io - input loaders for the storm_surge_hydrograph (SSH) module.
+"""io - input loaders for the coastal_storm_hydrograph (CSH) module.
 
 Author : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
 

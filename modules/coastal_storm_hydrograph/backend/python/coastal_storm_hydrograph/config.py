@@ -1,8 +1,8 @@
-"""config - configuration model for the storm_surge_hydrograph (SSH) module.
+"""config - configuration model for the coastal_storm_hydrograph (CSH) module.
 
 Author : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
 
-A single validated ``SSHConfig`` carries the operator options from the launcher to
+A single validated ``CSHConfig`` carries the operator options from the launcher to
 the orchestrator. Paths are coerced to ``Path``.
 """
 
@@ -14,8 +14,15 @@ from typing import List, Optional, Union
 from pydantic import BaseModel, field_validator
 
 
-class SSHConfig(BaseModel):
+class CSHConfig(BaseModel):
     model_config = {"arbitrary_types_allowed": True}
+
+    # ── Mode (which hydrograph to build) ───────────────────────────────────────
+    # "surge"      : storm-surge (water-level) hydrograph. The implemented method.
+    # "wave"       : wave-height (Hs) hydrograph. PLACEHOLDER (not yet implemented).
+    # "surge_wave" : joint surge + wave, evaluated synoptically with the lag between
+    #                the surge peak and the wave peak. PLACEHOLDER (not yet implemented).
+    mode: str = "surge"
 
     # ── I/O layout (CyHAN raw / processed / outputs convention) ────────────────
     input_dir: Path = Path("data/inputs")
@@ -77,6 +84,14 @@ class SSHConfig(BaseModel):
     @classmethod
     def _as_path(cls, v):
         return Path(v)
+
+    @field_validator("mode", mode="before")
+    @classmethod
+    def _mode(cls, v):
+        v = str(v).strip().lower()
+        if v not in ("surge", "wave", "surge_wave"):
+            raise ValueError("mode must be 'surge', 'wave', or 'surge_wave'")
+        return v
 
     @field_validator("aggregate", mode="before")
     @classmethod

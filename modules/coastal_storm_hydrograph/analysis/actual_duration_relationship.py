@@ -24,7 +24,7 @@ import pandas as pd
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "backend" / "python"))
-from storm_surge_hydrograph import io, hydrograph as H   # noqa: E402
+from coastal_storm_hydrograph import io, hydrograph as H   # noqa: E402
 
 DT = 0.25
 MIN_WET = 5
@@ -101,7 +101,7 @@ def main() -> None:
         a2.set_title(f"Canonical conversion (rel.err "
                      f"{np.mean(np.abs(W_pred-W)/W)*100:.1f}%)")
         a2.grid(alpha=0.3); a2.legend()
-        fig.suptitle("CHS — SSH actual duration vs equivalent width", fontweight="bold")
+        fig.suptitle("PyStorm-CSH actual duration vs equivalent width", fontweight="bold")
         fig.tight_layout(); fig.savefig(outdir / "fig_actual_duration.png", dpi=120)
         plt.close(fig)
         print(f"wrote {outdir / 'fig_actual_duration.png'}")

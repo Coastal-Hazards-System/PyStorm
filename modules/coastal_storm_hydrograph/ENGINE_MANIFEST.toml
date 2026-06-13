@@ -1,12 +1,12 @@
-# CyHAN engine manifest - storm_surge_hydrograph
-# Per-save-point unit (scalable) storm-surge hydrographs (SSH).
+# CyHAN engine manifest - coastal_storm_hydrograph
+# Per-save-point unit (scalable) storm-surge hydrographs (CSH).
 # Pure-Python module: no C++ engine (CyHAN v2.1 5.1; no performance-critical kernel).
 
 [module]
-name        = "storm_surge_hydrograph"
+name        = "coastal_storm_hydrograph"
 version     = "0.1.0"
-launcher    = "run_storm_surge_hydrograph.py"
-entry       = "backend/python/main_storm_surge_hydrograph.py:run"
+launcher    = "run_coastal_storm_hydrograph.py"
+entry       = "backend/python/main_coastal_storm_hydrograph.py:run"
 
 [pipeline]
 # Per save point: build one dimensionless surge shape, scale it, write + plot.
@@ -37,5 +37,5 @@ actual_duration_offset_m = 0.30         # actual-duration threshold z0 = max(gro
 [outputs]
 unit_hydrograph = "data/outputs/unit_hydrograph_SP#####.csv"       # canonical shape (s, u_empirical, u_parametric)
 scaled          = "data/outputs/scaled/hydrograph_SP#####_peak<P>m.csv | _widthenv_p25/p50/p75.csv"
-parameters      = "data/outputs/ssh_parameters.csv"                # per-SP geometry, widths, actual duration, limb fit
-plots           = "data/outputs/plots/SSH_SP#####.png | SSH_ensemble_SP#####.png"   # optional
+parameters      = "data/outputs/csh_parameters.csv"                # per-SP geometry, widths, actual duration, limb fit
+plots           = "data/outputs/plots/CSH_SP#####.png | CSH_ensemble_SP#####.png"   # optional

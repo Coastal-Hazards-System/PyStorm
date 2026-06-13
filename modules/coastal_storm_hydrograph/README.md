@@ -1,16 +1,29 @@
-# storm_surge_hydrograph (SSH)
+# coastal_storm_hydrograph (CSH)
 
-Per-save-point **unit (scalable) storm-surge hydrographs**. For each coastal save
-point, SSH reduces an ensemble of synthetic-TC surge time series to a single
-dimensionless surge shape (peak = 1) that is **scaled by two parameters, a peak surge
-elevation and an equivalent width** (a timescale), to reconstruct a full hydrograph. One
-shape is derived per save point.
+Per-save-point **scalable coastal-storm hydrographs**: a fixed dimensionless shape
+plus a few per-storm scaling parameters, derived per save point from an ensemble of
+synthetic-TC time series. CSH runs in one of three **modes** (set by `MODE` / `--mode`):
+
+| Mode | What it builds | Status |
+|------|----------------|--------|
+| `surge` | storm-surge (water-level) hydrograph | **implemented** |
+| `wave` | wave-height (Hs) hydrograph | placeholder (not yet implemented) |
+| `surge_wave` | joint surge + wave, evaluated synoptically with the time lag between the surge peak and the wave peak | placeholder (not yet implemented) |
+
+The default is `surge`. The `wave` and `surge_wave` modes are defined slots that
+currently raise a clear `NotImplementedError`; their intended design is sketched in
+the whitepaper. The rest of this README documents the implemented **surge** mode.
+
+For the surge mode, CSH reduces an ensemble of synthetic-TC surge time series to a
+single dimensionless surge shape (peak = 1) that is **scaled by two parameters, a peak
+surge elevation and an equivalent width** (a timescale), to reconstruct a full
+hydrograph. One shape is derived per save point.
 
 **Why two parameters.** Normalizing by peak alone leaves a large temporal spread
 (coefficient of variation ~0.8) that is nearly independent of the peak, so a peak-only
 shape blurs the crest and tails. The module therefore uses **double normalization**:
 the shape is a function of dimensionless time `s = tau/W`, where `W` is the equivalent
-width (area/peak). The companion **whitepaper** (`SSH_Whitepaper.md`, local, not versioned)
+width (area/peak). The companion **whitepaper** (`Coastal_Storm_Hydrograph_Whitepaper.md`, local, not versioned)
 compares four shape models (amplitude-only, double normalization, duration clustering,
 functional PCA); double normalization is the most accurate and parameter-efficient. The
 comparison is reproducible via `analysis/shape_model_comparison.py`.
@@ -67,7 +80,7 @@ So the model can be driven by an equivalent width or by an observed inundation d
 ### A note on the data
 
 Save-point wetness varies strongly with ground elevation. In the CTXS set the
-deeper points (SP4149-4153, ground +2.0 to +2.4 m) are wet for **71-110** of the
+deeper points (SP4149-4153, ground +2.0 to +2.4 m) are wet for **65-107** of the
 660 storms and give tight shapes (fit RMSE ~0.01); the higher points
 (SP3911-3915, ground +0.4 to +1.3 m) are wet for only **3-5** storms, so their unit
 hydrographs are data-limited and noisier. Each shape is still built from that
@@ -77,8 +90,8 @@ point's own storms, as configured.
 
 ```bash
 pip install -r requirements.txt      # numpy, pandas, pydantic, scipy, matplotlib
-python run_storm_surge_hydrograph.py
-python run_storm_surge_hydrograph.py --aggregate median --no-plots
+python run_coastal_storm_hydrograph.py
+python run_coastal_storm_hydrograph.py --aggregate median --no-plots
 ```
 
 ### Key options (USER OPTIONS block)
@@ -108,15 +121,15 @@ python run_storm_surge_hydrograph.py --aggregate median --no-plots
 | `unit_hydrograph_SP#####.csv` | canonical shape: `s_dimensionless, u_empirical, u_parametric` (`tau_hours` for the legacy amplitude method) |
 | `scaled/hydrograph_SP#####_peak<P>m.csv` | peak-scaling examples at the median duration (`tau_hours, elevation_m_navd88, surge_above_ground_m`) |
 | `scaled/hydrograph_SP#####_widthenv_p25/p50/p75.csv` | equivalent-width envelope at the median peak |
-| `ssh_parameters.csv` | per save point: geometry, ground elev, overwater flag, method, n_storms, peak min/median/max, equiv-width P25/P50/P75, actual-duration threshold + median, corr(peak,width), limb fit |
-| `plots/SSH_SP#####.png` | 3 panels: canonical unit hydrograph + ensemble + fit; peak scaling; equivalent-width envelope |
-| `plots/SSH_ensemble_SP#####.png` | every storm's unnormalized hydrograph (m NAVD88) peak-aligned, colored by peak elevation |
+| `csh_parameters.csv` | per save point: geometry, ground elev, overwater flag, method, n_storms, peak min/median/max, equiv-width P25/P50/P75, actual-duration threshold + median, corr(peak,width), limb fit |
+| `plots/CSH_SP#####.png` | 3 panels: canonical unit hydrograph + ensemble + fit; peak scaling; equivalent-width envelope |
+| `plots/CSH_ensemble_SP#####.png` | every storm's unnormalized hydrograph (m NAVD88) peak-aligned, colored by peak elevation |
 | `analysis/*.py` | comparison studies (whitepaper): `shape_model_comparison.py`, `timescale_comparison.py`, `actual_duration_relationship.py` + metrics CSVs and figures |
 
 To scale to a target peak and duration in code:
 
 ```python
-from storm_surge_hydrograph.hydrograph import scale_to_peak, width_stats
+from coastal_storm_hydrograph.hydrograph import scale_to_peak, width_stats
 W = width_stats(unit_hydrograph)["p50"]                     # or a storm-specific equiv width
 tau, elev = scale_to_peak(unit_hydrograph, peak_elev=4.5, equiv_width=W)        # m NAVD88
 # or drive it from an observed inundation duration (time above 0.30 m) + the peak:
@@ -126,21 +139,21 @@ tau, elev = scale_to_peak(unit_hydrograph, peak_elev=4.5, actual_duration=9.0)  
 ## Layout
 
 ```
-storm_surge_hydrograph/
-|- run_storm_surge_hydrograph.py            # launcher (USER OPTIONS)
+coastal_storm_hydrograph/
+|- run_coastal_storm_hydrograph.py            # launcher (USER OPTIONS)
 |- analysis/                                # whitepaper comparison studies
 |  |- shape_model_comparison.py             # amplitude/double-norm/cluster/FPCA
 |  |- timescale_comparison.py               # equivalent width vs FWHM vs 2nd-moment
 |  |- actual_duration_relationship.py       # actual duration <-> equivalent width
 |- backend/python/
-|  |- main_storm_surge_hydrograph.py        # orchestrator entry: run(config)
-|  |- storm_surge_hydrograph/
-|     |- config.py        # SSHConfig (pydantic)
+|  |- main_coastal_storm_hydrograph.py        # orchestrator entry: run(config)
+|  |- coastal_storm_hydrograph/
+|     |- config.py        # CSHConfig (pydantic)
 |     |- io.py            # staID + surge/time matrix loaders
 |     |- hydrograph.py    # normalize, unit hydrograph, parametric limbs, scaling
 |     |- writer.py        # unit / scaled / parameter CSV writers
 |     |- plots.py         # per-save-point diagnostic figure
-|     |- orchestrator.py  # SSHOrchestrator: per-save-point pipeline
+|     |- orchestrator.py  # CSHOrchestrator: per-save-point pipeline
 |- data/{inputs/{raw,processed},outputs}/
 |- tests/
 ```

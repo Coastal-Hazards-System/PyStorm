@@ -1,4 +1,4 @@
-"""Apples-to-apples comparison of time-normalization scales for the SSH module.
+"""Apples-to-apples comparison of time-normalization scales for the CSH module.
 
 Author : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
 
@@ -34,7 +34,7 @@ import pandas as pd
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "backend" / "python"))
-from storm_surge_hydrograph import io, hydrograph as H   # noqa: E402
+from coastal_storm_hydrograph import io, hydrograph as H   # noqa: E402
 
 DT = 0.25
 MIN_WET = 5

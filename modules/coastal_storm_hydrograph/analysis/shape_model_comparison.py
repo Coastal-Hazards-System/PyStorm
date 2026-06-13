@@ -1,4 +1,4 @@
-"""Comparison of unit-hydrograph shape models for the SSH module.
+"""Comparison of unit-hydrograph shape models for the CSH module.
 
 Author : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
 
@@ -37,7 +37,7 @@ import pandas as pd
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "backend" / "python"))
-from storm_surge_hydrograph import io, hydrograph as H   # noqa: E402
+from coastal_storm_hydrograph import io, hydrograph as H   # noqa: E402
 
 DT = 0.25
 MIN_WET = 5
@@ -189,7 +189,7 @@ def make_figures(df: pd.DataFrame, rep_sp: int, outdir: Path) -> None:
     a2.plot(SGRID, dn.mean(0), "b", lw=2)
     a2.set_xlim(-6, 6); a2.set_title(f"Double-normalized (spread={df.spread_double_norm.mean():.3f})")
     a2.set_xlabel("dimensionless time s = tau / D"); a2.grid(alpha=0.3)
-    fig.suptitle(f"CHS — SSH shape collapse (SP{rep_sp:05d}, n={len(storms)})", fontweight="bold")
+    fig.suptitle(f"PyStorm-CSH shape collapse (SP{rep_sp:05d}, n={len(storms)})", fontweight="bold")
     fig.tight_layout(); fig.savefig(outdir / "fig_collapse.png", dpi=120); plt.close(fig)
 
     # Fig 2: LOO reconstruction RMSE vs parameter count.
@@ -201,7 +201,7 @@ def make_figures(df: pd.DataFrame, rep_sp: int, outdir: Path) -> None:
         ax.scatter(p, r, s=60); ax.annotate(name, (p, r), textcoords="offset points",
                                             xytext=(6, 4), fontsize=8)
     ax.set_xlabel("number of per-storm parameters"); ax.set_ylabel("LOO reconstruction RMSE")
-    ax.set_title("CHS — SSH shape models: accuracy vs parameters", fontweight="bold")
+    ax.set_title("PyStorm-CSH shape models: accuracy vs parameters", fontweight="bold")
     ax.grid(alpha=0.3); ax.set_xticks([1, 2, 3, 4])
     fig.tight_layout(); fig.savefig(outdir / "fig_rmse_vs_params.png", dpi=120); plt.close(fig)
 
@@ -214,7 +214,7 @@ def make_figures(df: pd.DataFrame, rep_sp: int, outdir: Path) -> None:
     xs = np.linspace(A.min(), A.max(), 50); b2.plot(xs, np.exp(bb0 + bb1 * np.log(xs)), "r--")
     b2.set_xlabel("peak surge A (m)"); b2.set_ylabel("duration D (h)")
     b2.set_title(f"Peak vs duration (corr={np.corrcoef(A, D)[0,1]:.2f}: nearly independent)"); b2.grid(alpha=0.3)
-    fig.suptitle(f"CHS — SSH duration (SP{rep_sp:05d})", fontweight="bold")
+    fig.suptitle(f"PyStorm-CSH duration (SP{rep_sp:05d})", fontweight="bold")
     fig.tight_layout(); fig.savefig(outdir / "fig_duration.png", dpi=120); plt.close(fig)
 
     # Fig 4: FPCA mean + first modes.
@@ -226,7 +226,7 @@ def make_figures(df: pd.DataFrame, rep_sp: int, outdir: Path) -> None:
         ax.plot(PHYS, mu + 2 * Sv[m] / np.sqrt(len(storms)) * Vt[m],
                 lw=1.2, label=f"mode {m+1} (+, {var[m]*100:.0f}% var)")
     ax.set_xlim(-30, 30); ax.set_xlabel("Time relative to peak (h)"); ax.set_ylabel("normalized surge")
-    ax.set_title(f"CHS — SSH functional PCA modes (SP{rep_sp:05d})", fontweight="bold")
+    ax.set_title(f"PyStorm-CSH functional PCA modes (SP{rep_sp:05d})", fontweight="bold")
     ax.grid(alpha=0.3); ax.legend(fontsize=8)
     fig.tight_layout(); fig.savefig(outdir / "fig_fpca_modes.png", dpi=120); plt.close(fig)
     print(f"wrote 4 figures -> {outdir}")

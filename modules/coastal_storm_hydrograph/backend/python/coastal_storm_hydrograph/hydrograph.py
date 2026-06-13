@@ -1,4 +1,4 @@
-"""hydrograph - unit / scalable storm-surge hydrographs (the SSH method core).
+"""hydrograph - unit / scalable storm-surge hydrographs (the CSH method core).
 
 Author : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
 

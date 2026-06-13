@@ -16,7 +16,7 @@ Following CyHAN v2.1, a C++ engine is shipped where a module has
 performance-critical computation, and is omitted where it does not. Compute-heavy
 modules (POT, PST, RTCS) ship a C++ kernel with a pure-Python fallback so each
 workflow runs whether or not the extension is built; pure-Python modules (TCA,
-SSH) ship no engine. AHD ships an optional C++ accelerator with a NumPy fallback.
+CSH) ship no engine. AHD ships an optional C++ accelerator with a NumPy fallback.
 
 ## Modules
 
@@ -29,10 +29,10 @@ PyStorm has six modules. Two short chains, two independent:
 | [`peaks_over_threshold`](modules/peaks_over_threshold/README.md) (POT) | Extract independent storm peaks from a continuous water-level or NTR time series. |
 | [`probabilistic_simulation_technique`](modules/probabilistic_simulation_technique/README.md) (PST) | Turn a POT peak sample into a hazard curve (response magnitude versus AER) with a confidence band. |
 | [`reduced_tc_suite`](modules/reduced_tc_suite/README.md) (RTCS) | Select a small, representative Reduced Tropical Cyclone Suite that reproduces the full synthetic suite's hazard. |
-| [`storm_surge_hydrograph`](modules/storm_surge_hydrograph/README.md) (SSH) | Reduce an ensemble of synthetic-TC surge series to one dimensionless surge shape per save point, scalable by a peak elevation and an equivalent width. |
+| [`coastal_storm_hydrograph`](modules/coastal_storm_hydrograph/README.md) (CSH) | Reduce an ensemble of synthetic-TC surge series to one dimensionless surge shape per save point, scalable by a peak elevation and an equivalent width. |
 
 Data flow: **AHD writes the augmented best-track that TCA reads; POT writes
-per-station peak files that PST reads.** RTCS and SSH are independent.
+per-station peak files that PST reads.** RTCS and CSH are independent.
 
 ## Architecture
 
@@ -56,7 +56,7 @@ What each module ships varies with its workload:
 | POT | `_pot` kernel | — |
 | PST | `_pst` kernel | `scripts/` (method testbed) |
 | RTCS | `_rtcs` kernel | `scripts/` (preprocess, DSW) |
-| SSH | none (pure Python) | `analysis/` (shape/timescale studies) |
+| CSH | none (pure Python) | `analysis/` (shape/timescale studies) |
 
 ## Quickstart
 
@@ -85,9 +85,9 @@ python run_probabilistic_simulation_technique.py
 cd modules/reduced_tc_suite
 python run_reduced_tc_suite.py
 
-# SSH: unit storm-surge hydrographs
-cd modules/storm_surge_hydrograph
-python run_storm_surge_hydrograph.py
+# CSH: unit storm-surge hydrographs
+cd modules/coastal_storm_hydrograph
+python run_coastal_storm_hydrograph.py
 ```
 
 Each launcher has a USER OPTIONS block at the top and `--help` for command-line
@@ -109,7 +109,7 @@ python modules/augmented_hurricane_database/backend/engines/cpp/build.py     # _
 
 `build.py` tries setuptools, then CMake, then a direct compiler call. It needs
 pybind11 (`pip install pybind11`) and a C++17 toolchain (MSVC or MinGW on
-Windows, gcc or clang elsewhere). TCA and SSH have no engine to build.
+Windows, gcc or clang elsewhere). TCA and CSH have no engine to build.
 
 ## Repository layout
 
@@ -122,7 +122,7 @@ PyStorm/
 │   ├── peaks_over_threshold/                 POT  storm-peak extraction
 │   ├── probabilistic_simulation_technique/   PST  hazard curves (consumes POT)
 │   ├── reduced_tc_suite/                     RTCS representative suite selection
-│   └── storm_surge_hydrograph/               SSH  unit storm-surge hydrographs
+│   └── coastal_storm_hydrograph/               CSH  unit storm-surge hydrographs
 │
 │   Each module:
 │     run_<module>.py            launcher (user options)
@@ -163,7 +163,7 @@ copies. All six modules write their figures through it.
   `DEFAULT_DPI = 150` and creates parent dirs). The palette and `style_ax` were
   previously duplicated in POT and PST (the palette byte-for-byte, `_style_ax`
   already drifting); every module's figure write now goes through `save_figure` at
-  the 150 DPI standard. AHD and SSH still pass their fast PNG settings
+  the 150 DPI standard. AHD and CSH still pass their fast PNG settings
   (`compress_level`, no tight bbox) through `save_figure`. The one exception is
   TCA's per-CRL map renderer (a blit/PIL fast-path for ~1000+ maps that does not
   use `savefig`), which stays at 110 dpi by design.
@@ -206,7 +206,7 @@ copies. All six modules write their figures through it.
 | PST | Probabilistic Simulation Technique |
 | RTCS | Reduced Tropical Cyclone Suite |
 | SRR | Storm Recurrence Rate |
-| SSH | Storm Surge Hydrograph |
+| CSH | Coastal Storm Hydrograph |
 | TC | Tropical Cyclone |
 
 ## Standards

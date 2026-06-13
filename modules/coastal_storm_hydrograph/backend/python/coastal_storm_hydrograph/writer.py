@@ -1,4 +1,4 @@
-"""writer - output writers for the storm_surge_hydrograph (SSH) module.
+"""writer - output writers for the coastal_storm_hydrograph (CSH) module.
 
 Author : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.army.mil>
 """
@@ -11,7 +11,7 @@ from typing import Optional, Sequence
 import numpy as np
 import pandas as pd
 
-from storm_surge_hydrograph.hydrograph import (
+from coastal_storm_hydrograph.hydrograph import (
     UnitHydrograph, scale_to_peak, width_stats, actual_durations,
     threshold_depth, is_overwater,
 )
