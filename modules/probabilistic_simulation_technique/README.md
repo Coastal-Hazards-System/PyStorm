@@ -204,7 +204,7 @@ python scripts/method_testbed.py --series dwl --fit mom
 
 ## Layout
 
-```
+```text
 probabilistic_simulation_technique/
 ├── run_probabilistic_simulation_technique.py   Launcher (user options only)
 ├── pyproject.toml                              Installable orchestrator package

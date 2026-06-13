@@ -229,7 +229,7 @@ optional `srr_radius_path`, and the plot counts `n_maps` / `n_monthly_maps` /
 
 ## Layout
 
-```
+```text
 storm_climatology_analysis/
 ├── run_storm_climatology_analysis.py        # launcher (USER OPTIONS)
 ├── SRR_GKF_Whitepaper.md                    # companion whitepaper (method + validation)

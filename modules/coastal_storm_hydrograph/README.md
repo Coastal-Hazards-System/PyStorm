@@ -167,7 +167,7 @@ tau, elev = scale_to_peak(unit_hydrograph, peak_elev=4.5, actual_duration=9.0)  
 
 ## Layout
 
-```
+```text
 coastal_storm_hydrograph/
 |- run_coastal_storm_hydrograph.py            # launcher (USER OPTIONS)
 |- analysis/                                # whitepaper comparison studies

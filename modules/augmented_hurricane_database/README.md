@@ -305,7 +305,7 @@ year, and storm number, e.g. `..._atlantic_AL1880_02.png`).
 
 ## Layout
 
-```
+```text
 augmented_hurricane_database/
 ├── run_augmented_hurricane_database.py        # launcher (USER OPTIONS)
 ├── backend/python/

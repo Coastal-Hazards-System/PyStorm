@@ -143,7 +143,7 @@ The return type follows the job:
 
 ## Layout
 
-```
+```text
 peaks_over_threshold/
 ├── run_peaks_over_threshold.py             Launcher (user options only)
 ├── pyproject.toml                          Installable orchestrator package

@@ -87,7 +87,7 @@ Both objectives (parameter coverage and response coverage) must enter the
 clustering simultaneously. We standardize `X` and `Y_r` independently and
 concatenate them with user-controlled weights:
 
-```
+```text
 Z = [ α · z(X) | β · z(Y_r) ] ∈ ℝ^{n × (p + r)}
 ```
 
@@ -255,7 +255,7 @@ The module exposes a single canonical launcher
 (`run_reduced_storm_suite.py` at the module root, CyHAN §5.3). It dispatches
 to one of two workflows based on `--mode`:
 
-```
+```text
   --mode fixed    →  workflows/rss_selection.run_rss_selection      (§3.2)
   --mode optimal  →  workflows/growth_evaluation.run_growth_evaluation (§3.3)
 ```
@@ -271,7 +271,7 @@ step is the same.
 
 Both workflows begin with the same data-prep pipeline through step [2]:
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────────────┐
 │  preprocess.py  →  data/inputs/processed/tc_data.h5                 │
 │  (raw X / Y / HC / track files  →  validated HDF5 store)            │
@@ -309,7 +309,7 @@ All diagnostic stages (α/β sweep, Sub-RSS, HC verification, QBM) are
 available; HC-dependent stages are skipped automatically when `HC_bench`
 is absent.
 
-```
+```text
                               [0]-[2]  shared upstream  (§3.1)
                                        │
                                        ▼
@@ -357,7 +357,7 @@ The user inputs a minimum subset size `k_min`, a maximum subset size
 evaluating PAM + DSW + HC + RMSE at every `k`, then picks the smallest
 `k` whose reconstructed hazard curve meets the tolerance.
 
-```
+```text
                               [0]-[2]  shared upstream  (§3.1)
                                        │
                                        ▼
@@ -400,7 +400,7 @@ evaluating PAM + DSW + HC + RMSE at every `k`, then picks the smallest
 
 Pseudo-code for the inner loop:
 
-```
+```text
 # Sweep
 for k in range(k_min, k_max + 1, k_step):
     indices     ← PAM(Z, k, forced)                  (sampling/kmedoids)
@@ -580,7 +580,7 @@ indices and metrics).
 
 ## 9. Module Layout (CyHAN v2.2 §16.1)
 
-```
+```text
 reduced_storm_suite/
 ├── run_reduced_storm_suite.py            Launcher (user options only)
 ├── pyproject.toml                        Installable orchestrator package
