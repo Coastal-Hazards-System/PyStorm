@@ -1,0 +1,38 @@
+# CyHAN engine manifest - life_cycle_simulation
+# Monte-Carlo synthetic TC life cycles for a CRL, driven by the SCA SRR.
+
+[module]
+name        = "life_cycle_simulation"
+version     = "0.1.0"
+launcher    = "run_life_cycle_simulation.py"
+entry       = "backend/python/api_life_cycle_simulation.py:run"
+engine      = "none"   # light, fully NumPy-vectorized; no C++ kernel (pure-Python module)
+
+[pipeline]
+# Linear pass per CRL, off one shared SRR source.
+order   = ["load", "drivers", "simulate", "write", "plots"]
+load    = "read the SCA SRR table (srr_<basin>_<v>.csv) and optional daily companion (srr_source)"
+drivers = "per CRL: annual stratum SRRs -> Poisson rate + intensity split; seasonal SRR -> day-of-year pmf (srr_source.build_crl_srr)"
+simulate = "vectorized Poisson(lambda) counts -> per-TC stratum (categorical) + day-of-year (inverse-CDF) (simulator.simulate)"
+write   = "synthetic TC catalog + per-realization summary (CSV) (writer)"
+plots   = "OPTIONAL per-CRL QC figure (count / stratum / seasonality) (plots.plot_crl_diagnostics)"
+
+[source]
+# The storm recurrence rate comes from the sibling SCA module.
+srr_table = "../storm_climatology_analysis/data/outputs/srr_<basin>_<v>.csv (TC/km/yr, annual + monthly per stratum)"
+srr_daily = "../storm_climatology_analysis/data/outputs/srr_daily_<basin>_<v>.csv (TC/km/yr per day-of-year; optional, for day_method='daily')"
+
+[parameters]
+crl_ids        = [844]    # CRL id(s) to simulate
+radius_km      = 200.0    # radius of influence (km); lambda = SRR * 2 * radius_km
+sim_years      = 100      # life-cycle length (years)
+n_realizations = 1000     # independent realizations
+day_method     = "daily"  # "daily" (smooth daily SRR) or "monthly" (month + uniform day)
+seed           = 12345    # reproducible RNG (None = nondeterministic)
+strata         = ["low", "med", "high"]
+
+[outputs]
+# One pair per CRL; tag = crl<NNNN>_R<R>km_<Y>yr_<N>real.
+catalog = "data/outputs/lcs_catalog_<tag>.csv"   # one row per synthetic TC
+summary = "data/outputs/lcs_summary_<tag>.csv"   # per-realization TC counts by stratum
+plots   = "data/outputs/plots/lcs_diag_<tag>.png"  # optional QC figure

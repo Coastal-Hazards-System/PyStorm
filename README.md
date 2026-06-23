@@ -16,23 +16,27 @@ Following CyHAN v2.2, a C++ engine is shipped where a module has
 performance-critical computation, and is omitted where it does not. Compute-heavy
 modules (POT, PST, RSS) ship a C++ kernel with a pure-Python fallback so each
 workflow runs whether or not the extension is built; pure-Python modules (SCA,
-CSH) ship no engine. AHD ships an optional C++ accelerator with a NumPy fallback.
+CSH, LCS) ship no engine. AHD ships an optional C++ accelerator with a NumPy
+fallback.
 
 ## Modules
 
-PyStorm has six modules. Two short chains, two independent:
+PyStorm has seven modules: a tropical-cyclone chain (AHD -> SCA -> LCS), a
+response chain (POT -> PST), and two independent modules (RSS, CSH):
 
 | Module | Purpose |
 |--------|---------|
 | [`augmented_hurricane_database`](modules/augmented_hurricane_database/README.md) (AHD) | Build an augmented HURDAT2 best-track: parse NHC HURDAT2, derive storm motion, optionally backfill Rmax from EBTRK and impute missing Cp/Rmax with a Gaussian-process metamodel. The best-track foundation for downstream TC analyses. |
-| [`storm_climatology_analysis`](modules/storm_climatology_analysis/README.md) | Per-CRL tropical-cyclone storm recurrence rates (SRR/DSRR) from the augmented HURDAT2, annual and monthly, via the Gaussian Kernel Function. |
+| [`storm_climatology_analysis`](modules/storm_climatology_analysis/README.md) (SCA) | Per-CRL tropical-cyclone storm recurrence rates (SRR/DSRR) from the augmented HURDAT2, annual and monthly, via the Gaussian Kernel Function. |
+| [`life_cycle_simulation`](modules/life_cycle_simulation/README.md) (LCS) | Monte-Carlo synthetic tropical-cyclone life cycles for a CRL: a Poisson number of TCs per year (rate from the SCA SRR and a radius of influence), each stratified by intensity and placed on a calendar day from the seasonal SRR. Consumes the SCA SRR tables. |
 | [`peaks_over_threshold`](modules/peaks_over_threshold/README.md) (POT) | Extract independent storm peaks from a continuous water-level or NTR time series. |
 | [`probabilistic_simulation_technique`](modules/probabilistic_simulation_technique/README.md) (PST) | Turn a POT peak sample into a hazard curve (response magnitude versus AER) with a confidence band. |
 | [`reduced_storm_suite`](modules/reduced_storm_suite/README.md) (RSS) | Select a small, representative Reduced Storm Suite that reproduces the full synthetic suite's hazard. |
 | [`coastal_storm_hydrograph`](modules/coastal_storm_hydrograph/README.md) (CSH) | Reduce an ensemble of synthetic-TC surge series to one dimensionless surge shape per save point, scalable by a peak elevation and an equivalent width. |
 
-Data flow: **AHD writes the augmented best-track that SCA reads; POT writes
-per-station peak files that PST reads.** RSS and CSH are independent.
+Data flow: **AHD writes the augmented best-track that SCA reads; SCA writes the
+per-CRL SRR that LCS reads; POT writes per-station peak files that PST reads.**
+RSS and CSH are independent.
 
 ## Architecture
 
@@ -82,6 +86,7 @@ What each module ships varies with its workload:
 |--------|------------|-------------------|
 | AHD | optional `_gpm` accelerator (NumPy fallback) | — |
 | SCA | none (pure Python) | `analysis/` (kernel sensitivity) |
+| LCS | none (pure Python) | — |
 | POT | `_pot` kernel | — |
 | PST | `_pst` kernel | `scripts/` (method testbed) |
 | RSS | `_rss` kernel | `scripts/` (preprocess, DSW) |
@@ -101,6 +106,10 @@ python run_augmented_hurricane_database.py
 # SCA: per-CRL storm recurrence rates from the augmented best-track
 cd modules/storm_climatology_analysis
 python run_storm_climatology_analysis.py
+
+# LCS: Monte-Carlo synthetic TC life cycles for a CRL from the SCA SRR
+cd modules/life_cycle_simulation
+python run_life_cycle_simulation.py
 
 # POT: extract peaks from a water-level / NTR series
 cd modules/peaks_over_threshold
@@ -147,7 +156,8 @@ PyStorm/
 │
 ├── modules/                                  six self-contained capability verticals
 │   ├── augmented_hurricane_database/         AHD  augmented HURDAT2 best-track
-│   ├── storm_climatology_analysis/           per-CRL SRR/DSRR (consumes AHD)
+│   ├── storm_climatology_analysis/           SCA  per-CRL SRR/DSRR (consumes AHD)
+│   ├── life_cycle_simulation/                LCS  synthetic TC life cycles (consumes SCA)
 │   ├── peaks_over_threshold/                 POT  storm-peak extraction
 │   ├── probabilistic_simulation_technique/   PST  hazard curves (consumes POT)
 │   ├── reduced_storm_suite/                     RSS representative suite selection
@@ -227,6 +237,7 @@ copies. All six modules write their figures through it.
 | GPD | Generalized Pareto Distribution |
 | HC | Hazard Curve |
 | HURDAT2 | HURricane DATabase, 2nd generation (NHC best-track) |
+| LCS | Life Cycle Simulation |
 | MRI | Mean Return Interval (MRI = 1 / AER) |
 | MSVC | Microsoft Visual C++ (compiler) |
 | NTR | Non-Tidal Residual |
