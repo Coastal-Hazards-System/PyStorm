@@ -73,6 +73,32 @@ def _poisson_pmf(lam: float, k: np.ndarray) -> np.ndarray:
     return np.exp(-lam) * lam ** k / fact
 
 
+def _nbinom_pmf(k: np.ndarray, r: float, p: float) -> np.ndarray:
+    """Negative-Binomial pmf P(X=k) = C(k+r-1, k) p^r (1-p)^k, r real (via lgamma)."""
+    k = np.asarray(k, float)
+    log_c = np.array([math.lgamma(ki + r) - math.lgamma(r) - math.lgamma(ki + 1.0)
+                      for ki in k])
+    return np.exp(log_c + r * math.log(p) + k * np.log1p(-p))
+
+
+def _annual_count_ref(counts: np.ndarray, lam: float, k: np.ndarray):
+    """Reference pmf for the annual counts over grid ``k``.
+
+    Poisson(lambda) under the independent baseline; a Negative Binomial matched to
+    the realized mean and Fano factor when the counts are overdispersed (Fano > ~1),
+    so the reference tracks the serial-correlation / clustering mode. Returns
+    (label, pmf).
+    """
+    flat = counts.reshape(-1).astype(float)
+    mean = flat.mean() if flat.size else 0.0
+    fano = float(flat.var() / mean) if mean > 0 else 1.0
+    if fano > 1.05 and mean > 0:                    # overdispersed -> Negative Binomial
+        r = mean / (fano - 1.0)
+        p = r / (r + mean)
+        return f"NegBin(mean={mean:.3f}, Fano={fano:.2f})", _nbinom_pmf(k, r, p)
+    return f"Poisson({lam:.3f})", _poisson_pmf(lam, k)
+
+
 def _suptitle(fig, subtitle: str, name: str) -> None:
     """Brand the figure: PyStorm-LCS prefix on the top-level title (comment std 4.6)."""
     fig.suptitle(f"PyStorm-LCS  {subtitle}  -  {name}", fontweight="bold")
@@ -83,23 +109,32 @@ def _suptitle(fig, subtitle: str, name: str) -> None:
 # ---------------------------------------------------------------------------
 
 def plot_annual_fan(counts, lam, *, subtitle, out_path) -> Path:
-    """TCs/year vs simulation year: median line with 25-75% and 5-95% bands."""
+    """TCs/year vs simulation year: the per-year mean and 25-75% / 5-95% bands.
+
+    The per-year *marginal* is stationary, so the mean and bands are flat across
+    years whether or not the counts are serially correlated; clustering shows in the
+    ACF (the clustering figure), not here. The mean (per-year average across
+    realizations) is shown rather than the median, which is a degenerate 0 with
+    interpolation spikes for sparse, low-rate integer counts.
+    """
     plt = _mpl()
     n_years = counts.shape[1]
     years = np.arange(1, n_years + 1)
-    p05, p25, p50, p75, p95 = np.percentile(counts, [5, 25, 50, 75, 95], axis=0)
+    p05, p25, p75, p95 = np.percentile(counts, [5, 25, 75, 95], axis=0)
+    mean_y = counts.mean(axis=0)                    # smooth per-year mean (~ lambda)
 
     fig, ax = plt.subplots(figsize=(11, 4.4))
     ax.fill_between(years, p05, p95, color=RAMP[100], label="5-95%")
     ax.fill_between(years, p25, p75, color=RAMP[200], label="25-75%")
-    ax.plot(years, p50, color=_DEEP, linewidth=1.6, label="median")
+    ax.plot(years, mean_y, color=_DEEP, linewidth=1.6, label="per-year mean")
     ax.axhline(lam, color=EMPH_DARK, linestyle="--", linewidth=1.2,
-               label=f"mean lambda={lam:.3f}")
+               label=f"lambda={lam:.3f}")
     ax.set_xlim(1, n_years)
     ax.set_ylim(bottom=0)
     ax.set_xlabel("simulation year")
     ax.set_ylabel("TCs per year")
-    ax.set_title("Per-year count: flat across years (years are i.i.d. Poisson)")
+    ax.set_title("Per-year count: stationary marginal across years "
+                 "(serial correlation shows in the ACF, not here)")
     ax.legend(frameon=False, fontsize=8, ncol=4, loc="upper right")
     style_ax(ax)
     _suptitle(fig, subtitle, "annual TC count (ensemble bands)")
@@ -201,12 +236,13 @@ def plot_cumulative(counts, lam, *, subtitle, out_path) -> Path:
 
 
 def plot_count_distributions(counts, lam, *, subtitle, out_path) -> Path:
-    """Two marginals: TCs/year pmf vs Poisson, and per-realization total counts."""
+    """Two marginals: TCs/year pmf vs the reference (Poisson or NegBin), and the
+    per-realization total counts vs a Normal fit to the realized totals."""
     plt = _mpl()
     n_real, n_years = counts.shape
     fig, axes = plt.subplots(1, 2, figsize=(12, 4.4))
 
-    # ── Per-year count vs Poisson(lambda) ──────────────────────────────────────
+    # ── Per-year count vs the count reference (Poisson, or NegBin if overdispersed) ─
     ax = axes[0]
     per_year = counts.ravel()
     kmax = max(1, int(per_year.max()))
@@ -214,18 +250,21 @@ def plot_count_distributions(counts, lam, *, subtitle, out_path) -> Path:
     ax.hist(per_year, bins=edges, density=True, color=RAMP[200],
             edgecolor=_DEEP, linewidth=0.6, label="simulated")
     k = np.arange(0, kmax + 1)
-    ax.plot(k, _poisson_pmf(lam, k), "o-", color=EMPH_DARK, markersize=4,
-            label=f"Poisson({lam:.3f})")
+    ref_label, ref_pmf = _annual_count_ref(counts, lam, k)
+    ax.plot(k, ref_pmf, "o-", color=EMPH_DARK, markersize=4, label=ref_label)
     ax.set_xlabel("TCs per year")
     ax.set_ylabel("probability")
     ax.set_title("Annual count")
     ax.legend(frameon=False, fontsize=8)
     style_ax(ax)
 
-    # ── Per-realization total over the full life cycle (approx Normal) ──────────
+    # ── Per-realization total over the full life cycle (Normal fit to the totals) ──
     ax = axes[1]
     totals = counts.sum(axis=1)
-    mu, sd = lam * n_years, math.sqrt(max(lam * n_years, 1e-12))
+    # Fit the Normal to the realized totals so it widens correctly when the annual
+    # counts are overdispersed / serially correlated (else it matches lambda*Y).
+    mu = float(totals.mean())
+    sd = max(float(totals.std()), 1e-12)
     tmin, tmax = int(totals.min()), int(totals.max())
     bins = np.arange(tmin - 0.5, tmax + 1.5)
     ax.hist(totals, bins=bins, density=True, color=RAMP[200],
@@ -359,19 +398,19 @@ def plot_waiting_times(catalog, lam, *, n_realizations, subtitle, out_path) -> P
 # ---------------------------------------------------------------------------
 
 def plot_diagnostic(catalog, counts, srr, *, lam, p, subtitle, out_path) -> Path:
-    """Three-panel QC: annual count vs Poisson, the stratum split, and seasonality."""
+    """Three-panel QC: annual count vs its reference, the stratum split, seasonality."""
     plt = _mpl()
     fig, axes = plt.subplots(1, 3, figsize=(15, 4.2))
 
-    # ── Panel 1: annual count distribution vs Poisson(lambda) ──────────────────
+    # ── Panel 1: annual count vs the reference (Poisson, or NegBin if overdispersed) ─
     ax = axes[0]
     per_year = counts.ravel()
     kmax = max(1, int(per_year.max()))
     ax.hist(per_year, bins=np.arange(-0.5, kmax + 1.5), density=True, color=RAMP[200],
             edgecolor=_DEEP, linewidth=0.6, label="simulated")
     k = np.arange(0, kmax + 1)
-    ax.plot(k, _poisson_pmf(lam, k), "o-", color=EMPH_DARK, markersize=4,
-            label=f"Poisson({lam:.3f})")
+    ref_label, ref_pmf = _annual_count_ref(counts, lam, k)
+    ax.plot(k, ref_pmf, "o-", color=EMPH_DARK, markersize=4, label=ref_label)
     ax.set_xlabel("TCs per year")
     ax.set_ylabel("probability")
     ax.set_title("Annual count")
