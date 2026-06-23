@@ -86,6 +86,28 @@ def locate_daily_companion(input_csv) -> Optional[Path]:
     return cand if cand.is_file() else None
 
 
+def locate_selection_companion(input_csv) -> Optional[Path]:
+    """Find selection_<basin>_<v>.csv sitting next to a srr_<basin>_<v>.csv input."""
+    path = Path(input_csv)
+    cand = path.with_name(re.sub(r"^srr[^_]*_", "selection_", path.name, count=1))
+    return cand if cand.is_file() else None
+
+
+def load_selection_table(path, crl_ids=None) -> "pd.DataFrame":
+    """Load the per-CRL selected-TC table (crl_id, year, dist) for calibration.
+
+    Reads only the columns the correlation calibration needs; optionally keeps just
+    the requested CRLs.
+    """
+    path = Path(path)
+    if not path.is_file():
+        raise FileNotFoundError(f"SCA selection table not found: {path}")
+    df = pd.read_csv(path, usecols=["crl_id", "year", "dist"])
+    if crl_ids is not None:
+        df = df[df["crl_id"].isin(set(int(c) for c in crl_ids))]
+    return df
+
+
 def load_daily_table(daily_csv, crl_ids) -> "pd.DataFrame":
     """Read the long-form daily SRR table, keeping only the requested CRLs.
 

@@ -169,8 +169,8 @@ def test_simulate_shape_and_reproducibility():
     # Same seed -> identical catalog (reproducible).
     pd.testing.assert_frame_equal(out1.catalog, out2.catalog)
     cat = out1.catalog
-    assert set(cat.columns) == {"realization", "year", "event",
-                                "intensity", "doy", "month", "day"}
+    assert {"realization", "year", "event", "intensity", "doy", "month", "day",
+            "event_time", "seq", "wait_yr"} == set(cat.columns)   # sequencing on by default
     assert cat["realization"].between(1, 200).all()
     assert cat["year"].between(1, 50).all()
     assert cat["doy"].between(1, 365).all()
@@ -231,6 +231,131 @@ def test_writers_roundtrip(tmp_path):
     sp = writer.write_summary(summ, tmp_path / "sum.csv")
     assert pd.read_csv(cp).shape[0] == len(out.catalog)
     assert pd.read_csv(sp).shape[0] == 20
+
+
+# ---------------------------------------------------------------------------
+# (10) serial correlation + sequencing
+# ---------------------------------------------------------------------------
+
+def test_config_correlation_validators():
+    assert LCSConfig(input_csv="x").correlation is False        # off by default
+    assert LCSConfig(input_csv="x").sequencing is True          # on by default
+    assert LCSConfig(input_csv="x", ar_phi=0.7).ar_phi == 0.7
+    for bad in (dict(ar_phi=1.0), dict(ar_phi=-0.1), dict(overdispersion=-1.0)):
+        with pytest.raises(Exception):
+            LCSConfig(input_csv="x", **bad)
+
+
+def test_draw_counts_poisson_baseline():
+    c = simulator.draw_counts(0.8, 3000, 60, correlation=False,
+                              rng=np.random.default_rng(0))
+    assert c.shape == (3000, 60)
+    assert c.mean() == pytest.approx(0.8, rel=0.05)
+    fano, acf1 = simulator._count_diagnostics(c)
+    assert fano == pytest.approx(1.0, abs=0.1) and abs(acf1) < 0.05
+
+
+def test_draw_counts_overdispersion_lifts_fano_preserves_mean():
+    c = simulator.draw_counts(2.0, 3000, 60, correlation=True, overdispersion=0.5,
+                              rng=np.random.default_rng(1))
+    assert c.mean() == pytest.approx(2.0, rel=0.05)             # mean preserved
+    fano, acf1 = simulator._count_diagnostics(c)
+    assert fano > 1.5                                           # ~ 1 + lam*od
+    assert abs(acf1) < 0.07                                     # no serial memory
+
+
+def test_draw_counts_serial_correlation_positive_acf():
+    c = simulator.draw_counts(2.0, 4000, 80, correlation=True, ar_phi=0.7, ar_beta=0.5,
+                              rng=np.random.default_rng(2))
+    assert c.mean() == pytest.approx(2.0, rel=0.06)            # mean preserved
+    fano, acf1 = simulator._count_diagnostics(c)
+    assert acf1 > 0.10                                          # lag-1 autocorrelation
+    assert fano > 1.0
+
+
+def test_add_sequencing():
+    cat = pd.DataFrame({
+        "realization": [1, 1, 1, 2], "year": [3, 1, 1, 5], "doy": [10, 200, 50, 100],
+        "event": [1, 1, 2, 1], "intensity": ["low", "med", "high", "low"]})
+    seq = simulator.add_sequencing(cat, 10)
+    assert {"event_time", "seq", "wait_yr"} <= set(seq.columns)
+    r1 = seq[seq.realization == 1]
+    assert r1["event_time"].is_monotonic_increasing                # chronological
+    assert r1["seq"].tolist() == [1, 2, 3]
+    assert np.isnan(r1["wait_yr"].iloc[0]) and (r1["wait_yr"].iloc[1:] > 0).all()
+    r2 = seq[seq.realization == 2]
+    assert r2["seq"].tolist() == [1] and np.isnan(r2["wait_yr"].iloc[0])
+
+
+def test_simulate_with_correlation_and_sequencing():
+    srr_df, daily_df = _srr_table(), _daily_table()
+    s = srr_source.build_crl_srr(srr_df, daily_df, 1, day_method="daily")
+    out = simulator.simulate(s, radius_km=200.0, sim_years=50, n_realizations=400,
+                             rng=np.random.default_rng(7), correlation=True,
+                             ar_phi=0.6, ar_beta=0.5, overdispersion=0.3, sequencing=True)
+    assert {"event_time", "seq", "wait_yr"} <= set(out.catalog.columns)
+    assert out.fano > 1.0                                          # overdispersed
+    # Every realization is chronologically ordered.
+    assert out.catalog.groupby("realization")["event_time"].apply(
+        lambda x: x.is_monotonic_increasing).all()
+
+
+# ---------------------------------------------------------------------------
+# (11) correlation calibration from historical counts
+# ---------------------------------------------------------------------------
+
+def test_correlation_params_default_to_none():
+    cfg = LCSConfig(input_csv="x")
+    assert cfg.ar_phi is None and cfg.ar_beta is None and cfg.overdispersion is None
+
+
+def test_crl_annual_counts_within_radius_zero_filled():
+    from life_cycle_simulation import calibration
+    sel = pd.DataFrame({"crl_id": [5, 5, 5, 5, 7],
+                        "year": [1940, 1940, 1942, 1950, 1945],
+                        "dist": [100, 300, 150, 180, 50]})       # 300 > radius -> excluded
+    c = calibration.crl_annual_counts(sel, 5, radius_km=200.0, start_year=1938)
+    assert len(c) == 1950 - 1938 + 1                              # zero-filled to last year
+    assert c.sum() == 3 and c[1940 - 1938] == 1                   # the dist=300 row dropped
+
+
+def test_calibrate_correlation_poisson_and_overdispersed():
+    from life_cycle_simulation import calibration
+    rng = np.random.default_rng(0)
+    # Poisson sample -> overdispersion ~ 0, beta small.
+    cal = calibration.calibrate_correlation(rng.poisson(0.6, 300).astype(float))
+    assert cal["overdispersion"] < 0.3 and cal["ar_beta"] < 0.7
+    # Gamma-mixed (NegBin) sample -> overdispersion detected (target var(G)=0.5).
+    g = rng.gamma(2.0, 0.5, 400)
+    cal2 = calibration.calibrate_correlation(rng.poisson(1.0 * g).astype(float))
+    assert cal2["overdispersion"] > 0.2
+
+
+def test_calibrate_correlation_overrides():
+    from life_cycle_simulation import calibration
+    cal = calibration.calibrate_correlation(
+        np.array([0.0, 1, 2, 1, 0, 3, 1, 2]),
+        ar_phi=0.8, ar_beta=0.3, overdispersion=0.1)
+    assert (cal["ar_phi"], cal["ar_beta"], cal["overdispersion"]) == (0.8, 0.3, 0.1)
+
+
+def test_end_to_end_correlation_calibration(tmp_path):
+    import api_life_cycle_simulation as api
+    in_csv = tmp_path / "srr_atlantic_1938-2025_20260227.csv"
+    _srr_table().reset_index(drop=True).to_csv(in_csv, index=False)
+    _daily_table().to_csv(tmp_path / "srr_daily_atlantic_1938-2025_20260227.csv", index=False)
+    # A selection table next to the SRR drives the calibration.
+    rng = np.random.default_rng(3)
+    rows = [{"crl_id": cid, "year": y, "dist": rng.uniform(0, 300)}
+            for cid in (1, 2) for y in range(1940, 2020)
+            for _ in range(rng.poisson(1.0))]
+    pd.DataFrame(rows).to_csv(
+        tmp_path / "selection_atlantic_1938-2025_20260227.csv", index=False)
+
+    result = api.run({"input_csv": in_csv, "crl_ids": [1, 2], "output_dir": tmp_path / "out",
+                      "n_realizations": 60, "sim_years": 40, "seed": 1, "correlation": True})
+    cat = pd.read_csv(result.results[1].catalog_path)
+    assert {"event_time", "seq", "wait_yr"} <= set(cat.columns)   # sequencing applied
 
 
 # ---------------------------------------------------------------------------

@@ -88,7 +88,7 @@ DAILY_CSV = None
 # CRL_IDS  - one CRL id, or a list of ids; one synthetic catalog per CRL.
 # RADIUS_KM- radius of influence either side of the CRL (default 200 km; change
 #            freely). lambda = SRR * (2 * RADIUS_KM).
-CRL_IDS   = [844]
+CRL_IDS   = [844, 128]
 RADIUS_KM = 200.0
 
 # ── Simulation size ──────────────────────────────────────────────────────────
@@ -106,6 +106,29 @@ DAY_METHOD = "daily"
 # CRL draws from an independent sub-stream derived from (SEED, crl_id).
 SEED = 12345
 
+# ── Serial correlation + clustering of annual counts (off by default) ─────────
+# CORRELATION=False keeps the independent Poisson baseline exactly. When True, the
+# annual rate gains year-to-year memory and/or overdispersion, so active and quiet
+# years cluster (the annual mean rate is preserved). The three parameters below are
+# CALIBRATED from each CRL's historical annual counts (the SCA selection table)
+# whenever they are left as None; set a number to override the estimate.
+#   AR_PHI         - AR(1) persistence of the latent climate state, [0, 1)
+#   AR_BETA        - sensitivity of the log annual-rate to the state (lag-1 ACF)
+#   OVERDISPERSION - variance of the i.i.d. annual rate multiplier (Fano = 1 +
+#                    lambda*OVERDISPERSION)
+# Note: a sparse, low-rate CRL typically calibrates to ~0 (Poisson), which is the
+# statistically appropriate result; the clustering signal is basin/regional.
+CORRELATION    = True
+AR_PHI         = None    # None = calibrate from history; or set a value to override
+AR_BETA        = None
+OVERDISPERSION = None
+
+# ── Event sequencing ──────────────────────────────────────────────────────────
+# Add the chronological event timeline to the catalog: event_time (years), a
+# per-realization chronological order (seq), and the inter-arrival waiting time
+# from the previous event (wait_yr).
+SEQUENCING = True
+
 # ── Visualization suite (optional, off by default) ───────────────────────────
 # MAKE_PLOTS is the master switch. PLOTS selects which per-CRL figures to render;
 # ["all"] renders every figure. To toggle individually, list only the keys you
@@ -117,11 +140,12 @@ SEED = 12345
 #   count_dist     - TCs/year pmf vs Poisson, and per-realization totals
 #   seasonality    - monthly + day-of-year occurrence by stratum vs driving SRR
 #   waiting_times  - inter-event waiting time and time-to-first-TC
+#   clustering     - annual-count ACF + sample trajectories (Fano); serial corr.
 #   diagnostic     - the three-panel quick QC (count / stratum / seasonality)
-MAKE_PLOTS = False
+MAKE_PLOTS = True
 PLOTS      = ["all"]
 #PLOTS = ["annual_fan", "annual_heatmap", "annual_violin", "cumulative",
-#         "count_dist", "seasonality", "waiting_times", "diagnostic"]
+#         "count_dist", "seasonality", "waiting_times", "clustering", "diagnostic"]
 PLOT_DIR   = DATA / "outputs" / "plots"
 
 # ── Output ───────────────────────────────────────────────────────────────────
@@ -150,6 +174,11 @@ CONFIG = {
     "n_realizations": N_REALIZATIONS,
     "day_method":     DAY_METHOD,
     "seed":           SEED,
+    "correlation":    CORRELATION,
+    "ar_phi":         AR_PHI,
+    "ar_beta":        AR_BETA,
+    "overdispersion": OVERDISPERSION,
+    "sequencing":     SEQUENCING,
     "make_plots":     MAKE_PLOTS,
     "plots":          PLOTS,
     "plot_dir":       PLOT_DIR,
@@ -175,6 +204,15 @@ def _apply_cli(config: dict) -> dict:
     p.add_argument("--day-method", choices=["daily", "monthly"],
                    help="Override DAY_METHOD.")
     p.add_argument("--seed", type=int, help="Override SEED.")
+    p.add_argument("--correlation", dest="correlation", action="store_true", default=None,
+                   help="Enable serial correlation + overdispersion of annual counts.")
+    p.add_argument("--no-correlation", dest="correlation", action="store_false",
+                   help="Disable correlation (independent Poisson baseline).")
+    p.add_argument("--ar-phi", type=float, help="Override AR_PHI (AR(1) persistence).")
+    p.add_argument("--ar-beta", type=float, help="Override AR_BETA (log-rate sensitivity).")
+    p.add_argument("--overdispersion", type=float, help="Override OVERDISPERSION.")
+    p.add_argument("--no-sequencing", dest="sequencing", action="store_false",
+                   default=None, help="Skip the chronological event timeline columns.")
     p.add_argument("--plots", dest="plots_on", action="store_true", default=None,
                    help="Render the per-CRL figure suite (master switch on).")
     p.add_argument("--no-plots", dest="plots_on", action="store_false",
@@ -185,10 +223,15 @@ def _apply_cli(config: dict) -> dict:
     args = p.parse_args()
     config = dict(config)
     for key in ("storm_type", "input_csv", "daily_csv", "crl_ids", "radius_km",
-                "sim_years", "n_realizations", "day_method", "seed"):
+                "sim_years", "n_realizations", "day_method", "seed",
+                "ar_phi", "ar_beta", "overdispersion"):
         val = getattr(args, key)
         if val is not None:
             config[key] = val
+    if args.correlation is not None:
+        config["correlation"] = args.correlation
+    if args.sequencing is not None:
+        config["sequencing"] = args.sequencing
     if args.plots_on is not None:
         config["make_plots"] = args.plots_on
     if args.plot_keys:                              # selecting figures implies plots on

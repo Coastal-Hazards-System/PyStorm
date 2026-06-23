@@ -23,14 +23,20 @@ from life_cycle_simulation.simulator import (
     simulate,
     poisson_rate,
     stratum_probs,
+    draw_counts,
+    add_sequencing,
 )
 from life_cycle_simulation.orchestrator import (
     LCSOrchestrator,
     LCSResult,
     CRLResult,
 )
+from life_cycle_simulation.calibration import (
+    crl_annual_counts,
+    calibrate_correlation,
+)
 from life_cycle_simulation.plots import render_suite
-from life_cycle_simulation import writer, plots, calendar365
+from life_cycle_simulation import writer, plots, calendar365, calibration
 
 __all__ = [
     "LCSConfig",
@@ -46,6 +52,11 @@ __all__ = [
     "simulate",
     "poisson_rate",
     "stratum_probs",
+    "draw_counts",
+    "add_sequencing",
+    "crl_annual_counts",
+    "calibrate_correlation",
+    "calibration",
     "LCSOrchestrator",
     "LCSResult",
     "CRLResult",

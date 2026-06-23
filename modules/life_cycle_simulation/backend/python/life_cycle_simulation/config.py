@@ -23,7 +23,7 @@ STRATA = ("low", "med", "high")
 # so config validation stays free of the matplotlib import chain. "all" expands to
 # this tuple; see life_cycle_simulation.plots for what each figure shows.
 PLOT_KEYS = ("annual_fan", "annual_heatmap", "annual_violin", "cumulative",
-             "count_dist", "seasonality", "waiting_times", "diagnostic")
+             "count_dist", "seasonality", "waiting_times", "clustering", "diagnostic")
 
 
 class LCSConfig(BaseModel):
@@ -45,6 +45,10 @@ class LCSConfig(BaseModel):
     #             input_csv. Used by day_method="daily" to place each TC in the year.
     input_csv: Optional[Union[str, Path]] = None
     daily_csv: Optional[Union[str, Path]] = None
+    # selection_csv : the SCA per-CRL selected-TC table selection_<basin>_<v>.csv,
+    # used to CALIBRATE the correlation parameters from each CRL's historical annual
+    # counts. None auto-locates it next to input_csv (only read when correlation=True).
+    selection_csv: Optional[Union[str, Path]] = None
 
     # ── Site and footprint ─────────────────────────────────────────────────────
     # crl_ids   : one CRL id, or several (a list); one synthetic catalog per CRL.
@@ -68,6 +72,33 @@ class LCSConfig(BaseModel):
     # Random seed for reproducibility. None -> a fresh nondeterministic stream.
     # Each CRL draws from an independent sub-stream derived from (seed, crl_id).
     seed: Optional[int] = 12345
+
+    # ── Serial correlation + clustering of annual counts (off by default) ───────
+    # correlation=False keeps the independent Poisson(lambda) baseline exactly.
+    # When True, the annual rate is modulated by a persistent latent climate state
+    # and/or made overdispersed, so active and quiet years cluster:
+    #     S_y      = ar_phi * S_{y-1} + sqrt(1-ar_phi^2) * eps_y   (AR(1), N(0,1))
+    #     lambda_y = lambda * exp(ar_beta*S_y - ar_beta^2/2)       (mean-preserving)
+    #     N(y)     ~ Poisson(lambda_y * G_y),  G_y ~ Gamma(mean 1, var overdispersion)
+    # ar_beta drives the year-to-year memory (lag-1 autocorrelation); overdispersion
+    # lifts the count variance (Fano = 1 + lambda*overdispersion). The annual mean rate
+    # is preserved, so the catalog still matches the SRR.
+    #
+    # When correlation=True, each parameter left as None is CALIBRATED from the CRL's
+    # historical annual counts (the SCA selection): overdispersion = (Fano-1)/mean and
+    # ar_beta/ar_phi from the lag-1/lag-2 count autocorrelation. Set a number to
+    # override that estimate. A sparse, low-rate CRL typically calibrates to ~0
+    # (Poisson), which is the statistically appropriate result.
+    correlation: bool = False
+    ar_phi: Optional[float] = None         # AR(1) persistence [0, 1); None -> calibrate
+    ar_beta: Optional[float] = None        # log-rate sensitivity (>=0); None -> calibrate
+    overdispersion: Optional[float] = None  # rate-multiplier variance (>=0); None -> calibrate
+
+    # ── Event sequencing ───────────────────────────────────────────────────────
+    # Add the chronological event timeline to the catalog: a continuous event_time
+    # (years), a per-realization chronological order (seq), and the inter-arrival
+    # waiting time from the previous event (wait_yr).
+    sequencing: bool = True
 
     # ── Output ─────────────────────────────────────────────────────────────────
     output_dir: Path = Path("data/outputs")
@@ -123,6 +154,25 @@ class LCSConfig(BaseModel):
         if int(v) <= 0:
             raise ValueError("sim_years and n_realizations must be positive.")
         return int(v)
+
+    @field_validator("ar_phi", mode="before")
+    @classmethod
+    def _ar_phi_range(cls, v):
+        if v is None:
+            return None
+        v = float(v)
+        if not (0.0 <= v < 1.0):
+            raise ValueError("ar_phi must be in [0, 1) or None (auto-calibrate).")
+        return v
+
+    @field_validator("ar_beta", "overdispersion", mode="before")
+    @classmethod
+    def _nonneg_or_none(cls, v):
+        if v is None:
+            return None
+        if float(v) < 0.0:
+            raise ValueError("ar_beta and overdispersion must be >= 0 or None.")
+        return float(v)
 
     @field_validator("plots", mode="before")
     @classmethod

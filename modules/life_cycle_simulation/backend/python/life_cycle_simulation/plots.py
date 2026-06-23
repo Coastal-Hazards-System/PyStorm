@@ -416,6 +416,64 @@ def plot_diagnostic(catalog, counts, srr, *, lam, p, subtitle, out_path) -> Path
     return save_figure(fig, Path(out_path), close=True)
 
 
+def plot_clustering(counts, lam, *, subtitle, out_path) -> Path:
+    """Serial-correlation diagnostics: annual-count ACF and sample trajectories.
+
+    Left: the lag-k autocorrelation of annual counts (lag-1 quantifies year-to-year
+    memory), with the ~95% no-correlation band. Right: a sample of per-realization
+    annual-count trajectories with the ensemble mean and lambda, and the Fano factor
+    (variance/mean; > 1 indicates overdispersion). Both are flat/zero under the
+    independent-Poisson baseline.
+    """
+    plt = _mpl()
+    R, Y = counts.shape
+    mean = counts.mean()
+    fano = float(counts.var() / mean) if mean > 0 else 1.0
+    maxlag = max(1, min(12, Y - 1))
+    lags = np.arange(1, maxlag + 1)
+    acf = np.array([
+        (np.corrcoef(counts[:, :-L].ravel().astype(float),
+                     counts[:, L:].ravel().astype(float))[0, 1]
+         if counts[:, :-L].std() > 0 and counts[:, L:].std() > 0 else 0.0)
+        for L in lags])
+    band = 1.96 / np.sqrt(max(counts.size, 1))
+
+    fig, axes = plt.subplots(1, 2, figsize=(12, 4.4))
+
+    # ── ACF of annual counts ───────────────────────────────────────────────────
+    ax = axes[0]
+    ax.bar(lags, acf, color=RAMP[200], edgecolor=_DEEP, linewidth=0.5)
+    ax.axhline(0.0, color="k", linewidth=0.8)
+    ax.axhline(band, color=EMPH_DARK, linestyle="--", linewidth=1.0,
+               label="95% band (no corr)")
+    ax.axhline(-band, color=EMPH_DARK, linestyle="--", linewidth=1.0)
+    ax.set_xticks(lags)
+    ax.set_xlabel("lag (years)")
+    ax.set_ylabel("autocorrelation")
+    ax.set_title(f"Annual-count ACF  (lag-1 = {acf[0]:+.2f})")
+    ax.legend(frameon=False, fontsize=8)
+    style_ax(ax)
+
+    # ── Sample annual-count trajectories (clustering is visible as runs) ────────
+    ax = axes[1]
+    years = np.arange(1, Y + 1)
+    for i in range(min(R, 15)):
+        ax.plot(years, counts[i], color=WAVE_MAKER, linewidth=0.7, alpha=0.5)
+    ax.plot(years, counts.mean(axis=0), color=_DEEP, linewidth=2.0, label="ensemble mean")
+    ax.axhline(lam, color=EMPH_DARK, linestyle="--", linewidth=1.2,
+               label=f"lambda={lam:.3f}")
+    ax.set_xlim(1, Y)
+    ax.set_xlabel("simulation year")
+    ax.set_ylabel("TCs per year")
+    ax.set_title(f"Sample trajectories  (Fano = {fano:.2f})")
+    ax.legend(frameon=False, fontsize=8)
+    style_ax(ax)
+
+    _suptitle(fig, subtitle, "clustering / serial correlation")
+    fig.tight_layout(rect=(0, 0, 1, 0.94))
+    return save_figure(fig, Path(out_path), close=True)
+
+
 # ---------------------------------------------------------------------------
 # Suite dispatcher
 # ---------------------------------------------------------------------------
@@ -461,6 +519,8 @@ def render_suite(catalog: pd.DataFrame, summary: pd.DataFrame, srr, *,
         elif key == "waiting_times":
             paths.append(plot_waiting_times(catalog, lam, n_realizations=n_realizations,
                                             subtitle=subtitle, out_path=path(key)))
+        elif key == "clustering":
+            paths.append(plot_clustering(counts, lam, subtitle=subtitle, out_path=path(key)))
         elif key == "diagnostic":
             paths.append(plot_diagnostic(catalog, counts, srr, lam=lam, p=p,
                                          subtitle=subtitle, out_path=path(key)))

@@ -6,6 +6,7 @@ Author : Norberto C. Nadal-Caraballo, PhD  <norberto.c.nadal-caraballo@usace.arm
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Dict, List, Optional
@@ -13,7 +14,7 @@ from typing import Dict, List, Optional
 import numpy as np
 
 from life_cycle_simulation.config import LCSConfig
-from life_cycle_simulation import srr_source, simulator, writer
+from life_cycle_simulation import srr_source, simulator, writer, calibration
 
 
 @dataclass
@@ -29,6 +30,8 @@ class CRLResult:
     daily_used: bool                 # day-of-year drawn from the smooth daily SRR
     catalog_path: Path
     summary_path: Path
+    fano: float = 1.0                # realized variance/mean of annual counts
+    acf1: float = 0.0                # realized lag-1 autocorrelation of annual counts
     plot_paths: List[Path] = field(default_factory=list)
 
 
@@ -57,14 +60,39 @@ class LCSOrchestrator:
         return (f"crl{crl_id:04d}_R{r}km_{self.cfg.sim_years}yr_"
                 f"{self.cfg.n_realizations}real")
 
-    def _process_crl(self, crl_id, srr_df, daily_df) -> CRLResult:
+    def _resolve_correlation(self, crl_id, selection_df, cal_start):
+        """Resolve (ar_phi, ar_beta, overdispersion): calibrate the None ones from
+        the CRL's historical annual counts, keep operator overrides."""
+        cfg = self.cfg
+        if selection_df is not None:
+            counts = calibration.crl_annual_counts(
+                selection_df, crl_id, radius_km=cfg.radius_km, start_year=cal_start)
+            cal = calibration.calibrate_correlation(
+                counts, ar_phi=cfg.ar_phi, ar_beta=cfg.ar_beta,
+                overdispersion=cfg.overdispersion)
+            return cal["ar_phi"], cal["ar_beta"], cal["overdispersion"], cal
+        # No selection table: use explicit values, else neutral defaults.
+        return (cfg.ar_phi if cfg.ar_phi is not None else 0.5,
+                cfg.ar_beta if cfg.ar_beta is not None else 0.0,
+                cfg.overdispersion if cfg.overdispersion is not None else 0.0, None)
+
+    def _process_crl(self, crl_id, srr_df, daily_df, selection_df=None,
+                     cal_start=1938) -> CRLResult:
         cfg = self.cfg
         srr = srr_source.build_crl_srr(srr_df, daily_df, crl_id,
                                        day_method=cfg.day_method)
         rng = self._child_rng(crl_id)
+
+        ar_phi, ar_beta, overdispersion, cal = 0.0, 0.0, 0.0, None
+        if cfg.correlation:
+            ar_phi, ar_beta, overdispersion, cal = self._resolve_correlation(
+                crl_id, selection_df, cal_start)
+
         out = simulator.simulate(
             srr, radius_km=cfg.radius_km, sim_years=cfg.sim_years,
-            n_realizations=cfg.n_realizations, rng=rng)
+            n_realizations=cfg.n_realizations, rng=rng,
+            correlation=cfg.correlation, ar_phi=ar_phi, ar_beta=ar_beta,
+            overdispersion=overdispersion, sequencing=cfg.sequencing)
 
         tag = self._file_tag(crl_id)
         odir = Path(cfg.output_dir)
@@ -73,10 +101,14 @@ class LCSOrchestrator:
         summary_path = writer.write_summary(summary, odir / f"lcs_summary_{tag}.csv")
 
         mean_rate = out.n_events / (cfg.n_realizations * cfg.sim_years)
+        corr = ""
+        if cfg.correlation:
+            corr = (f"  corr: phi={ar_phi:.2f} beta={ar_beta:.2f} "
+                    f"od={overdispersion:.3f}  Fano={out.fano:.2f} ACF1={out.acf1:+.2f}")
         print(f"[lcs] CRL {crl_id}: lambda={out.lam:.4f} TC/yr  "
               f"split low/med/high={out.p[0]:.2f}/{out.p[1]:.2f}/{out.p[2]:.2f}  "
               f"{out.n_events:,} TCs (mean {mean_rate:.3f}/yr)  "
-              f"day={'daily' if srr.daily_used else 'monthly'}  -> {catalog_path.name}")
+              f"day={'daily' if srr.daily_used else 'monthly'}{corr}  -> {catalog_path.name}")
 
         plot_paths: List[Path] = []
         if cfg.make_plots and cfg.plots:
@@ -87,7 +119,7 @@ class LCSOrchestrator:
             p_low=float(out.p[0]), p_med=float(out.p[1]), p_high=float(out.p[2]),
             n_events=out.n_events, daily_used=srr.daily_used,
             catalog_path=catalog_path, summary_path=summary_path,
-            plot_paths=plot_paths)
+            fano=out.fano, acf1=out.acf1, plot_paths=plot_paths)
 
     def _render_plots(self, out, summary, srr, crl_id, tag) -> List[Path]:
         cfg = self.cfg
@@ -126,7 +158,24 @@ class LCSOrchestrator:
                 daily_df = srr_source.load_daily_table(daily_csv, cfg.crl_ids)
                 print(f"[lcs] daily SRR seasonal shape from {Path(daily_csv).name}")
 
+        # Correlation calibration source: the SCA selection table and the rate-period
+        # start year (parsed from the SRR filename, e.g. ..._1938-2025_...).
+        selection_df = None
+        cal_start = 1938
+        if cfg.correlation:
+            m = re.search(r"_(\d{4})-(\d{4})_", Path(cfg.input_csv).name)
+            cal_start = int(m.group(1)) if m else 1938
+            sel_csv = cfg.selection_csv or srr_source.locate_selection_companion(cfg.input_csv)
+            if sel_csv is None:
+                print("[lcs] correlation on but no selection table found next to "
+                      "input_csv; using explicit/neutral params (no calibration).")
+            else:
+                selection_df = srr_source.load_selection_table(sel_csv, cfg.crl_ids)
+                print(f"[lcs] correlation calibration from {Path(sel_csv).name} "
+                      f"(history from {cal_start})")
+
         result = LCSResult(sim_years=cfg.sim_years, n_realizations=cfg.n_realizations)
         for crl_id in cfg.crl_ids:
-            result.results[int(crl_id)] = self._process_crl(crl_id, srr_df, daily_df)
+            result.results[int(crl_id)] = self._process_crl(
+                crl_id, srr_df, daily_df, selection_df, cal_start)
         return result

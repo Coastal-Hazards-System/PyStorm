@@ -33,6 +33,35 @@ The whole `(realization x year)` grid is drawn in one vectorized pass, so cost
 scales with the number of TCs produced, not with Python loops over years or
 realizations. No C++ engine: the work is light and fully NumPy-vectorized.
 
+### Serial correlation and clustering (optional)
+
+With `correlation=True` the independent Poisson in step 2 is replaced by a
+serially-correlated, overdispersed annual rate, so active and quiet years cluster
+(the annual mean is preserved, so the catalog still matches the SRR):
+
+```text
+S_y      = ar_phi * S_{y-1} + sqrt(1 - ar_phi^2) * eps_y      (AR(1), N(0,1))
+lambda_y = lambda * exp(ar_beta * S_y - ar_beta^2 / 2)        (mean-preserving)
+N(y)     ~ Poisson(lambda_y * G_y),  G_y ~ Gamma(mean 1, var overdispersion)
+```
+
+`ar_beta` drives the year-to-year memory (lag-1 autocorrelation); `overdispersion`
+lifts the count variance (`Fano = 1 + lambda * overdispersion`).
+
+Each parameter left as `None` (the default) is **calibrated from that CRL's
+historical annual counts** in the SCA selection table (`overdispersion =
+(Fano - 1)/mean`, the AR(1) terms from the lag-1/lag-2 count autocorrelation); set a
+number to override. A sparse, low-rate CRL typically calibrates to ~0 (Poisson),
+which is the statistically appropriate result; the clustering signal is
+basin/regional. The selection table is auto-located next to `input_csv`.
+
+### Sequencing
+
+With `sequencing=True` (default) the catalog gains a chronological event timeline:
+`event_time` (continuous years = `(year-1) + (doy-1)/365`), `seq` (the
+per-realization chronological order), and `wait_yr` (the inter-arrival waiting time
+from the previous event). Rows are ordered by realization then `event_time`.
+
 ## Inputs
 
 LCS consumes the SCA outputs (it does not read HURDAT or any track data directly):
@@ -47,10 +76,12 @@ LCS consumes the SCA outputs (it does not read HURDAT or any track data directly
 `data/outputs/`, one pair per CRL (tag = `crl<NNNN>_R<R>km_<Y>yr_<N>real`):
 
 ```text
-lcs_catalog_<tag>.csv      one row per synthetic TC:
-                             realization, year, event, intensity, month, day, doy
+lcs_catalog_<tag>.csv      one row per synthetic TC: realization, year, event,
+                             intensity, month, day, doy, and (when sequencing)
+                             event_time, seq, wait_yr
 lcs_summary_<tag>.csv      per-realization TC counts overall and by stratum
-plots/lcs_diag_<tag>.png   optional QC figure (count / stratum / seasonality)
+plots/lcs_<key>_<tag>.png  optional figures (incl. clustering: annual-count ACF +
+                             trajectories when correlation is on)
 ```
 
 ## Quickstart
@@ -116,7 +147,13 @@ directly.
 | `n_realizations` | `1000` | Independent realizations |
 | `day_method` | `"daily"` | `"daily"` (smooth) or `"monthly"` (month + uniform day) |
 | `seed` | `12345` | Reproducible RNG; `None` = nondeterministic |
-| `make_plots` | `False` | Write the per-CRL diagnostic figure |
+| `correlation` | `False` | Serial correlation + overdispersion of annual counts (else independent Poisson) |
+| `ar_phi` | `None` | AR(1) persistence `[0, 1)`; `None` = calibrate from history |
+| `ar_beta` | `None` | Log-rate sensitivity to the state (lag-1 ACF); `None` = calibrate |
+| `overdispersion` | `None` | Rate-multiplier variance (`Fano = 1 + lambda*overdispersion`); `None` = calibrate |
+| `selection_csv` | `None` | SCA selection table for calibration; `None` auto-locates next to `input_csv` |
+| `sequencing` | `True` | Add the chronological event timeline (`event_time`, `seq`, `wait_yr`) |
+| `make_plots` | `False` | Write the per-CRL diagnostic figures |
 | `output_dir` | `data/outputs` | Where catalogs and summaries land |
 
 ## Tests
