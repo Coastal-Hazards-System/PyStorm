@@ -21,7 +21,7 @@ fallback.
 
 ## Modules
 
-PyStorm has seven modules: a tropical-cyclone chain (AHD -> SCA -> LCS), a
+PyStorm has eight modules: a tropical-cyclone chain (AHD -> SCA -> LCS / JDM), a
 response chain (POT -> PST), and two independent modules (RSS, CSH):
 
 | Module | Purpose |
@@ -29,14 +29,15 @@ response chain (POT -> PST), and two independent modules (RSS, CSH):
 | [`augmented_hurricane_database`](modules/augmented_hurricane_database/README.md) (AHD) | Build an augmented HURDAT2 best-track: parse NHC HURDAT2, derive storm motion, optionally backfill Rmax from EBTRK and impute missing Cp/Rmax with a Gaussian-process metamodel. The best-track foundation for downstream TC analyses. |
 | [`storm_climatology_analysis`](modules/storm_climatology_analysis/README.md) (SCA) | Per-CRL tropical-cyclone storm recurrence rates (SRR/DSRR) from the augmented HURDAT2, annual and monthly, via the Gaussian Kernel Function. |
 | [`life_cycle_simulation`](modules/life_cycle_simulation/README.md) (LCS) | Monte-Carlo synthetic tropical-cyclone life cycles for a CRL: a Poisson number of TCs per year (rate from the SCA SRR and a radius of influence), each stratified by intensity and placed on a calendar day from the seasonal SRR. Consumes the SCA SRR tables. |
+| [`joint_distribution_model`](modules/joint_distribution_model/README.md) (JDM) | Per-CRL JPM joint distribution of TC parameters [heading, Dp, Rmax, Vt]: distance-weighted marginal distributions and a meta-Gaussian copula. Consumes the SCA selection + DSRR outputs. |
 | [`peaks_over_threshold`](modules/peaks_over_threshold/README.md) (POT) | Extract independent storm peaks from a continuous water-level or NTR time series. |
 | [`probabilistic_simulation_technique`](modules/probabilistic_simulation_technique/README.md) (PST) | Turn a POT peak sample into a hazard curve (response magnitude versus AER) with a confidence band. |
 | [`reduced_storm_suite`](modules/reduced_storm_suite/README.md) (RSS) | Select a small, representative Reduced Storm Suite that reproduces the full synthetic suite's hazard. |
 | [`coastal_storm_hydrograph`](modules/coastal_storm_hydrograph/README.md) (CSH) | Reduce an ensemble of synthetic-TC surge series to one dimensionless surge shape per save point, scalable by a peak elevation and an equivalent width. |
 
 Data flow: **AHD writes the augmented best-track that SCA reads; SCA writes the
-per-CRL SRR that LCS reads; POT writes per-station peak files that PST reads.**
-RSS and CSH are independent.
+per-CRL SRR that LCS reads and the selection + DSRR that JDM reads; POT writes
+per-station peak files that PST reads.** RSS and CSH are independent.
 
 ## Architecture
 
@@ -87,6 +88,7 @@ What each module ships varies with its workload:
 | AHD | optional `_gpm` accelerator (NumPy fallback) | — |
 | SCA | none (pure Python) | `analysis/` (kernel sensitivity) |
 | LCS | none (pure Python) | — |
+| JDM | optional `_jdm` bootstrap kernel (NumPy fallback) | — |
 | POT | `_pot` kernel | — |
 | PST | `_pst` kernel | `scripts/` (method testbed) |
 | RSS | `_rss` kernel | `scripts/` (preprocess, DSW) |
@@ -110,6 +112,10 @@ python run_storm_climatology_analysis.py
 # LCS: Monte-Carlo synthetic TC life cycles for a CRL from the SCA SRR
 cd modules/life_cycle_simulation
 python run_life_cycle_simulation.py
+
+# JDM: per-CRL joint distribution of TC parameters (marginals + copula) from SCA
+cd modules/joint_distribution_model
+python run_joint_distribution_model.py
 
 # POT: extract peaks from a water-level / NTR series
 cd modules/peaks_over_threshold
@@ -142,22 +148,24 @@ builds on first run, or build it manually:
 python modules/peaks_over_threshold/backend/engines/cpp/build.py             # _pot
 python modules/probabilistic_simulation_technique/backend/engines/build.py   # _pst
 python modules/reduced_storm_suite/backend/engines/cpp/build.py                 # _rss
+python modules/joint_distribution_model/backend/engines/cpp/build.py         # _jdm
 python modules/augmented_hurricane_database/backend/engines/cpp/build.py     # _gpm (optional)
 ```
 
 `build.py` tries setuptools, then CMake, then a direct compiler call. It needs
 pybind11 (`pip install pybind11`) and a C++17 toolchain (MSVC or MinGW on
-Windows, gcc or clang elsewhere). SCA and CSH have no engine to build.
+Windows, gcc or clang elsewhere). SCA, LCS, and CSH have no engine to build.
 
 ## Repository layout
 
 ```text
 PyStorm/
 │
-├── modules/                                  six self-contained capability verticals
+├── modules/                                  eight self-contained capability verticals
 │   ├── augmented_hurricane_database/         AHD  augmented HURDAT2 best-track
 │   ├── storm_climatology_analysis/           SCA  per-CRL SRR/DSRR (consumes AHD)
 │   ├── life_cycle_simulation/                LCS  synthetic TC life cycles (consumes SCA)
+│   ├── joint_distribution_model/             JDM  TC-parameter joint distribution (consumes SCA)
 │   ├── peaks_over_threshold/                 POT  storm-peak extraction
 │   ├── probabilistic_simulation_technique/   PST  hazard curves (consumes POT)
 │   ├── reduced_storm_suite/                     RSS representative suite selection
@@ -237,6 +245,8 @@ copies. All six modules write their figures through it.
 | GPD | Generalized Pareto Distribution |
 | HC | Hazard Curve |
 | HURDAT2 | HURricane DATabase, 2nd generation (NHC best-track) |
+| JDM | Joint Distribution Model |
+| JPM | Joint Probability Method |
 | LCS | Life Cycle Simulation |
 | MRI | Mean Return Interval (MRI = 1 / AER) |
 | MSVC | Microsoft Visual C++ (compiler) |

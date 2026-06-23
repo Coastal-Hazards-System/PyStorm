@@ -1,0 +1,36 @@
+[build-system]
+requires      = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name            = "joint_distribution_model"
+version         = "0.1.0"
+description     = "Per-CRL JPM joint distribution of tropical-cyclone parameters (heading, Dp, Rmax, Vt): distance-weighted marginal distributions and a meta-Gaussian copula, from the storm_climatology_analysis outputs."
+readme          = "README.md"
+requires-python = ">=3.10"
+authors = [
+  {name = "Norberto C. Nadal-Caraballo, PhD", email = "norberto.c.nadal-caraballo@usace.army.mil"},
+]
+license = {text = "Public domain (U.S. Government work, 17 U.S.C. §105)"}
+dependencies = [
+  "numpy>=1.24",
+  "pandas>=2.0",
+  "pydantic>=2.0",
+  "scipy>=1.10",      # Kendall tau, distribution fits, root-finding
+]
+
+[project.optional-dependencies]
+plots = [
+  "matplotlib>=3.6",  # per-CRL marginal diagnostic figures
+]
+dev = [
+  "matplotlib>=3.6",
+  "pytest>=7.4",
+]
+
+[tool.setuptools]
+py-modules = ["api_joint_distribution_model"]
+
+[tool.setuptools.packages.find]
+where    = ["backend/python"]
+include  = ["joint_distribution_model*"]

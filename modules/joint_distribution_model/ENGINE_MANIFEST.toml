@@ -1,0 +1,43 @@
+# CyHAN engine manifest - joint_distribution_model
+# Per-CRL JPM joint distribution of TC parameters (marginals + meta-Gaussian copula).
+
+[module]
+name        = "joint_distribution_model"
+version     = "0.1.0"
+launcher    = "run_joint_distribution_model.py"
+entry       = "backend/python/api_joint_distribution_model.py:run"
+engine      = "none"   # pure Python (scipy); bootstrap parallelized over CRLs
+
+[pipeline]
+# Linear pass per basin; per-CRL fitting parallelized over CRLs.
+order   = ["load", "adjust", "marginals", "copula", "write", "plots"]
+load    = "load the SCA selection table (per-CRL selected TCs) and DSRR arrays (sca_source)"
+adjust  = "distance-weighted adjustment of [Hd,Dp,Rmax,Vt] + DSRR heading recenter + intensity binning (adjust)"
+marginals = "per CRL x intensity: Dp trunc-Weibull (jitter bootstrap), Rmax lognormal, Vt normal/lognormal, Hd from DSRR (marginals, bootstrap)"
+copula  = "Kendall tau matrix of [Hd,Dp,Rmax,Vt] -> Gaussian rho = sin(pi*tau/2) per intensity (copula)"
+write   = "marginal params (CSV) + copula tau/rho (NPZ) + adjusted per-storm params (CSV) (writer)"
+plots   = "OPTIONAL per-CRL figures: marginal WPP-vs-fit + meta-Gaussian copula (rho heatmaps + pairs) (plots)"
+
+[source]
+# Both inputs are storm_climatology_analysis (SCA) outputs.
+selection = "../storm_climatology_analysis/data/outputs/selection_<basin>_<v>.csv (per-CRL selected TCs)"
+dsrr      = "../storm_climatology_analysis/data/outputs/dsrr_<basin>_<v>.npz (per-CRL heading mean/stdv/cdf per intensity)"
+
+[parameters]
+cp_source  = "cp_gauss"   # "cp_gauss" (SCA representative-point Cp; default) or "cp_mindist" (Cp at closest approach)
+ref_pressure = 1013.0
+start_year = 1938
+min_dp     = 8.0
+dp_low     = 28.0
+dp_med     = 48.0
+n_boot     = 10000          # Dp jitter-bootstrap count per CRL (heavy; tunable)
+intensity_bins = ["all", "high", "med", "low"]
+params         = ["Hd", "Dp", "Rmax", "Vt"]
+
+[outputs]
+# Tagged <v> from the SCA selection filename, e.g. atlantic_1938-2025_20260227.
+marginals = "data/outputs/jdm_marginals_<basin>_<v>.csv"   # per CRL x intensity x param
+copula    = "data/outputs/jdm_copula_<basin>_<v>.npz"      # per CRL x intensity tau + rho (4x4)
+adjusted  = "data/outputs/jdm_adjusted_<basin>_<v>.csv"    # adjusted, stratum-labeled storms
+plots_marginals = "data/outputs/plots/marginals_<basin>/CHS_<Basin>_CRL_<NNNN>.png"   # optional
+plots_copula    = "data/outputs/plots/copula_<basin>/CHS_<Basin>_CRL_<NNNN>.png"      # optional (rho heatmaps + pairs)
