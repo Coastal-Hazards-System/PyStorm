@@ -154,6 +154,32 @@ its own `srr_<R>km/` folder and, when maps are enabled, plotted in separate
 `selection_<R>km_<basin>/` folders with the SRR box relabeled `SRR_<R>km (TC/yr)`.
 The per-CRL maps already print the SRR in the order **All, High, Med, Low**.
 
+### Monthly hazard curves (analysis tool)
+
+`analysis/monthly_hazard_curves.py` splits an existing **annual hazard curve** (a
+PST output: response magnitude vs annual exceedance rate, AER) into **12 monthly
+curves** using the monthly SRR. Because a hazard curve is a rate times a tail
+probability, `AER_annual(r) = lambda_annual · P(R > r)`, and the monthly SRR
+partitions the annual rate (the twelve monthly rates sum to the annual rate), the
+month-m curve is the annual curve with its rate axis scaled by
+
+    f_m = SRR_m / SRR_all          (sum_m f_m = 1)
+
+so `AER_m(r) = f_m · AER_annual(r)`: a straight downward shift of `log10(f_m)` on a
+log-AER plot, with the response magnitudes unchanged and the MRI multiplied by
+`1/f_m`. The twelve monthly curves sum back to the annual curve at every magnitude.
+This assumes a month's storms share the full-year per-storm response distribution;
+when the seasonal intensity mix differs, weight per stratum using the per-stratum
+monthly columns (`srr*_low_<Mon>`, `srr*_med_<Mon>`, `srr*_high_<Mon>`).
+
+```bash
+python analysis/monthly_hazard_curves.py \
+    --hc  <annual_hc>.csv  [--cb <annual_cb>.csv] \
+    --srr data/outputs/srr_atlantic_<v>.csv  --crl 74
+# writes Annual + 12 monthly curves (long form CSV) and a combined plot to
+# data/outputs/monthly_hazard_curves/
+```
+
 ## Daily SRR (the continuous seasonal cycle)
 
 The daily SRR is the omnidirectional rate resolved over day-of-year. A few points
@@ -234,7 +260,8 @@ storm_climatology_analysis/
 ├── run_storm_climatology_analysis.py        # launcher (USER OPTIONS)
 ├── SRR_GKF_Whitepaper.md                    # companion whitepaper (method + validation)
 ├── analysis/
-│   └── day_kernel_sensitivity.py            # DAY_KERNEL bandwidth LOO-CV sensitivity
+│   ├── day_kernel_sensitivity.py            # DAY_KERNEL bandwidth LOO-CV sensitivity
+│   └── monthly_hazard_curves.py             # split an annual hazard curve into 12 monthly curves by SRR
 ├── backend/python/
 │   ├── api_storm_climatology_analysis.py   # orchestrator entry: run(config)
 │   └── storm_climatology_analysis/
