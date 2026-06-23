@@ -88,5 +88,71 @@ def calibrate_correlation(counts: np.ndarray, *, ar_phi: Optional[float] = None,
         "ar_phi": phi_auto if ar_phi is None else float(ar_phi),
         "ar_beta": beta_auto if ar_beta is None else float(ar_beta),
         "overdispersion": nu_auto if overdispersion is None else float(overdispersion),
-        "mean": mean, "fano": fano, "acf1": r1, "n_years": n,
+        "mean": mean, "fano": fano, "acf1": r1, "n_years": n, "n_pooled": 1,
+    }
+
+
+def _series_moments(counts: np.ndarray):
+    """(mean, var, gamma1, gamma2): mean, variance, lag-1 and lag-2 autocovariances."""
+    c = np.asarray(counts, float)
+    n = c.size
+    if n == 0:
+        return 0.0, 0.0, 0.0, 0.0
+    mean = float(c.mean())
+
+    def autocov(k: int) -> float:
+        if n <= k + 1:
+            return 0.0
+        return float(np.mean((c[:-k] - mean) * (c[k:] - mean)))
+
+    return mean, float(c.var()), autocov(1), autocov(2)
+
+
+def calibrate_correlation_regional(series, *, ar_phi: Optional[float] = None,
+                                   ar_beta: Optional[float] = None,
+                                   overdispersion: Optional[float] = None,
+                                   default_phi: float = 0.5, beta_max: float = 2.0) -> Dict:
+    """Calibrate the correlation parameters from a POOL of CRL annual-count series.
+
+    The clustering signal (AMO/ENSO-like) is basin- to regional-scale and usually too
+    weak to detect in one sparse, low-rate CRL. Pooling neighbouring CRLs sharpens it.
+    For a shared multiplicative rate factor of relative variance v, each CRL has
+    Var_i - mean_i = mean_i^2 * v and lag-k autocovariance gamma_k,i = mean_i^2 *
+    v_serial * phi^k, so the pooled, mean^2-weighted moments give
+
+        v       = sum_i (Var_i - mean_i) / sum_i mean_i^2          (total dispersion)
+        phi     = sum_i gamma_2,i / sum_i gamma_1,i                (geometric decay)
+        beta^2  = (sum_i gamma_1,i / sum_i mean_i^2) / phi,  capped by v
+        nu      = v - beta^2
+
+    This is mean-invariant (no bias from CRLs of different rate) and avoids storm
+    double-counting (it sums each CRL's own moments, never the overlapping counts).
+    Explicit (non-None) arguments override their estimate.
+    """
+    moments = [_series_moments(c) for c in series if np.asarray(c).size]
+    m2 = sum(m * m for m, _, _, _ in moments)
+    g0 = sum(v - m for m, v, _, _ in moments)        # pooled excess variance
+    g1 = sum(g for _, _, g, _ in moments)
+    g2 = sum(g for _, _, _, g in moments)
+    mean_pool = float(np.mean([m for m, _, _, _ in moments])) if moments else 0.0
+
+    disp = max(0.0, g0 / m2) if m2 > 0 else 0.0
+    # Attribute variance to the serial term only with geometric-decay evidence
+    # (positive lag-1 AND lag-2 autocovariance, gamma_k = mean^2 v_serial phi^k);
+    # otherwise it is i.i.d. overdispersion (phi ~ 0 carries no multi-year memory).
+    if g1 > 0 and g2 > 0 and m2 > 0:
+        phi_auto = float(np.clip(g2 / g1, 0.0, 0.95))
+        beta2_serial = (g1 / m2) / max(phi_auto, 1e-3)
+    else:
+        phi_auto, beta2_serial = default_phi, 0.0
+    beta2 = min(max(beta2_serial, 0.0), disp, beta_max ** 2)
+    beta_auto = float(np.sqrt(beta2))
+    nu_auto = max(0.0, disp - beta2)
+
+    return {
+        "ar_phi": phi_auto if ar_phi is None else float(ar_phi),
+        "ar_beta": beta_auto if ar_beta is None else float(ar_beta),
+        "overdispersion": nu_auto if overdispersion is None else float(overdispersion),
+        "mean": mean_pool, "fano": 1.0 + disp * mean_pool if mean_pool > 0 else 1.0,
+        "acf1": float(g1 / g0) if g0 > 0 else 0.0, "n_pooled": len(moments),
     }

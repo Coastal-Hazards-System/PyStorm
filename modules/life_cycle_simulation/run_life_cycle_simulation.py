@@ -122,6 +122,10 @@ CORRELATION    = True
 AR_PHI         = None    # None = calibrate from history; or set a value to override
 AR_BETA        = None
 OVERDISPERSION = None
+# REGIONAL_POOL_KM: when calibrating, pool every CRL within this many km of the
+# target so the basin/regional clustering signal is estimated from many records
+# instead of one sparse history. None = per-CRL calibration (default); e.g. 300.
+REGIONAL_POOL_KM = None
 
 # ── Event sequencing ──────────────────────────────────────────────────────────
 # Add the chronological event timeline to the catalog: event_time (years), a
@@ -178,6 +182,7 @@ CONFIG = {
     "ar_phi":         AR_PHI,
     "ar_beta":        AR_BETA,
     "overdispersion": OVERDISPERSION,
+    "regional_pool_km": REGIONAL_POOL_KM,
     "sequencing":     SEQUENCING,
     "make_plots":     MAKE_PLOTS,
     "plots":          PLOTS,
@@ -211,6 +216,8 @@ def _apply_cli(config: dict) -> dict:
     p.add_argument("--ar-phi", type=float, help="Override AR_PHI (AR(1) persistence).")
     p.add_argument("--ar-beta", type=float, help="Override AR_BETA (log-rate sensitivity).")
     p.add_argument("--overdispersion", type=float, help="Override OVERDISPERSION.")
+    p.add_argument("--regional-pool-km", type=float, dest="regional_pool_km",
+                   help="Pool CRLs within this many km for the calibration (regional).")
     p.add_argument("--no-sequencing", dest="sequencing", action="store_false",
                    default=None, help="Skip the chronological event timeline columns.")
     p.add_argument("--plots", dest="plots_on", action="store_true", default=None,
@@ -224,7 +231,7 @@ def _apply_cli(config: dict) -> dict:
     config = dict(config)
     for key in ("storm_type", "input_csv", "daily_csv", "crl_ids", "radius_km",
                 "sim_years", "n_realizations", "day_method", "seed",
-                "ar_phi", "ar_beta", "overdispersion"):
+                "ar_phi", "ar_beta", "overdispersion", "regional_pool_km"):
         val = getattr(args, key)
         if val is not None:
             config[key] = val

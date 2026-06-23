@@ -34,6 +34,7 @@ from life_cycle_simulation.orchestrator import (
 from life_cycle_simulation.calibration import (
     crl_annual_counts,
     calibrate_correlation,
+    calibrate_correlation_regional,
 )
 from life_cycle_simulation.plots import render_suite
 from life_cycle_simulation import writer, plots, calendar365, calibration
@@ -56,6 +57,7 @@ __all__ = [
     "add_sequencing",
     "crl_annual_counts",
     "calibrate_correlation",
+    "calibrate_correlation_regional",
     "calibration",
     "LCSOrchestrator",
     "LCSResult",

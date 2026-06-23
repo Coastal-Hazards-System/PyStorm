@@ -93,6 +93,11 @@ class LCSConfig(BaseModel):
     ar_phi: Optional[float] = None         # AR(1) persistence [0, 1); None -> calibrate
     ar_beta: Optional[float] = None        # log-rate sensitivity (>=0); None -> calibrate
     overdispersion: Optional[float] = None  # rate-multiplier variance (>=0); None -> calibrate
+    # regional_pool_km : when set, the auto-calibration pools every CRL within this
+    # great-circle distance (km) of the target, so the basin/regional clustering
+    # signal is estimated from many CRLs instead of one sparse record. None (default)
+    # calibrates from the target CRL alone. Ignored where parameters are overridden.
+    regional_pool_km: Optional[float] = None
 
     # ── Event sequencing ───────────────────────────────────────────────────────
     # Add the chronological event timeline to the catalog: a continuous event_time
@@ -172,6 +177,15 @@ class LCSConfig(BaseModel):
             return None
         if float(v) < 0.0:
             raise ValueError("ar_beta and overdispersion must be >= 0 or None.")
+        return float(v)
+
+    @field_validator("regional_pool_km", mode="before")
+    @classmethod
+    def _pool_km_or_none(cls, v):
+        if v is None:
+            return None
+        if float(v) <= 0.0:
+            raise ValueError("regional_pool_km must be > 0 or None (per-CRL).")
         return float(v)
 
     @field_validator("plots", mode="before")

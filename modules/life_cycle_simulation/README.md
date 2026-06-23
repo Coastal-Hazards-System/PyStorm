@@ -55,6 +55,13 @@ number to override. A sparse, low-rate CRL typically calibrates to ~0 (Poisson),
 which is the statistically appropriate result; the clustering signal is
 basin/regional. The selection table is auto-located next to `input_csv`.
 
+Because that signal is regional, set **`regional_pool_km`** to calibrate from every
+CRL within that great-circle distance of the target (pooling their mean-weighted
+second moments, with no storm double-counting) instead of the one sparse record. This
+surfaces the modest regional overdispersion that a single CRL cannot resolve (e.g. a
+Gulf CRL moves from `Fano ~ 1.00` per-CRL to `~ 1.08` pooled over ~70 neighbours).
+`None` (default) keeps the per-CRL calibration.
+
 ### Sequencing
 
 With `sequencing=True` (default) the catalog gains a chronological event timeline:
@@ -152,6 +159,7 @@ directly.
 | `ar_phi` | `None` | AR(1) persistence `[0, 1)`; `None` = calibrate from history |
 | `ar_beta` | `None` | Log-rate sensitivity to the state (lag-1 ACF); `None` = calibrate |
 | `overdispersion` | `None` | Rate-multiplier variance (`Fano = 1 + lambda*overdispersion`); `None` = calibrate |
+| `regional_pool_km` | `None` | Pool CRLs within this many km for the calibration (regional); `None` = per-CRL |
 | `selection_csv` | `None` | SCA selection table for calibration; `None` auto-locates next to `input_csv` |
 | `sequencing` | `True` | Add the chronological event timeline (`event_time`, `seq`, `wait_yr`) |
 | `make_plots` | `False` | Write the per-CRL diagnostic figures |

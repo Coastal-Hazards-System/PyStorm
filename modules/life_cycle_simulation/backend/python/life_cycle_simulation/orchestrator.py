@@ -60,21 +60,43 @@ class LCSOrchestrator:
         return (f"crl{crl_id:04d}_R{r}km_{self.cfg.sim_years}yr_"
                 f"{self.cfg.n_realizations}real")
 
-    def _resolve_correlation(self, crl_id, selection_df, cal_start):
+    def _pool_ids(self, srr_df, crl_id, pool_km):
+        """CRL ids within ``pool_km`` great-circle km of ``crl_id`` (incl. itself)."""
+        if crl_id not in srr_df.index:
+            return [crl_id]
+        lat0 = float(srr_df.loc[crl_id, "lat"]); lon0 = float(srr_df.loc[crl_id, "lon"])
+        lat = np.radians(srr_df["lat"].to_numpy(float))
+        lon = np.radians(srr_df["lon"].to_numpy(float))
+        dlat = lat - np.radians(lat0); dlon = lon - np.radians(lon0)
+        a = (np.sin(dlat / 2) ** 2
+             + np.cos(np.radians(lat0)) * np.cos(lat) * np.sin(dlon / 2) ** 2)
+        dist_km = 2.0 * 6371.0 * np.arcsin(np.sqrt(np.clip(a, 0.0, 1.0)))
+        return [int(c) for c in srr_df.index.to_numpy()[dist_km <= pool_km]]
+
+    def _resolve_correlation(self, crl_id, srr_df, selection_df, cal_start):
         """Resolve (ar_phi, ar_beta, overdispersion): calibrate the None ones from
-        the CRL's historical annual counts, keep operator overrides."""
+        the historical annual counts (regionally pooled when configured), keep
+        operator overrides."""
         cfg = self.cfg
-        if selection_df is not None:
+        if selection_df is None:
+            # No selection table: use explicit values, else neutral defaults.
+            return (cfg.ar_phi if cfg.ar_phi is not None else 0.5,
+                    cfg.ar_beta if cfg.ar_beta is not None else 0.0,
+                    cfg.overdispersion if cfg.overdispersion is not None else 0.0, None)
+
+        kw = dict(ar_phi=cfg.ar_phi, ar_beta=cfg.ar_beta,
+                  overdispersion=cfg.overdispersion)
+        if cfg.regional_pool_km:
+            pool = self._pool_ids(srr_df, crl_id, cfg.regional_pool_km)
+            series = [calibration.crl_annual_counts(
+                selection_df, c, radius_km=cfg.radius_km, start_year=cal_start)
+                for c in pool]
+            cal = calibration.calibrate_correlation_regional(series, **kw)
+        else:
             counts = calibration.crl_annual_counts(
                 selection_df, crl_id, radius_km=cfg.radius_km, start_year=cal_start)
-            cal = calibration.calibrate_correlation(
-                counts, ar_phi=cfg.ar_phi, ar_beta=cfg.ar_beta,
-                overdispersion=cfg.overdispersion)
-            return cal["ar_phi"], cal["ar_beta"], cal["overdispersion"], cal
-        # No selection table: use explicit values, else neutral defaults.
-        return (cfg.ar_phi if cfg.ar_phi is not None else 0.5,
-                cfg.ar_beta if cfg.ar_beta is not None else 0.0,
-                cfg.overdispersion if cfg.overdispersion is not None else 0.0, None)
+            cal = calibration.calibrate_correlation(counts, **kw)
+        return cal["ar_phi"], cal["ar_beta"], cal["overdispersion"], cal
 
     def _process_crl(self, crl_id, srr_df, daily_df, selection_df=None,
                      cal_start=1938) -> CRLResult:
@@ -86,7 +108,7 @@ class LCSOrchestrator:
         ar_phi, ar_beta, overdispersion, cal = 0.0, 0.0, 0.0, None
         if cfg.correlation:
             ar_phi, ar_beta, overdispersion, cal = self._resolve_correlation(
-                crl_id, selection_df, cal_start)
+                crl_id, srr_df, selection_df, cal_start)
 
         out = simulator.simulate(
             srr, radius_km=cfg.radius_km, sim_years=cfg.sim_years,
@@ -103,8 +125,10 @@ class LCSOrchestrator:
         mean_rate = out.n_events / (cfg.n_realizations * cfg.sim_years)
         corr = ""
         if cfg.correlation:
+            pool = (f" pool={cal['n_pooled']}" if cal and cal.get("n_pooled", 1) > 1
+                    else "")
             corr = (f"  corr: phi={ar_phi:.2f} beta={ar_beta:.2f} "
-                    f"od={overdispersion:.3f}  Fano={out.fano:.2f} ACF1={out.acf1:+.2f}")
+                    f"od={overdispersion:.3f}{pool}  Fano={out.fano:.2f} ACF1={out.acf1:+.2f}")
         print(f"[lcs] CRL {crl_id}: lambda={out.lam:.4f} TC/yr  "
               f"split low/med/high={out.p[0]:.2f}/{out.p[1]:.2f}/{out.p[2]:.2f}  "
               f"{out.n_events:,} TCs (mean {mean_rate:.3f}/yr)  "
@@ -171,9 +195,13 @@ class LCSOrchestrator:
                 print("[lcs] correlation on but no selection table found next to "
                       "input_csv; using explicit/neutral params (no calibration).")
             else:
-                selection_df = srr_source.load_selection_table(sel_csv, cfg.crl_ids)
+                # Regional pooling needs the neighbours too, so load the whole table;
+                # otherwise just the requested CRLs (cheaper).
+                sel_filter = None if cfg.regional_pool_km else cfg.crl_ids
+                selection_df = srr_source.load_selection_table(sel_csv, sel_filter)
+                pooled = " (regional pooling)" if cfg.regional_pool_km else ""
                 print(f"[lcs] correlation calibration from {Path(sel_csv).name} "
-                      f"(history from {cal_start})")
+                      f"(history from {cal_start}){pooled}")
 
         result = LCSResult(sim_years=cfg.sim_years, n_realizations=cfg.n_realizations)
         for crl_id in cfg.crl_ids:

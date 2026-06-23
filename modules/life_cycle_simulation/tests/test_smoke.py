@@ -339,6 +339,24 @@ def test_calibrate_correlation_overrides():
     assert (cal["ar_phi"], cal["ar_beta"], cal["overdispersion"]) == (0.8, 0.3, 0.1)
 
 
+def test_calibrate_correlation_regional_pools_dispersion():
+    from life_cycle_simulation import calibration
+    rng = np.random.default_rng(0)
+    # 20 short, sparse CRL series each overdispersed (relative variance ~0.4).
+    over = [rng.poisson(0.8 * rng.gamma(1 / 0.4, 0.4, 60)).astype(float)
+            for _ in range(20)]
+    cal = calibration.calibrate_correlation_regional(over)
+    assert cal["n_pooled"] == 20
+    assert cal["overdispersion"] > 0.2                # shared signal recovered
+    # A pool of pure-Poisson series calibrates back to ~0.
+    pois = [rng.poisson(0.8, 60).astype(float) for _ in range(20)]
+    cal0 = calibration.calibrate_correlation_regional(pois)
+    assert cal0["overdispersion"] < 0.2 and cal0["ar_beta"] < 0.4
+    # Overrides still win.
+    assert calibration.calibrate_correlation_regional(
+        over, overdispersion=0.05)["overdispersion"] == 0.05
+
+
 def test_end_to_end_correlation_calibration(tmp_path):
     import api_life_cycle_simulation as api
     in_csv = tmp_path / "srr_atlantic_1938-2025_20260227.csv"
@@ -356,6 +374,12 @@ def test_end_to_end_correlation_calibration(tmp_path):
                       "n_realizations": 60, "sim_years": 40, "seed": 1, "correlation": True})
     cat = pd.read_csv(result.results[1].catalog_path)
     assert {"event_time", "seq", "wait_yr"} <= set(cat.columns)   # sequencing applied
+
+    # Regional pooling: a large pool radius merges both CRLs for the calibration.
+    pooled = api.run({"input_csv": in_csv, "crl_ids": [1, 2], "output_dir": tmp_path / "out2",
+                      "n_realizations": 60, "sim_years": 40, "seed": 1, "correlation": True,
+                      "regional_pool_km": 50000.0})
+    assert pooled.results[1].catalog_path.is_file()
 
 
 # ---------------------------------------------------------------------------
