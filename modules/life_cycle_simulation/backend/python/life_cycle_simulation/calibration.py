@@ -43,10 +43,15 @@ def calibrate_correlation(counts: np.ndarray, *, ar_phi: Optional[float] = None,
     """Resolve (ar_phi, ar_beta, overdispersion), estimating any left as None.
 
     Estimators (mean = lambda, Fano = var/mean, r_k = lag-k count autocorrelation):
-      * overdispersion = max(0, (Fano - 1) / mean)
-      * the AR(1) Cox count autocorrelation satisfies r1 = mean * ar_beta^2 * ar_phi /
-        Fano, so ar_phi = clip(r2 / r1) (geometric decay) when both lags are clearly
-        positive, else ``default_phi``, and ar_beta = sqrt(r1 * Fano / (mean * ar_phi)).
+      * The total relative rate-variance is disp = max(0, (Fano - 1)/mean), which the
+        Cox model splits as disp = ar_beta^2 + overdispersion (serial + i.i.d.). The
+        AR(1) count autocorrelation r1 = mean * ar_beta^2 * ar_phi / Fano gives the
+        serial part ar_beta^2 = r1 * Fano / (mean * ar_phi); it is CAPPED by disp, and
+        overdispersion takes the remainder disp - ar_beta^2. Because beta^2 cannot
+        exceed the total dispersion, a Poisson-like series (Fano ~ 1, so disp ~ 0)
+        forces ar_beta ~ 0 even if its sparse-count lag-1 ACF is spuriously nonzero.
+      * ar_phi = clip(r2 / r1) (the geometric decay) when both lags are clearly
+        positive, else ``default_phi``.
     Explicit (non-None) arguments override their estimate. Returns the resolved
     parameters plus the realized mean/Fano/acf1 used.
     """
@@ -64,17 +69,24 @@ def calibrate_correlation(counts: np.ndarray, *, ar_phi: Optional[float] = None,
         return float(np.corrcoef(a, b)[0, 1])
 
     r1, r2 = acf(1), acf(2)
-    od_auto = max(0.0, (fano - 1.0) / mean) if mean > 0 else 0.0
+    # Total relative variance of the annual rate implied by the overdispersion,
+    # disp = (Fano - 1)/mean = beta^2 + nu. The serial (beta^2) and i.i.d. (nu)
+    # components must sum to it, so the AR(1) variance is bounded by the total:
+    # a Cox process cannot have serial correlation without overdispersion, so a
+    # Poisson-like series (Fano ~ 1) forces beta ~ 0 regardless of a noisy lag-1 ACF.
+    disp = max(0.0, (fano - 1.0) / mean) if mean > 0 else 0.0
     phi_auto = float(np.clip(r2 / r1, 0.0, 0.95)) if (r1 > 0.05 and r2 > 0) else default_phi
     if r1 > 0 and mean > 0:
-        beta_auto = float(np.sqrt(np.clip(r1 * fano / (mean * max(phi_auto, 1e-3)),
-                                          0.0, beta_max ** 2)))
+        beta2_serial = r1 * fano / (mean * max(phi_auto, 1e-3))     # from lag-1 ACF
     else:
-        beta_auto, phi_auto = 0.0, default_phi
+        beta2_serial = 0.0
+    beta2 = min(beta2_serial, disp, beta_max ** 2)                  # capped by the total
+    beta_auto = float(np.sqrt(max(beta2, 0.0)))
+    nu_auto = max(0.0, disp - beta2)                               # i.i.d. remainder
 
     return {
         "ar_phi": phi_auto if ar_phi is None else float(ar_phi),
         "ar_beta": beta_auto if ar_beta is None else float(ar_beta),
-        "overdispersion": od_auto if overdispersion is None else float(overdispersion),
+        "overdispersion": nu_auto if overdispersion is None else float(overdispersion),
         "mean": mean, "fano": fano, "acf1": r1, "n_years": n,
     }

@@ -81,22 +81,25 @@ def _nbinom_pmf(k: np.ndarray, r: float, p: float) -> np.ndarray:
     return np.exp(log_c + r * math.log(p) + k * np.log1p(-p))
 
 
-def _annual_count_ref(counts: np.ndarray, lam: float, k: np.ndarray):
-    """Reference pmf for the annual counts over grid ``k``.
+def _plot_count_refs(ax, counts: np.ndarray, lam: float, k: np.ndarray) -> None:
+    """Overlay BOTH count references on an annual-count histogram axis, for diagnosis.
 
-    Poisson(lambda) under the independent baseline; a Negative Binomial matched to
-    the realized mean and Fano factor when the counts are overdispersed (Fano > ~1),
-    so the reference tracks the serial-correlation / clustering mode. Returns
-    (label, pmf).
+    Always draws Poisson(lambda), the independent baseline; when the counts are
+    overdispersed (Fano > ~1) also draws a Negative Binomial matched to the realized
+    mean and Fano factor. Both are clearly labeled, so the simulated histogram sits on
+    Poisson under the baseline and on the Negative Binomial under clustering, and the
+    gap between the two curves shows the overdispersion.
     """
+    ax.plot(k, _poisson_pmf(lam, k), "o--", color=EMPH_DARK, markersize=4,
+            label=f"Poisson({lam:.3f})")
     flat = counts.reshape(-1).astype(float)
     mean = flat.mean() if flat.size else 0.0
     fano = float(flat.var() / mean) if mean > 0 else 1.0
-    if fano > 1.05 and mean > 0:                    # overdispersed -> Negative Binomial
+    if fano > 1.01 and mean > 0:                     # overdispersed -> Negative Binomial
         r = mean / (fano - 1.0)
         p = r / (r + mean)
-        return f"NegBin(mean={mean:.3f}, Fano={fano:.2f})", _nbinom_pmf(k, r, p)
-    return f"Poisson({lam:.3f})", _poisson_pmf(lam, k)
+        ax.plot(k, _nbinom_pmf(k, r, p), "s-", color="#8159C9", markersize=4,
+                label=f"NegBin(mean={mean:.3f}, Fano={fano:.2f})")
 
 
 def _suptitle(fig, subtitle: str, name: str) -> None:
@@ -250,8 +253,7 @@ def plot_count_distributions(counts, lam, *, subtitle, out_path) -> Path:
     ax.hist(per_year, bins=edges, density=True, color=RAMP[200],
             edgecolor=_DEEP, linewidth=0.6, label="simulated")
     k = np.arange(0, kmax + 1)
-    ref_label, ref_pmf = _annual_count_ref(counts, lam, k)
-    ax.plot(k, ref_pmf, "o-", color=EMPH_DARK, markersize=4, label=ref_label)
+    _plot_count_refs(ax, counts, lam, k)
     ax.set_xlabel("TCs per year")
     ax.set_ylabel("probability")
     ax.set_title("Annual count")
@@ -288,7 +290,7 @@ def plot_count_distributions(counts, lam, *, subtitle, out_path) -> Path:
 # Seasonality and waiting times
 # ---------------------------------------------------------------------------
 
-def plot_seasonality(catalog, srr, *, subtitle, out_path) -> Path:
+def plot_seasonality(catalog, srr, p, *, subtitle, out_path) -> Path:
     """Monthly stacked-by-stratum occurrence + day-of-year histogram vs driving SRR."""
     plt = _mpl()
     fig, axes = plt.subplots(1, 2, figsize=(13, 4.4))
@@ -304,8 +306,10 @@ def plot_seasonality(catalog, srr, *, subtitle, out_path) -> Path:
         ax.bar(months, cnt, bottom=bottom, color=_STRATUM_COLOR[s],
                edgecolor="white", linewidth=0.3, label=s.capitalize())
         bottom += cnt
-    # Driving monthly shape from the per-stratum day pmf, scaled to the catalog size.
-    drive_doy = srr.doy_pmf.sum(axis=0)
+    # Driving day-of-year shape = the STRATUM-WEIGHTED mix of the per-stratum daily
+    # pmfs, sum_s p_s f_s(d), which is what the simulation draws (and equals the
+    # overall daily SRR normalized). An equal-weight sum would not match the catalog.
+    drive_doy = (np.asarray(p, float)[:, None] * srr.doy_pmf).sum(axis=0)
     if drive_doy.sum() > 0:
         drive_doy = drive_doy / drive_doy.sum()
         month_of_doy = np.repeat(months, np.diff(np.append(MONTH_START_DOY, NDOY + 1)))
@@ -409,8 +413,7 @@ def plot_diagnostic(catalog, counts, srr, *, lam, p, subtitle, out_path) -> Path
     ax.hist(per_year, bins=np.arange(-0.5, kmax + 1.5), density=True, color=RAMP[200],
             edgecolor=_DEEP, linewidth=0.6, label="simulated")
     k = np.arange(0, kmax + 1)
-    ref_label, ref_pmf = _annual_count_ref(counts, lam, k)
-    ax.plot(k, ref_pmf, "o-", color=EMPH_DARK, markersize=4, label=ref_label)
+    _plot_count_refs(ax, counts, lam, k)
     ax.set_xlabel("TCs per year")
     ax.set_ylabel("probability")
     ax.set_title("Annual count")
@@ -438,7 +441,7 @@ def plot_diagnostic(catalog, counts, srr, *, lam, p, subtitle, out_path) -> Path
         hist, _ = np.histogram(catalog["doy"], bins=np.arange(1, NDOY + 2))
         ax.bar(np.arange(1, NDOY + 1), hist / hist.sum(), width=1.0,
                color=RAMP[100], label="simulated")
-    drive = srr.doy_pmf.sum(axis=0)
+    drive = (np.asarray(p, float)[:, None] * srr.doy_pmf).sum(axis=0)   # stratum-weighted
     if drive.sum() > 0:
         ax.plot(np.arange(1, NDOY + 1), drive / drive.sum(), color=_DEEP,
                 linewidth=1.4, label="driving SRR")
@@ -554,7 +557,7 @@ def render_suite(catalog: pd.DataFrame, summary: pd.DataFrame, srr, *,
             paths.append(plot_count_distributions(counts, lam, subtitle=subtitle,
                                                   out_path=path(key)))
         elif key == "seasonality":
-            paths.append(plot_seasonality(catalog, srr, subtitle=subtitle, out_path=path(key)))
+            paths.append(plot_seasonality(catalog, srr, p, subtitle=subtitle, out_path=path(key)))
         elif key == "waiting_times":
             paths.append(plot_waiting_times(catalog, lam, n_realizations=n_realizations,
                                             subtitle=subtitle, out_path=path(key)))
