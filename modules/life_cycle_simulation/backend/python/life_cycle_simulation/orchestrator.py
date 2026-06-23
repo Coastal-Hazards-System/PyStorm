@@ -125,12 +125,13 @@ class LCSOrchestrator:
         cfg = self.cfg
         from life_cycle_simulation import plots
         base = Path(cfg.plot_dir) if cfg.plot_dir else (Path(cfg.output_dir) / "plots")
+        crl_dir = base / f"crl{int(crl_id):04d}"       # one folder per CRL
         try:
             paths = plots.render_suite(
                 out.catalog, summary, srr, lam=out.lam, p=out.p,
                 sim_years=cfg.sim_years, n_realizations=cfg.n_realizations,
-                plots=cfg.plots, out_dir=base, tag=tag)
-            print(f"[lcs] CRL {crl_id}: wrote {len(paths)} figure(s) -> {base}")
+                plots=cfg.plots, out_dir=crl_dir, tag=tag)
+            print(f"[lcs] CRL {crl_id}: wrote {len(paths)} figure(s) -> {crl_dir}")
             return paths
         except RuntimeError as exc:                    # matplotlib missing
             print(f"[lcs] CRL {crl_id}: plots skipped ({exc})")

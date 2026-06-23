@@ -53,7 +53,7 @@ Outputs (data/outputs/), one pair per CRL (tag = crl<NNNN>_R<R>km_<Y>yr_<N>real)
   lcs_catalog_<tag>.csv  - one row per synthetic TC (realization, year, event,
                            intensity, month, day, doy)
   lcs_summary_<tag>.csv  - per-realization TC counts overall and by stratum
-  plots/lcs_diag_<tag>.png - optional QC figure (count / stratum / seasonality)
+  plots/crl<NNNN>/        - optional per-CRL folder with all that CRL's figures
 """
 
 from pathlib import Path

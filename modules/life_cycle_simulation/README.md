@@ -80,7 +80,8 @@ lcs_catalog_<tag>.csv      one row per synthetic TC: realization, year, event,
                              intensity, month, day, doy, and (when sequencing)
                              event_time, seq, wait_yr
 lcs_summary_<tag>.csv      per-realization TC counts overall and by stratum
-plots/lcs_<key>_<tag>.png  optional figures (incl. clustering: annual-count ACF +
+plots/crl<NNNN>/lcs_<key>_<tag>.png   optional figures, one folder per CRL holding
+                             all its plots (incl. clustering: annual-count ACF +
                              trajectories when correlation is on)
 ```
 
