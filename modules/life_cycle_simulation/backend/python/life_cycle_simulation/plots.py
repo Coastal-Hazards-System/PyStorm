@@ -358,7 +358,12 @@ def plot_waiting_times(catalog, lam, *, n_realizations, subtitle, out_path) -> P
     inter = dt[r[1:] == r[:-1]]                     # drop cross-realization gaps
     first = df.groupby("realization")["t"].min().to_numpy()
 
-    fig, axes = plt.subplots(1, 2, figsize=(12, 4.4))
+    # Within-year inter-arrival, in days: gaps between consecutive TCs of the same
+    # (realization, year). Within-season clustering shifts these toward shorter gaps.
+    intra = (catalog.sort_values(["realization", "year", "doy"])
+             .groupby(["realization", "year"])["doy"].diff().dropna().to_numpy())
+
+    fig, axes = plt.subplots(1, 3, figsize=(16.5, 4.4))
     rate = max(lam, 1e-12)
     tmax = float(np.percentile(inter, 99)) if inter.size else 1.0
     xx = np.linspace(0, max(tmax, 1e-3), 200)
@@ -389,6 +394,19 @@ def plot_waiting_times(catalog, lam, *, n_realizations, subtitle, out_path) -> P
     ax.set_xlabel("years to first TC")
     ax.set_ylabel("probability density")
     ax.set_title("Time to first TC")
+    ax.legend(frameon=False, fontsize=8)
+    style_ax(ax)
+
+    # ── Within-year inter-arrival (days between same-year TCs) ──────────────────
+    ax = axes[2]
+    if intra.size:
+        dmax = float(np.percentile(intra, 99))
+        ax.hist(intra, bins=40, range=(0, max(dmax, 1.0)), density=True, color=RAMP[200],
+                edgecolor=_DEEP, linewidth=0.5,
+                label=f"simulated (median {np.median(intra):.0f} d)")
+    ax.set_xlabel("days between same-year TCs")
+    ax.set_ylabel("probability density")
+    ax.set_title("Within-year inter-arrival")
     ax.legend(frameon=False, fontsize=8)
     style_ax(ax)
 

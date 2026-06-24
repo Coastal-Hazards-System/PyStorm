@@ -131,6 +131,7 @@ OVERDISPERSION = None
 # is set by the ratio R/sigma, not by R alone: the weight at the pool edge is
 # exp(-0.5*(R/sigma)^2) (~0.14 at R=2*sigma, ~0.01 at R=3*sigma), so set
 # REGIONAL_POOL_KM to about 2-3 sigma. Needs REGIONAL_POOL_KM.
+# Recommended values: sigma=200; R=3*sigma=600
 REGIONAL_POOL_KM = 600 # None
 REGIONAL_POOL_SIGMA_KM = 200 # None
 
@@ -147,6 +148,19 @@ REGIONAL_POOL_SIGMA_KM = 200 # None
 # Rows are ordered by realization, then by event_time, so each realization reads top
 # to bottom as one chronological storm timeline. False omits all three columns.
 SEQUENCING = True
+
+# ── Within-season (intra-year) clustering ─────────────────────────────────────
+# WITHIN_SEASON_RHO concentrates each year's storms into a sub-seasonal active window,
+# beyond the seasonal SRR shape (e.g. an MJO active phase or a persistent favorable
+# pattern that makes a few weeks much more active):
+#   0   - independent placement: each storm's day is drawn independently from the
+#         seasonal shape (an inhomogeneous Poisson process; no event-to-event bunching).
+#   >0  - up to <1, a year's storms bunch closer in time; larger = tighter clusters.
+# It is a shared-factor Gaussian copula on the event days, so it preserves BOTH the
+# annual count and the seasonal day-of-year marginal exactly; only the within-year
+# inter-arrival gaps tighten. This is INTRA-year clustering, independent of CORRELATION
+# (which is the INTER-year, count-level layer).
+WITHIN_SEASON_RHO = 0.0
 
 # ── Visualization suite (optional, off by default) ───────────────────────────
 # MAKE_PLOTS is the master switch. PLOTS selects which per-CRL figures to render;
@@ -199,6 +213,7 @@ CONFIG = {
     "overdispersion": OVERDISPERSION,
     "regional_pool_km": REGIONAL_POOL_KM,
     "regional_pool_sigma_km": REGIONAL_POOL_SIGMA_KM,
+    "within_season_rho": WITHIN_SEASON_RHO,
     "sequencing":     SEQUENCING,
     "make_plots":     MAKE_PLOTS,
     "plots":          PLOTS,
@@ -236,6 +251,8 @@ def _apply_cli(config: dict) -> dict:
                    help="Pool CRLs within this many km for the calibration (regional).")
     p.add_argument("--regional-pool-sigma-km", type=float, dest="regional_pool_sigma_km",
                    help="Gaussian distance taper (km) for the regional pool weights.")
+    p.add_argument("--within-season-rho", type=float, dest="within_season_rho",
+                   help="Within-season (intra-year) clustering strength in [0, 1).")
     p.add_argument("--no-sequencing", dest="sequencing", action="store_false",
                    default=None, help="Skip the chronological event timeline columns.")
     p.add_argument("--plots", dest="plots_on", action="store_true", default=None,
@@ -250,7 +267,7 @@ def _apply_cli(config: dict) -> dict:
     for key in ("storm_type", "input_csv", "daily_csv", "crl_ids", "radius_km",
                 "sim_years", "n_realizations", "day_method", "seed",
                 "ar_phi", "ar_beta", "overdispersion", "regional_pool_km",
-                "regional_pool_sigma_km"):
+                "regional_pool_sigma_km", "within_season_rho"):
         val = getattr(args, key)
         if val is not None:
             config[key] = val

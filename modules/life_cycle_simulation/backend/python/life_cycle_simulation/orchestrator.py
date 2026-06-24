@@ -119,7 +119,8 @@ class LCSOrchestrator:
             srr, radius_km=cfg.radius_km, sim_years=cfg.sim_years,
             n_realizations=cfg.n_realizations, rng=rng,
             correlation=cfg.correlation, ar_phi=ar_phi, ar_beta=ar_beta,
-            overdispersion=overdispersion, sequencing=cfg.sequencing)
+            overdispersion=overdispersion, within_season_rho=cfg.within_season_rho,
+            sequencing=cfg.sequencing)
 
         tag = self._file_tag(crl_id)
         odir = Path(cfg.output_dir)

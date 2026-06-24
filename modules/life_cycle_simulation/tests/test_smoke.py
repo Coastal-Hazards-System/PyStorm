@@ -301,6 +301,57 @@ def test_simulate_with_correlation_and_sequencing():
 
 
 # ---------------------------------------------------------------------------
+# (10b) within-season (intra-year) clustering
+# ---------------------------------------------------------------------------
+
+def test_norm_cdf_matches_known_values():
+    from life_cycle_simulation.simulator import _norm_cdf
+    phi = _norm_cdf(np.array([-3.0, -1.0, 0.0, 1.0, 3.0]))
+    assert abs(phi[2] - 0.5) < 1e-6                                # Phi(0) = 1/2
+    assert abs(phi[3] - 0.8413) < 1e-3 and abs(phi[1] - 0.1587) < 1e-3
+    assert np.all(np.diff(phi) > 0) and phi[0] < 0.01 and phi[-1] > 0.99
+
+
+def test_within_season_rho_validator():
+    LCSConfig(input_csv="x", within_season_rho=0.5)
+    for bad in (1.0, -0.1):
+        with pytest.raises(Exception):
+            LCSConfig(input_csv="x", within_season_rho=bad)
+
+
+def _sim_rho(rho, seed=4):
+    srr_df, daily_df = _srr_table(), _daily_table()
+    s = srr_source.build_crl_srr(srr_df, daily_df, 1, day_method="daily")
+    return simulator.simulate(s, radius_km=200.0, sim_years=100, n_realizations=800,
+                              rng=np.random.default_rng(seed), within_season_rho=rho)
+
+
+def test_within_season_preserves_count_and_seasonal_marginal():
+    base, clus = _sim_rho(0.0), _sim_rho(0.6)
+    # Count-preserving: identical per-(realization, year) counts (rho only moves days).
+    assert base.n_events == clus.n_events
+    assert (base.catalog.groupby(["realization", "year"]).size()
+            .equals(clus.catalog.groupby(["realization", "year"]).size()))
+    # Marginal-preserving: the day-of-year mean is statistically unchanged.
+    assert abs(base.catalog["doy"].mean() - clus.catalog["doy"].mean()) < 5.0
+
+
+def test_within_season_clustering_tightens_intra_year_gaps():
+    import dataclasses
+    srr_df, daily_df = _srr_table(), _daily_table()
+    s = srr_source.build_crl_srr(srr_df, daily_df, 1, day_method="daily")
+    s = dataclasses.replace(s, doy_pmf=np.ones((3, 365)) / 365.0)  # broad season
+
+    def within_year_spread(rho):
+        out = simulator.simulate(s, radius_km=200.0, sim_years=100, n_realizations=800,
+                                 rng=np.random.default_rng(4), within_season_rho=rho)
+        stds = out.catalog.groupby(["realization", "year"])["doy"].std().dropna()
+        return float(stds.mean())                                 # multi-event years only
+    # Clustering pulls a year's storms together -> smaller within-year day spread.
+    assert within_year_spread(0.6) < within_year_spread(0.0) * 0.8
+
+
+# ---------------------------------------------------------------------------
 # (11) correlation calibration from historical counts
 # ---------------------------------------------------------------------------
 

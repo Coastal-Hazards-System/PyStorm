@@ -122,21 +122,54 @@ def stratum_probs(annual: dict) -> np.ndarray:
 
 
 def _expand_counts(counts: np.ndarray, n_years: int):
-    """Expand an (R, Y) count grid to per-TC realization, year, and in-year index."""
+    """Expand an (R, Y) count grid to per-TC realization, year, cell, in-year index."""
     flat = counts.reshape(-1)                     # (R*Y,) cell counts, row-major
     n = int(flat.sum())
-    cell = np.repeat(np.arange(flat.size), flat)  # (N,) source cell per TC
+    cell = np.repeat(np.arange(flat.size), flat)  # (N,) source (realization,year) cell
     realization = (cell // n_years).astype(np.int32) + 1
     year = (cell % n_years).astype(np.int32) + 1
     # In-year event ordinal 1..count: position within the run of each cell.
     starts = np.cumsum(flat) - flat               # first global TC index per cell
     event = (np.arange(n) - np.repeat(starts, flat)).astype(np.int32) + 1
-    return realization, year, event, n
+    return realization, year, event, cell, n
 
 
-def _draw_doy(stratum: np.ndarray, doy_pmf: np.ndarray, rng) -> np.ndarray:
-    """Inverse-CDF day-of-year (1..365) per TC, from its stratum's day pmf."""
-    doy = np.ones(stratum.size, dtype=np.int32)
+def _norm_cdf(z: np.ndarray) -> np.ndarray:
+    """Standard normal CDF Phi(z), vectorized (Abramowitz-Stegun 7.1.26 erf, ~1e-7).
+
+    Used instead of scipy so the module keeps its numpy-only dependency footprint.
+    """
+    x = np.asarray(z, float) / np.sqrt(2.0)
+    sign = np.sign(x)
+    ax = np.abs(x)
+    t = 1.0 / (1.0 + 0.3275911 * ax)
+    poly = t * (0.254829592 + t * (-0.284496736 + t * (1.421413741
+                + t * (-1.453152027 + t * 1.061405429))))
+    erf = sign * (1.0 - poly * np.exp(-ax * ax))
+    return 0.5 * (1.0 + erf)
+
+
+def _draw_doy(stratum: np.ndarray, doy_pmf: np.ndarray, rng, *, cell=None,
+              within_season_rho: float = 0.0) -> np.ndarray:
+    """Inverse-CDF day-of-year (1..365) per TC, from its stratum's day pmf.
+
+    With ``within_season_rho`` > 0 the day quantiles of TCs sharing a (realization,
+    year) cell are positively correlated through a shared-factor Gaussian copula,
+    z_i = sqrt(rho) * xi_cell + sqrt(1-rho) * eta_i, U_i = Phi(z_i), so a year's storms
+    bunch into a sub-seasonal window (within-season clustering). Each U_i stays
+    marginally uniform, so the annual count and the seasonal day-of-year marginal are
+    both preserved exactly; rho = 0 is the independent inhomogeneous-Poisson placement.
+    """
+    n = stratum.size
+    clustered = within_season_rho > 0.0 and cell is not None and n > 0
+    u = None
+    if clustered:
+        rho = float(within_season_rho)
+        xi = rng.standard_normal(int(cell.max()) + 1)[cell]   # one factor per cell
+        eta = rng.standard_normal(n)
+        u = _norm_cdf(np.sqrt(rho) * xi + np.sqrt(1.0 - rho) * eta)
+
+    doy = np.ones(n, dtype=np.int32)
     for s in range(doy_pmf.shape[0]):
         mask = stratum == s
         ns = int(mask.sum())
@@ -148,19 +181,23 @@ def _draw_doy(stratum: np.ndarray, doy_pmf: np.ndarray, rng) -> np.ndarray:
             continue
         cdf = cdf / cdf[-1]
         # searchsorted on a right-continuous CDF maps U(0,1) -> day index 0..364.
-        idx = np.searchsorted(cdf, rng.random(ns), side="right")
+        draws = u[mask] if clustered else rng.random(ns)
+        idx = np.searchsorted(cdf, draws, side="right")
         doy[mask] = np.clip(idx, 0, 364).astype(np.int32) + 1
     return doy
 
 
 def simulate(srr: CRLSrr, *, radius_km: float, sim_years: int, n_realizations: int,
              rng, correlation: bool = False, ar_phi: float = 0.0, ar_beta: float = 0.0,
-             overdispersion: float = 0.0, sequencing: bool = True) -> SimOutput:
+             overdispersion: float = 0.0, within_season_rho: float = 0.0,
+             sequencing: bool = True) -> SimOutput:
     """Run the life-cycle Monte-Carlo for one CRL and return its synthetic catalog.
 
     ``correlation`` adds serial correlation / overdispersion to the annual counts;
-    ``sequencing`` adds the chronological event timeline. Both default to the
-    independent-Poisson, with sequencing on.
+    ``within_season_rho`` adds within-season (intra-year) clustering of the event days
+    (a shared-factor Gaussian copula, count- and seasonal-marginal-preserving);
+    ``sequencing`` adds the chronological event timeline. All default to the
+    independent baseline, with sequencing on.
 
     Returns
     -------
@@ -175,7 +212,7 @@ def simulate(srr: CRLSrr, *, radius_km: float, sim_years: int, n_realizations: i
                          ar_phi=ar_phi, ar_beta=ar_beta, overdispersion=overdispersion,
                          rng=rng)
     fano, acf1 = _count_diagnostics(counts)
-    realization, year, event, n = _expand_counts(counts, sim_years)
+    realization, year, event, cell, n = _expand_counts(counts, sim_years)
 
     if n == 0:                                    # no activity (e.g. inland CRL)
         empty = pd.DataFrame({
@@ -192,7 +229,8 @@ def simulate(srr: CRLSrr, *, radius_km: float, sim_years: int, n_realizations: i
     stratum = np.searchsorted(cum, rng.random(n), side="right")
     stratum = np.clip(stratum, 0, len(STRATA) - 1).astype(np.int32)
 
-    doy = _draw_doy(stratum, srr.doy_pmf, rng)
+    doy = _draw_doy(stratum, srr.doy_pmf, rng, cell=cell,
+                    within_season_rho=within_season_rho)
 
     catalog = pd.DataFrame({
         "realization": realization,
