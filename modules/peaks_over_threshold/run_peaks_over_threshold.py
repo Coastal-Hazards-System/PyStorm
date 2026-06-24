@@ -57,7 +57,7 @@ SECONDARY - build the POT input from NOAA data (optional upstream stages)
   download  Fetch hourly water level + hourly tide predictions per station/year
             from NOAA Tides & Currents into data/inputs/raw/<station>/.
   detrend   Remove the linear sea-level trend from the water level by least
-            squares. "midpoint" centres time on the NTDE midpoint (the trend
+            squares. "midpoint" centers time on the NTDE midpoint (the trend
             pivots there, matching NOAA datum convention); "ordinary" centres on
             the record mean. The slope is fitted from the record, or imposed via
             DETREND_SLOPE. Produces dwl = detrended water level.
