@@ -105,7 +105,7 @@ DAY_METHOD = "daily"
 # CRL draws from an independent sub-stream derived from (SEED, crl_id).
 SEED = 12345
 
-# ── Serial correlation + clustering of annual counts (off by default) ─────────
+# ── Year-to-year (inter-year) clustering of annual counts (off by default) ────
 # YEAR_TO_YEAR=False keeps the independent Poisson baseline exactly. When True, the
 # annual rate gains year-to-year memory and/or overdispersion, so active and quiet
 # years cluster (the annual mean rate is preserved). The three parameters below are
@@ -116,25 +116,13 @@ SEED = 12345
 #   OVERDISPERSION - variance of the i.i.d. annual rate multiplier (Fano = 1 +
 #                    lambda*OVERDISPERSION)
 # Note: a sparse, low-rate CRL typically calibrates to ~0 (Poisson), which is the
-# statistically appropriate result; the clustering signal is basin/regional.
+# statistically appropriate result; the signal is basin/regional (see REGIONAL POOLING).
 YEAR_TO_YEAR   = True
 AR_PHI         = None    # None = calibrate from history; or set a value to override
 AR_BETA        = None
 OVERDISPERSION = None
-# REGIONAL_POOL_KM: when calibrating, pool every CRL within this many km of the
-# target so the basin/regional clustering signal is estimated from many records
-# instead of one sparse history. None = per-CRL calibration (default); e.g. 300.
-# REGIONAL_POOL_SIGMA_KM: optional Gaussian distance taper for that pool. None =
-# uniform weight (hard cutoff). A value is the kernel bandwidth (ideally the climate
-# decorrelation length): w=exp(-d^2/(2*sigma^2)), half-weight at ~1.18*sigma. The fade
-# is set by the ratio R/sigma, not by R alone: the weight at the pool edge is
-# exp(-0.5*(R/sigma)^2) (~0.14 at R=2*sigma, ~0.01 at R=3*sigma), so set
-# REGIONAL_POOL_KM to about 2-3 sigma. Needs REGIONAL_POOL_KM.
-# Recommended values: sigma=200; R=3*sigma=600
-REGIONAL_POOL_KM = 600 # None
-REGIONAL_POOL_SIGMA_KM = 200 # None
 
-# ── Within-season (intra-year) clustering ─────────────────────────────────────
+# ── Within-year (intra-year) clustering of storm days (off by default) ────────
 # WITHIN_YEAR=False keeps independent day placement exactly (an inhomogeneous Poisson
 # process). When True, the days of a year's storms are correlated by an exchangeable
 # Gaussian copula on the event days, so it preserves BOTH the annual count and the
@@ -148,7 +136,22 @@ REGIONAL_POOL_SIGMA_KM = 200 # None
 #                     historical within-year storm-day correlation (the selection's
 #                     doy); set a number to override.
 WITHIN_YEAR     = True
-WITHIN_YEAR_RHO = None
+WITHIN_YEAR_RHO = None    # None = calibrate from history; or set a value to override
+
+# ── Regional pooling for calibration (applies to BOTH layers above) ───────────
+# The clustering signals are basin/regional and weak at one sparse CRL, so the None
+# (calibrated) parameters of YEAR_TO_YEAR and WITHIN_YEAR can pool neighbouring CRLs.
+# REGIONAL_POOL_KM: pool every CRL within this many km of the target. None = per-CRL
+# calibration (default); e.g. 300.
+# REGIONAL_POOL_SIGMA_KM: optional Gaussian distance taper for that pool. None =
+# uniform weight (hard cutoff). A value is the kernel bandwidth (ideally the climate
+# decorrelation length): w=exp(-d^2/(2*sigma^2)), half-weight at ~1.18*sigma. The fade
+# is set by the ratio R/sigma, not by R alone: the weight at the pool edge is
+# exp(-0.5*(R/sigma)^2) (~0.14 at R=2*sigma, ~0.01 at R=3*sigma), so set
+# REGIONAL_POOL_KM to about 2-3 sigma. Needs REGIONAL_POOL_KM.
+# Recommended values: sigma=200; R=3*sigma=600
+REGIONAL_POOL_KM = 600 # None
+REGIONAL_POOL_SIGMA_KM = 200 # None
 
 # ── Event sequencing ──────────────────────────────────────────────────────────
 # When True, append a chronological event timeline to each catalog row, as the last
@@ -209,14 +212,14 @@ CONFIG = {
     "n_realizations": N_REALIZATIONS,
     "day_method":     DAY_METHOD,
     "seed":           SEED,
-    "year_to_year":    YEAR_TO_YEAR,
+    "year_to_year":   YEAR_TO_YEAR,
     "ar_phi":         AR_PHI,
     "ar_beta":        AR_BETA,
     "overdispersion": OVERDISPERSION,
+    "within_year":    WITHIN_YEAR,
+    "within_year_rho": WITHIN_YEAR_RHO,
     "regional_pool_km": REGIONAL_POOL_KM,
     "regional_pool_sigma_km": REGIONAL_POOL_SIGMA_KM,
-    "within_year": WITHIN_YEAR,
-    "within_year_rho": WITHIN_YEAR_RHO,
     "sequencing":     SEQUENCING,
     "make_plots":     MAKE_PLOTS,
     "plots":          PLOTS,
@@ -250,17 +253,17 @@ def _apply_cli(config: dict) -> dict:
     p.add_argument("--ar-phi", type=float, help="Override AR_PHI (AR(1) persistence).")
     p.add_argument("--ar-beta", type=float, help="Override AR_BETA (log-rate sensitivity).")
     p.add_argument("--overdispersion", type=float, help="Override OVERDISPERSION.")
-    p.add_argument("--regional-pool-km", type=float, dest="regional_pool_km",
-                   help="Pool CRLs within this many km for the calibration (regional).")
-    p.add_argument("--regional-pool-sigma-km", type=float, dest="regional_pool_sigma_km",
-                   help="Gaussian distance taper (km) for the regional pool weights.")
     p.add_argument("--within-year", dest="within_year",
                    action="store_true", default=None,
-                   help="Enable within-season (intra-year) day clustering.")
+                   help="Enable within-year (intra-year) day clustering.")
     p.add_argument("--no-within-year", dest="within_year",
-                   action="store_false", help="Disable within-season day clustering.")
+                   action="store_false", help="Disable within-year day clustering.")
     p.add_argument("--within-year-rho", type=float, dest="within_year_rho",
-                   help="Within-season clustering strength in [0, 1) (overrides calibration).")
+                   help="Within-year day correlation in (-1, 1) (overrides calibration).")
+    p.add_argument("--regional-pool-km", type=float, dest="regional_pool_km",
+                   help="Pool CRLs within this many km for calibration (both layers).")
+    p.add_argument("--regional-pool-sigma-km", type=float, dest="regional_pool_sigma_km",
+                   help="Gaussian distance taper (km) for the regional pool weights.")
     p.add_argument("--no-sequencing", dest="sequencing", action="store_false",
                    default=None, help="Skip the chronological event timeline columns.")
     p.add_argument("--plots", dest="plots_on", action="store_true", default=None,
