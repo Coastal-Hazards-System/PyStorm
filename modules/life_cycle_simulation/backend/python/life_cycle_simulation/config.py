@@ -107,14 +107,16 @@ class LCSConfig(BaseModel):
 
     # ── Within-season (intra-year) clustering ──────────────────────────────────
     # within_year=False keeps the independent day placement exactly (an
-    # inhomogeneous Poisson process). When True, each year's TCs bunch into a
-    # sub-seasonal active window beyond the seasonal SRR shape, via a shared-factor
-    # Gaussian copula on the event days that preserves the annual count AND the
-    # seasonal day-of-year marginal exactly (only the within-year inter-arrival gaps
-    # tighten). This is the INTRA-year analogue of the INTER-year correlation layer.
-    # within_year_rho is the clustering strength in [0, 1): None (default) CALIBRATES
-    # it from the historical within-year storm-day correlation (the SCA selection's doy
-    # column); a number overrides. Ignored when within_year is False.
+    # inhomogeneous Poisson process). When True, the days of a year's TCs are
+    # correlated by an exchangeable Gaussian copula that preserves the annual count AND
+    # the seasonal day-of-year marginal exactly (only the within-year inter-arrival
+    # gaps change). This is the INTRA-year analogue of the INTER-year correlation layer.
+    # within_year_rho is the strength in (-1, 1): positive bunches a year's storms into
+    # a sub-seasonal window (clustering); negative spaces them out more than random
+    # (within-season regularity). None (default) CALIBRATES it (signed) from the
+    # historical within-year storm-day correlation (the SCA selection's doy column),
+    # regionally pooled like the count calibration; a number overrides. Ignored when
+    # within_year is False.
     within_year: bool = False
     within_year_rho: Optional[float] = None
 
@@ -213,8 +215,8 @@ class LCSConfig(BaseModel):
         if v is None:
             return None
         v = float(v)
-        if not (0.0 <= v < 1.0):
-            raise ValueError("within_year_rho must be in [0, 1) or None (calibrate).")
+        if not (-1.0 < v < 1.0):
+            raise ValueError("within_year_rho must be in (-1, 1) or None (calibrate).")
         return v
 
     @field_validator("plots", mode="before")

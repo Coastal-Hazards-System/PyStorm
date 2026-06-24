@@ -77,19 +77,20 @@ set `regional_pool_km` to roughly `2-3 sigma` to truncate only a negligible tail
 The correlation layer above acts on the annual *count*; it does not change *when*
 within a year storms land. `within_year=False` (default) places a year's
 storms independently from the seasonal shape (an inhomogeneous Poisson process). When
-**`within_year=True`**, a year's storms bunch into a sub-seasonal active
-window (an MJO-phase or persistent-pattern effect) via a **shared-factor Gaussian
-copula** on the event days, which preserves **both** the annual count and the seasonal
-day-of-year marginal exactly; only the within-year inter-arrival gaps tighten. This is
-the *intra*-year analogue of `year_to_year` (the *inter*-year, count-level layer).
+**`within_year=True`**, the days of a year's storms are correlated by an **exchangeable
+Gaussian copula** that preserves **both** the annual count and the seasonal day-of-year
+marginal exactly; only the within-year inter-arrival gaps change. This is the
+*intra*-year analogue of `year_to_year` (the *inter*-year, count-level layer).
 
-The strength `within_year_rho` in `[0, 1)` defaults to `None` = **calibrated** from
-the historical within-year storm-day correlation: each selected storm's `doy` is
-mapped to its seasonal quantile and then to a latent normal, and rho is the within-year
-correlation of those normals (with a one-standard-error small-sample shrinkage so a
-sparse CRL is not given spurious clustering). A number overrides. A branching
-Hawkes/Neyman-Scott process is deliberately *not* used: it would change the
-SRR-calibrated count, whereas the copula keeps the count fixed.
+The strength `within_year_rho` in `(-1, 1)` defaults to `None` = **calibrated**
+(signed) from the historical within-year storm-day correlation: each selected storm's
+`doy` is mapped to its seasonal quantile and then to a latent normal, and rho is the
+within-year correlation of those normals (one-standard-error shrinkage). A **positive**
+rho bunches a year's storms into a sub-seasonal window (clustering, an MJO-phase
+effect); a **negative** rho spaces them out more than random (within-season
+regularity). A number overrides. A branching Hawkes/Neyman-Scott process is
+deliberately *not* used: it would change the SRR-calibrated count, whereas the copula
+keeps the count fixed.
 
 Setting `regional_pool_km` pools the same neighbouring CRLs (and optional Gaussian
 taper) the count calibration uses, sharpening the estimate from a handful of per-CRL
@@ -198,7 +199,7 @@ directly.
 | `regional_pool_sigma_km` | `None` | Gaussian distance taper for the pool (`exp(-d^2/2 sigma^2)`); `None` = uniform |
 | `selection_csv` | `None` | SCA selection table for calibration; `None` auto-locates next to `input_csv` |
 | `within_year` | `False` | Within-season (intra-year) day clustering (else independent placement) |
-| `within_year_rho` | `None` | Intra-year clustering strength `[0, 1)`; `None` = calibrate from history |
+| `within_year_rho` | `None` | Intra-year day correlation `(-1, 1)` (+ cluster, - regular); `None` = calibrate |
 | `sequencing` | `True` | Add the chronological event timeline (`event_time`, `seq`, `wait_yr`) |
 | `make_plots` | `False` | Write the per-CRL diagnostic figures |
 | `output_dir` | `data/outputs` | Where catalogs and summaries land |

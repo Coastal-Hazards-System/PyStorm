@@ -314,8 +314,9 @@ def test_norm_cdf_matches_known_values():
 
 def test_within_year_rho_validator():
     LCSConfig(input_csv="x", within_year_rho=0.5)
+    LCSConfig(input_csv="x", within_year_rho=-0.2)              # regularity allowed
     assert LCSConfig(input_csv="x", within_year_rho=None).within_year_rho is None
-    for bad in (1.0, -0.1):
+    for bad in (1.0, -1.0):
         with pytest.raises(Exception):
             LCSConfig(input_csv="x", within_year_rho=bad)
 
@@ -339,6 +340,33 @@ def test_within_season_estimator_recovers_rho():
         z = np.sqrt(rho) * xi + np.sqrt(1.0 - rho) * rng.standard_normal(years.size)
         rho_hat, n = C.within_year_rho_estimate(z, years)
         assert n == n_years and abs(rho_hat - rho) < 0.08
+
+
+def test_within_season_estimator_recovers_negative_rho():
+    from life_cycle_simulation import calibration as C
+    rng = np.random.default_rng(5)
+    n_years, per, rho = 3000, 3, -0.30                           # regularity (rho < 0)
+    years = np.repeat(np.arange(n_years), per)
+    eta = rng.standard_normal(years.size)
+    sc = np.add.reduceat(eta, np.arange(0, years.size, per))     # per-group sum
+    a = np.sqrt(1.0 - rho)
+    b = (np.sqrt(1.0 - rho + per * rho) - a) / per
+    z = a * eta + b * np.repeat(sc, per)                         # exchangeable, corr rho
+    rho_hat, _ = C.within_year_rho_estimate(z, years)
+    assert rho_hat < -0.1 and abs(rho_hat - rho) < 0.1
+
+
+def test_within_season_negative_rho_spaces_gaps():
+    import dataclasses
+    s = srr_source.build_crl_srr(_srr_table(), _daily_table(), 1, day_method="daily")
+    s = dataclasses.replace(s, doy_pmf=np.ones((3, 365)) / 365.0)  # broad season
+
+    def spread(rho):
+        out = simulator.simulate(s, radius_km=200.0, sim_years=100, n_realizations=800,
+                                 rng=np.random.default_rng(4), within_year_rho=rho)
+        return float(out.catalog.groupby(["realization", "year"])["doy"].std().dropna().mean())
+    # Regularity (rho < 0) widens the within-year spread vs independent placement.
+    assert spread(-0.3) > spread(0.0) * 1.05
 
 
 def test_within_season_estimator_weights_downweight_far_group():

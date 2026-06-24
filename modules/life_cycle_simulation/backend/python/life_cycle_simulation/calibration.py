@@ -205,16 +205,18 @@ def within_year_latent(doy, doy_cdf) -> np.ndarray:
 
 
 def within_year_rho_estimate(z, group, weight=None):
-    """Shared-factor copula rho from the within-group correlation of latent normals z.
+    """Exchangeable copula rho from the within-group correlation of latent normals z.
 
     Storms grouped by (CRL, year) share a latent season-phase factor, so same-group
     pairs have correlation rho. Estimated as the pooled mean cross-product over all
     within-group pairs (sum of products / number of pairs), using only groups with at
     least two storms. ``weight`` (per storm, default 1) multiplies each group's
     contribution; pass a Gaussian distance taper to pool neighbours regionally with
-    nearer CRLs counting more. The raw estimate is shrunk toward zero by one standard
-    error (~1/sqrt(number of multi-storm groups), the effective sample size) so a
-    sparse pool is not assigned spurious strong clustering. Returns (rho, n groups).
+    nearer CRLs counting more. The signed estimate is shrunk toward zero by one
+    standard error (~1/sqrt(number of multi-storm groups)) so a sparse pool is not
+    assigned spurious structure. A positive rho is within-season clustering, a negative
+    rho is within-season regularity (storms spaced more than random). Returns (rho in
+    (-0.95, 0.99), n groups).
     """
     df = pd.DataFrame({"g": np.asarray(group), "z": np.asarray(z, float),
                        "w": 1.0 if weight is None else np.asarray(weight, float)})
@@ -228,6 +230,7 @@ def within_year_rho_estimate(z, group, weight=None):
     pairs = (w[m] * n[m] * (n[m] - 1.0) / 2.0).sum()
     if pairs <= 0:
         return 0.0, 0
-    cross = (w[m] * (s[m] ** 2 - q[m]) / 2.0).sum()          # weighted sum_{i<j} z_i z_j
+    rho_raw = (w[m] * (s[m] ** 2 - q[m]) / 2.0).sum() / pairs  # weighted within-yr corr
     shrink = 1.0 / np.sqrt(max(n_groups, 1))                 # ~1 SE in the group count
-    return float(np.clip(cross / pairs - shrink, 0.0, 0.99)), n_groups
+    rho = np.sign(rho_raw) * max(0.0, abs(rho_raw) - shrink)  # shrink toward 0, signed
+    return float(np.clip(rho, -0.95, 0.99)), n_groups

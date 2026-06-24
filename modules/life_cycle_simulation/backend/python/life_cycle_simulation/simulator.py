@@ -153,21 +153,28 @@ def _draw_doy(stratum: np.ndarray, doy_pmf: np.ndarray, rng, *, cell=None,
               within_year_rho: float = 0.0) -> np.ndarray:
     """Inverse-CDF day-of-year (1..365) per TC, from its stratum's day pmf.
 
-    With ``within_year_rho`` > 0 the day quantiles of TCs sharing a (realization,
-    year) cell are positively correlated through a shared-factor Gaussian copula,
-    z_i = sqrt(rho) * xi_cell + sqrt(1-rho) * eta_i, U_i = Phi(z_i), so a year's storms
-    bunch into a sub-seasonal window (within-season clustering). Each U_i stays
-    marginally uniform, so the annual count and the seasonal day-of-year marginal are
-    both preserved exactly; rho = 0 is the independent inhomogeneous-Poisson placement.
+    With ``within_year_rho`` != 0 the day quantiles of TCs sharing a (realization,
+    year) cell are correlated through an exchangeable Gaussian copula: for a cell of n
+    storms with i.i.d. eta and group sum S, z_i = a*eta_i + b*S with a = sqrt(1-rho)
+    and b = (sqrt(1-rho+n*rho) - a)/n, U_i = Phi(z_i). This is the shared-factor copula
+    when rho > 0 (storms bunch, within-season clustering) and the repulsive exchangeable
+    normal when rho < 0 (storms space out, within-season regularity), per-cell floored
+    at the PSD limit rho >= -1/(n-1). Each U_i stays marginally uniform, so the annual
+    count and the seasonal day-of-year marginal are both preserved exactly; rho = 0 is
+    the independent inhomogeneous-Poisson placement.
     """
     n = stratum.size
-    clustered = within_year_rho > 0.0 and cell is not None and n > 0
+    clustered = within_year_rho != 0.0 and cell is not None and n > 0
     u = None
     if clustered:
         rho = float(within_year_rho)
-        xi = rng.standard_normal(int(cell.max()) + 1)[cell]   # one factor per cell
         eta = rng.standard_normal(n)
-        u = _norm_cdf(np.sqrt(rho) * xi + np.sqrt(1.0 - rho) * eta)
+        nc = np.bincount(cell)[cell].astype(float)            # storms in each cell
+        sc = np.bincount(cell, weights=eta)[cell]             # group sum of eta
+        rc = np.maximum(rho, -1.0 / np.maximum(nc - 1.0, 1.0))  # per-cell PSD floor
+        a = np.sqrt(1.0 - rc)
+        b = (np.sqrt(np.maximum(1.0 - rc + nc * rc, 0.0)) - a) / nc
+        u = _norm_cdf(a * eta + b * sc)
 
     doy = np.ones(n, dtype=np.int32)
     for s in range(doy_pmf.shape[0]):

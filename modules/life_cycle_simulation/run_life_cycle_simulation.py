@@ -65,7 +65,6 @@ DATA = ROOT / "data"
 # Sibling storm_climatology_analysis module outputs (the default SRR source).
 _SCA_OUTPUTS = ROOT.parent / "storm_climatology_analysis" / "data" / "outputs"
 
-
 # ===========================================================================
 # USER OPTIONS  - edit anything in this block, then run the script
 # ===========================================================================
@@ -118,7 +117,7 @@ SEED = 12345
 #                    lambda*OVERDISPERSION)
 # Note: a sparse, low-rate CRL typically calibrates to ~0 (Poisson), which is the
 # statistically appropriate result; the clustering signal is basin/regional.
-YEAR_TO_YEAR    = True
+YEAR_TO_YEAR   = True
 AR_PHI         = None    # None = calibrate from history; or set a value to override
 AR_BETA        = None
 OVERDISPERSION = None
@@ -136,19 +135,21 @@ REGIONAL_POOL_KM = 600 # None
 REGIONAL_POOL_SIGMA_KM = 200 # None
 
 # ── Within-season (intra-year) clustering ─────────────────────────────────────
-# WITHIN_YEAR=False keeps independent day placement exactly (an
-# inhomogeneous Poisson process). When True, each year's storms bunch into a
-# sub-seasonal active window beyond the seasonal SRR shape (e.g. an MJO active phase or
-# a persistent favorable pattern that makes a few weeks much more active). It is a
-# shared-factor Gaussian copula on the event days, so it preserves BOTH the annual
-# count and the seasonal day-of-year marginal exactly; only the within-year
-# inter-arrival gaps tighten. This is the INTRA-year analogue of YEAR_TO_YEAR (the
-# INTER-year, count-level layer).
-#   WITHIN_YEAR_RHO - clustering strength in [0, 1). None (default) CALIBRATES it
-#                       from the historical within-year storm-day correlation (the SCA
-#                       selection's doy column); set a number to override.
-WITHIN_YEAR = True
-WITHIN_YEAR_RHO      = None
+# WITHIN_YEAR=False keeps independent day placement exactly (an inhomogeneous Poisson
+# process). When True, the days of a year's storms are correlated by an exchangeable
+# Gaussian copula on the event days, so it preserves BOTH the annual count and the
+# seasonal day-of-year marginal exactly; only the within-year inter-arrival gaps
+# change. This is the INTRA-year analogue of YEAR_TO_YEAR (the INTER-year, count-level
+# layer).
+#   WITHIN_YEAR_RHO - day correlation in (-1, 1). Positive bunches a year's storms into
+#                     a sub-seasonal window (clustering, e.g. an MJO active phase);
+#                     negative spaces them out more than random (within-season
+#                     regularity). None (default) CALIBRATES it (signed) from the
+#                     historical within-year storm-day correlation (the selection's
+#                     doy); set a number to override.
+WITHIN_YEAR     = True
+WITHIN_YEAR_RHO = None
+
 # ── Event sequencing ──────────────────────────────────────────────────────────
 # When True, append a chronological event timeline to each catalog row, as the last
 # three columns in this order:
