@@ -104,15 +104,15 @@ class LCSOrchestrator:
         return cal["ar_phi"], cal["ar_beta"], cal["overdispersion"], cal
 
     def _resolve_within_season(self, crl_id, srr, srr_df, selection_df, cal_start):
-        """Resolve the within-season rho when intra_year_correlation is on: an explicit
-        within_season_rho, else (None) calibrate it from the within-year correlation of
+        """Resolve the within-season rho when within_year is on: an explicit
+        within_year_rho, else (None) calibrate it from the within-year correlation of
         the historical storm days, regionally pooled when regional_pool_km is set.
         Returns (rho, n_groups). Off -> (0, None)."""
         cfg = self.cfg
-        if not cfg.intra_year_correlation:
+        if not cfg.within_year:
             return 0.0, None
-        if cfg.within_season_rho is not None:
-            return float(cfg.within_season_rho), None
+        if cfg.within_year_rho is not None:
+            return float(cfg.within_year_rho), None
         if selection_df is None or "doy" not in getattr(selection_df, "columns", []):
             return 0.0, None
         # Stratum-weighted seasonal CDF for the probability-integral transform. Nearby
@@ -136,16 +136,16 @@ class LCSOrchestrator:
                 wmap = {int(c): float(np.exp(-(d * d) / (2.0 * sig * sig)))
                         for c, d in zip(pool, dist_km)}
                 weight = sub["crl_id"].map(wmap).to_numpy()
-            z = calibration.within_season_latent(sub["doy"].to_numpy(), cdf)
-            return calibration.within_season_rho_estimate(z, group, weight)
+            z = calibration.within_year_latent(sub["doy"].to_numpy(), cdf)
+            return calibration.within_year_rho_estimate(z, group, weight)
 
         sub = selection_df[(selection_df["crl_id"] == crl_id)
                            & (selection_df["dist"] <= cfg.radius_km)
                            & (selection_df["year"] >= cal_start)]
         if len(sub) < 2:
             return 0.0, 0
-        z = calibration.within_season_latent(sub["doy"].to_numpy(), cdf)
-        return calibration.within_season_rho_estimate(z, sub["year"].to_numpy())
+        z = calibration.within_year_latent(sub["doy"].to_numpy(), cdf)
+        return calibration.within_year_rho_estimate(z, sub["year"].to_numpy())
 
     def _process_crl(self, crl_id, srr_df, daily_df, selection_df=None,
                      cal_start=1938) -> CRLResult:
@@ -155,7 +155,7 @@ class LCSOrchestrator:
         rng = self._child_rng(crl_id)
 
         ar_phi, ar_beta, overdispersion, cal = 0.0, 0.0, 0.0, None
-        if cfg.correlation:
+        if cfg.year_to_year:
             ar_phi, ar_beta, overdispersion, cal = self._resolve_correlation(
                 crl_id, srr_df, selection_df, cal_start)
         ws_rho, ws_n = self._resolve_within_season(
@@ -164,8 +164,8 @@ class LCSOrchestrator:
         out = simulator.simulate(
             srr, radius_km=cfg.radius_km, sim_years=cfg.sim_years,
             n_realizations=cfg.n_realizations, rng=rng,
-            correlation=cfg.correlation, ar_phi=ar_phi, ar_beta=ar_beta,
-            overdispersion=overdispersion, within_season_rho=ws_rho,
+            year_to_year=cfg.year_to_year, ar_phi=ar_phi, ar_beta=ar_beta,
+            overdispersion=overdispersion, within_year_rho=ws_rho,
             sequencing=cfg.sequencing)
 
         tag = self._file_tag(crl_id)
@@ -176,13 +176,13 @@ class LCSOrchestrator:
 
         mean_rate = out.n_events / (cfg.n_realizations * cfg.sim_years)
         corr = ""
-        if cfg.correlation:
+        if cfg.year_to_year:
             pool = (f" pool={cal['n_pooled']}" if cal and cal.get("n_pooled", 1) > 1
                     else "")
             corr = (f"  corr: phi={ar_phi:.2f} beta={ar_beta:.2f} "
                     f"od={overdispersion:.3f}{pool}  Fano={out.fano:.2f} ACF1={out.acf1:+.2f}")
-        if cfg.intra_year_correlation:
-            src = "cal" if cfg.within_season_rho is None else "set"
+        if cfg.within_year:
+            src = "cal" if cfg.within_year_rho is None else "set"
             yrs = f"/{ws_n}yr" if ws_n else ""
             corr += f"  intra: rho={ws_rho:.2f}({src}{yrs})"
         print(f"[lcs] CRL {crl_id}: lambda={out.lam:.4f} TC/yr  "
@@ -263,7 +263,7 @@ class LCSOrchestrator:
         # correlation layer and by the within-season layer (the latter for its doy).
         selection_df = None
         cal_start = 1938
-        if cfg.correlation or cfg.intra_year_correlation:
+        if cfg.year_to_year or cfg.within_year:
             m = re.search(r"_(\d{4})-(\d{4})_", Path(cfg.input_csv).name)
             cal_start = int(m.group(1)) if m else 1938
             sel_csv = cfg.selection_csv or srr_source.locate_selection_companion(cfg.input_csv)

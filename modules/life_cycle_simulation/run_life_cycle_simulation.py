@@ -107,7 +107,7 @@ DAY_METHOD = "daily"
 SEED = 12345
 
 # ── Serial correlation + clustering of annual counts (off by default) ─────────
-# CORRELATION=False keeps the independent Poisson baseline exactly. When True, the
+# YEAR_TO_YEAR=False keeps the independent Poisson baseline exactly. When True, the
 # annual rate gains year-to-year memory and/or overdispersion, so active and quiet
 # years cluster (the annual mean rate is preserved). The three parameters below are
 # CALIBRATED from each CRL's historical annual counts (the SCA selection table)
@@ -118,7 +118,7 @@ SEED = 12345
 #                    lambda*OVERDISPERSION)
 # Note: a sparse, low-rate CRL typically calibrates to ~0 (Poisson), which is the
 # statistically appropriate result; the clustering signal is basin/regional.
-CORRELATION    = True
+YEAR_TO_YEAR    = True
 AR_PHI         = None    # None = calibrate from history; or set a value to override
 AR_BETA        = None
 OVERDISPERSION = None
@@ -136,19 +136,19 @@ REGIONAL_POOL_KM = 600 # None
 REGIONAL_POOL_SIGMA_KM = 200 # None
 
 # ── Within-season (intra-year) clustering ─────────────────────────────────────
-# INTRA_YEAR_CORRELATION=False keeps independent day placement exactly (an
+# WITHIN_YEAR=False keeps independent day placement exactly (an
 # inhomogeneous Poisson process). When True, each year's storms bunch into a
 # sub-seasonal active window beyond the seasonal SRR shape (e.g. an MJO active phase or
 # a persistent favorable pattern that makes a few weeks much more active). It is a
 # shared-factor Gaussian copula on the event days, so it preserves BOTH the annual
 # count and the seasonal day-of-year marginal exactly; only the within-year
-# inter-arrival gaps tighten. This is the INTRA-year analogue of CORRELATION (the
+# inter-arrival gaps tighten. This is the INTRA-year analogue of YEAR_TO_YEAR (the
 # INTER-year, count-level layer).
-#   WITHIN_SEASON_RHO - clustering strength in [0, 1). None (default) CALIBRATES it
+#   WITHIN_YEAR_RHO - clustering strength in [0, 1). None (default) CALIBRATES it
 #                       from the historical within-year storm-day correlation (the SCA
 #                       selection's doy column); set a number to override.
-INTRA_YEAR_CORRELATION = True
-WITHIN_SEASON_RHO      = None
+WITHIN_YEAR = True
+WITHIN_YEAR_RHO      = None
 # ── Event sequencing ──────────────────────────────────────────────────────────
 # When True, append a chronological event timeline to each catalog row, as the last
 # three columns in this order:
@@ -208,14 +208,14 @@ CONFIG = {
     "n_realizations": N_REALIZATIONS,
     "day_method":     DAY_METHOD,
     "seed":           SEED,
-    "correlation":    CORRELATION,
+    "year_to_year":    YEAR_TO_YEAR,
     "ar_phi":         AR_PHI,
     "ar_beta":        AR_BETA,
     "overdispersion": OVERDISPERSION,
     "regional_pool_km": REGIONAL_POOL_KM,
     "regional_pool_sigma_km": REGIONAL_POOL_SIGMA_KM,
-    "intra_year_correlation": INTRA_YEAR_CORRELATION,
-    "within_season_rho": WITHIN_SEASON_RHO,
+    "within_year": WITHIN_YEAR,
+    "within_year_rho": WITHIN_YEAR_RHO,
     "sequencing":     SEQUENCING,
     "make_plots":     MAKE_PLOTS,
     "plots":          PLOTS,
@@ -242,9 +242,9 @@ def _apply_cli(config: dict) -> dict:
     p.add_argument("--day-method", choices=["daily", "monthly"],
                    help="Override DAY_METHOD.")
     p.add_argument("--seed", type=int, help="Override SEED.")
-    p.add_argument("--correlation", dest="correlation", action="store_true", default=None,
+    p.add_argument("--year-to-year", dest="year_to_year", action="store_true", default=None,
                    help="Enable serial correlation + overdispersion of annual counts.")
-    p.add_argument("--no-correlation", dest="correlation", action="store_false",
+    p.add_argument("--no-year-to-year", dest="year_to_year", action="store_false",
                    help="Disable correlation (independent Poisson baseline).")
     p.add_argument("--ar-phi", type=float, help="Override AR_PHI (AR(1) persistence).")
     p.add_argument("--ar-beta", type=float, help="Override AR_BETA (log-rate sensitivity).")
@@ -253,12 +253,12 @@ def _apply_cli(config: dict) -> dict:
                    help="Pool CRLs within this many km for the calibration (regional).")
     p.add_argument("--regional-pool-sigma-km", type=float, dest="regional_pool_sigma_km",
                    help="Gaussian distance taper (km) for the regional pool weights.")
-    p.add_argument("--intra-year-correlation", dest="intra_year_correlation",
+    p.add_argument("--within-year", dest="within_year",
                    action="store_true", default=None,
                    help="Enable within-season (intra-year) day clustering.")
-    p.add_argument("--no-intra-year-correlation", dest="intra_year_correlation",
+    p.add_argument("--no-within-year", dest="within_year",
                    action="store_false", help="Disable within-season day clustering.")
-    p.add_argument("--within-season-rho", type=float, dest="within_season_rho",
+    p.add_argument("--within-year-rho", type=float, dest="within_year_rho",
                    help="Within-season clustering strength in [0, 1) (overrides calibration).")
     p.add_argument("--no-sequencing", dest="sequencing", action="store_false",
                    default=None, help="Skip the chronological event timeline columns.")
@@ -274,14 +274,14 @@ def _apply_cli(config: dict) -> dict:
     for key in ("storm_type", "input_csv", "daily_csv", "crl_ids", "radius_km",
                 "sim_years", "n_realizations", "day_method", "seed",
                 "ar_phi", "ar_beta", "overdispersion", "regional_pool_km",
-                "regional_pool_sigma_km", "within_season_rho"):
+                "regional_pool_sigma_km", "within_year_rho"):
         val = getattr(args, key)
         if val is not None:
             config[key] = val
-    if args.correlation is not None:
-        config["correlation"] = args.correlation
-    if args.intra_year_correlation is not None:
-        config["intra_year_correlation"] = args.intra_year_correlation
+    if args.year_to_year is not None:
+        config["year_to_year"] = args.year_to_year
+    if args.within_year is not None:
+        config["within_year"] = args.within_year
     if args.sequencing is not None:
         config["sequencing"] = args.sequencing
     if args.plots_on is not None:

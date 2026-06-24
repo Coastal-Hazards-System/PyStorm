@@ -43,17 +43,17 @@ def poisson_rate(srr_all: float, radius_km: float) -> float:
     return float(srr_all) * 2.0 * float(radius_km)
 
 
-def draw_counts(lam: float, n_real: int, n_years: int, *, correlation: bool = False,
+def draw_counts(lam: float, n_real: int, n_years: int, *, year_to_year: bool = False,
                 ar_phi: float = 0.0, ar_beta: float = 0.0,
                 overdispersion: float = 0.0, rng) -> np.ndarray:
     """Annual TC counts on the (R, Y) grid.
 
-    correlation=False is the independent Poisson(lambda) baseline. When True, the
+    year_to_year=False is the independent Poisson(lambda) baseline. When True, the
     rate is modulated by a per-realization AR(1) latent climate state (mean-
     preserving) and/or an i.i.d. Gamma overdispersion, so active and quiet years
     cluster. The annual mean stays lambda, so the overall rate is unchanged.
     """
-    if not correlation or (ar_beta == 0.0 and overdispersion == 0.0):
+    if not year_to_year or (ar_beta == 0.0 and overdispersion == 0.0):
         return rng.poisson(lam, size=(n_real, n_years))
 
     rate = np.full((n_real, n_years), float(lam))
@@ -150,10 +150,10 @@ def _norm_cdf(z: np.ndarray) -> np.ndarray:
 
 
 def _draw_doy(stratum: np.ndarray, doy_pmf: np.ndarray, rng, *, cell=None,
-              within_season_rho: float = 0.0) -> np.ndarray:
+              within_year_rho: float = 0.0) -> np.ndarray:
     """Inverse-CDF day-of-year (1..365) per TC, from its stratum's day pmf.
 
-    With ``within_season_rho`` > 0 the day quantiles of TCs sharing a (realization,
+    With ``within_year_rho`` > 0 the day quantiles of TCs sharing a (realization,
     year) cell are positively correlated through a shared-factor Gaussian copula,
     z_i = sqrt(rho) * xi_cell + sqrt(1-rho) * eta_i, U_i = Phi(z_i), so a year's storms
     bunch into a sub-seasonal window (within-season clustering). Each U_i stays
@@ -161,10 +161,10 @@ def _draw_doy(stratum: np.ndarray, doy_pmf: np.ndarray, rng, *, cell=None,
     both preserved exactly; rho = 0 is the independent inhomogeneous-Poisson placement.
     """
     n = stratum.size
-    clustered = within_season_rho > 0.0 and cell is not None and n > 0
+    clustered = within_year_rho > 0.0 and cell is not None and n > 0
     u = None
     if clustered:
-        rho = float(within_season_rho)
+        rho = float(within_year_rho)
         xi = rng.standard_normal(int(cell.max()) + 1)[cell]   # one factor per cell
         eta = rng.standard_normal(n)
         u = _norm_cdf(np.sqrt(rho) * xi + np.sqrt(1.0 - rho) * eta)
@@ -188,13 +188,13 @@ def _draw_doy(stratum: np.ndarray, doy_pmf: np.ndarray, rng, *, cell=None,
 
 
 def simulate(srr: CRLSrr, *, radius_km: float, sim_years: int, n_realizations: int,
-             rng, correlation: bool = False, ar_phi: float = 0.0, ar_beta: float = 0.0,
-             overdispersion: float = 0.0, within_season_rho: float = 0.0,
+             rng, year_to_year: bool = False, ar_phi: float = 0.0, ar_beta: float = 0.0,
+             overdispersion: float = 0.0, within_year_rho: float = 0.0,
              sequencing: bool = True) -> SimOutput:
     """Run the life-cycle Monte-Carlo for one CRL and return its synthetic catalog.
 
     ``correlation`` adds serial correlation / overdispersion to the annual counts;
-    ``within_season_rho`` adds within-season (intra-year) clustering of the event days
+    ``within_year_rho`` adds within-season (intra-year) clustering of the event days
     (a shared-factor Gaussian copula, count- and seasonal-marginal-preserving);
     ``sequencing`` adds the chronological event timeline. All default to the
     independent baseline, with sequencing on.
@@ -208,7 +208,7 @@ def simulate(srr: CRLSrr, *, radius_km: float, sim_years: int, n_realizations: i
     lam = poisson_rate(srr.annual["all"], radius_km)
     p = stratum_probs(srr.annual)
 
-    counts = draw_counts(lam, n_realizations, sim_years, correlation=correlation,
+    counts = draw_counts(lam, n_realizations, sim_years, year_to_year=year_to_year,
                          ar_phi=ar_phi, ar_beta=ar_beta, overdispersion=overdispersion,
                          rng=rng)
     fano, acf1 = _count_diagnostics(counts)
@@ -230,7 +230,7 @@ def simulate(srr: CRLSrr, *, radius_km: float, sim_years: int, n_realizations: i
     stratum = np.clip(stratum, 0, len(STRATA) - 1).astype(np.int32)
 
     doy = _draw_doy(stratum, srr.doy_pmf, rng, cell=cell,
-                    within_season_rho=within_season_rho)
+                    within_year_rho=within_year_rho)
 
     catalog = pd.DataFrame({
         "realization": realization,

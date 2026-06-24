@@ -48,7 +48,7 @@ class LCSConfig(BaseModel):
     daily_csv: Optional[Union[str, Path]] = None
     # selection_csv : the SCA per-CRL selected-TC table selection_<basin>_<v>.csv,
     # used to CALIBRATE the correlation parameters from each CRL's historical annual
-    # counts. None auto-locates it next to input_csv (only read when correlation=True).
+    # counts. None auto-locates it next to input_csv (only read when year_to_year=True).
     selection_csv: Optional[Union[str, Path]] = None
 
     # ── Site and footprint ─────────────────────────────────────────────────────
@@ -75,7 +75,7 @@ class LCSConfig(BaseModel):
     seed: Optional[int] = 12345
 
     # ── Serial correlation + clustering of annual counts (off by default) ───────
-    # correlation=False keeps the independent Poisson(lambda) baseline exactly.
+    # year_to_year=False keeps the independent Poisson(lambda) baseline exactly.
     # When True, the annual rate is modulated by a persistent latent climate state
     # and/or made overdispersed, so active and quiet years cluster:
     #     S_y      = ar_phi * S_{y-1} + sqrt(1-ar_phi^2) * eps_y   (AR(1), N(0,1))
@@ -85,12 +85,12 @@ class LCSConfig(BaseModel):
     # lifts the count variance (Fano = 1 + lambda*overdispersion). The annual mean rate
     # is preserved, so the catalog still matches the SRR.
     #
-    # When correlation=True, each parameter left as None is CALIBRATED from the CRL's
+    # When year_to_year=True, each parameter left as None is CALIBRATED from the CRL's
     # historical annual counts (the SCA selection): overdispersion = (Fano-1)/mean and
     # ar_beta/ar_phi from the lag-1/lag-2 count autocorrelation. Set a number to
     # override that estimate. A sparse, low-rate CRL typically calibrates to ~0
     # (Poisson), which is the statistically appropriate result.
-    correlation: bool = False
+    year_to_year: bool = False
     ar_phi: Optional[float] = None         # AR(1) persistence [0, 1); None -> calibrate
     ar_beta: Optional[float] = None        # log-rate sensitivity (>=0); None -> calibrate
     overdispersion: Optional[float] = None  # rate-multiplier variance (>=0); None -> calibrate
@@ -106,17 +106,17 @@ class LCSConfig(BaseModel):
     regional_pool_sigma_km: Optional[float] = None
 
     # ── Within-season (intra-year) clustering ──────────────────────────────────
-    # intra_year_correlation=False keeps the independent day placement exactly (an
+    # within_year=False keeps the independent day placement exactly (an
     # inhomogeneous Poisson process). When True, each year's TCs bunch into a
     # sub-seasonal active window beyond the seasonal SRR shape, via a shared-factor
     # Gaussian copula on the event days that preserves the annual count AND the
     # seasonal day-of-year marginal exactly (only the within-year inter-arrival gaps
     # tighten). This is the INTRA-year analogue of the INTER-year correlation layer.
-    # within_season_rho is the clustering strength in [0, 1): None (default) CALIBRATES
+    # within_year_rho is the clustering strength in [0, 1): None (default) CALIBRATES
     # it from the historical within-year storm-day correlation (the SCA selection's doy
-    # column); a number overrides. Ignored when intra_year_correlation is False.
-    intra_year_correlation: bool = False
-    within_season_rho: Optional[float] = None
+    # column); a number overrides. Ignored when within_year is False.
+    within_year: bool = False
+    within_year_rho: Optional[float] = None
 
     # ── Event sequencing ───────────────────────────────────────────────────────
     # Add the chronological event timeline to the catalog: a continuous event_time
@@ -207,14 +207,14 @@ class LCSConfig(BaseModel):
             raise ValueError("regional pool distances must be > 0 or None.")
         return float(v)
 
-    @field_validator("within_season_rho", mode="before")
+    @field_validator("within_year_rho", mode="before")
     @classmethod
     def _rho_unit_range(cls, v):
         if v is None:
             return None
         v = float(v)
         if not (0.0 <= v < 1.0):
-            raise ValueError("within_season_rho must be in [0, 1) or None (calibrate).")
+            raise ValueError("within_year_rho must be in [0, 1) or None (calibrate).")
         return v
 
     @field_validator("plots", mode="before")

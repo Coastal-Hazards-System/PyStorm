@@ -238,7 +238,7 @@ def test_writers_roundtrip(tmp_path):
 # ---------------------------------------------------------------------------
 
 def test_config_correlation_validators():
-    assert LCSConfig(input_csv="x").correlation is False        # off by default
+    assert LCSConfig(input_csv="x").year_to_year is False        # off by default
     assert LCSConfig(input_csv="x").sequencing is True          # on by default
     assert LCSConfig(input_csv="x", ar_phi=0.7).ar_phi == 0.7
     for bad in (dict(ar_phi=1.0), dict(ar_phi=-0.1), dict(overdispersion=-1.0)):
@@ -247,7 +247,7 @@ def test_config_correlation_validators():
 
 
 def test_draw_counts_poisson_baseline():
-    c = simulator.draw_counts(0.8, 3000, 60, correlation=False,
+    c = simulator.draw_counts(0.8, 3000, 60, year_to_year=False,
                               rng=np.random.default_rng(0))
     assert c.shape == (3000, 60)
     assert c.mean() == pytest.approx(0.8, rel=0.05)
@@ -256,7 +256,7 @@ def test_draw_counts_poisson_baseline():
 
 
 def test_draw_counts_overdispersion_lifts_fano_preserves_mean():
-    c = simulator.draw_counts(2.0, 3000, 60, correlation=True, overdispersion=0.5,
+    c = simulator.draw_counts(2.0, 3000, 60, year_to_year=True, overdispersion=0.5,
                               rng=np.random.default_rng(1))
     assert c.mean() == pytest.approx(2.0, rel=0.05)             # mean preserved
     fano, acf1 = simulator._count_diagnostics(c)
@@ -265,7 +265,7 @@ def test_draw_counts_overdispersion_lifts_fano_preserves_mean():
 
 
 def test_draw_counts_serial_correlation_positive_acf():
-    c = simulator.draw_counts(2.0, 4000, 80, correlation=True, ar_phi=0.7, ar_beta=0.5,
+    c = simulator.draw_counts(2.0, 4000, 80, year_to_year=True, ar_phi=0.7, ar_beta=0.5,
                               rng=np.random.default_rng(2))
     assert c.mean() == pytest.approx(2.0, rel=0.06)            # mean preserved
     fano, acf1 = simulator._count_diagnostics(c)
@@ -291,7 +291,7 @@ def test_simulate_with_correlation_and_sequencing():
     srr_df, daily_df = _srr_table(), _daily_table()
     s = srr_source.build_crl_srr(srr_df, daily_df, 1, day_method="daily")
     out = simulator.simulate(s, radius_km=200.0, sim_years=50, n_realizations=400,
-                             rng=np.random.default_rng(7), correlation=True,
+                             rng=np.random.default_rng(7), year_to_year=True,
                              ar_phi=0.6, ar_beta=0.5, overdispersion=0.3, sequencing=True)
     assert {"event_time", "seq", "wait_yr"} <= set(out.catalog.columns)
     assert out.fano > 1.0                                          # overdispersed
@@ -312,20 +312,20 @@ def test_norm_cdf_matches_known_values():
     assert np.all(np.diff(phi) > 0) and phi[0] < 0.01 and phi[-1] > 0.99
 
 
-def test_within_season_rho_validator():
-    LCSConfig(input_csv="x", within_season_rho=0.5)
-    assert LCSConfig(input_csv="x", within_season_rho=None).within_season_rho is None
+def test_within_year_rho_validator():
+    LCSConfig(input_csv="x", within_year_rho=0.5)
+    assert LCSConfig(input_csv="x", within_year_rho=None).within_year_rho is None
     for bad in (1.0, -0.1):
         with pytest.raises(Exception):
-            LCSConfig(input_csv="x", within_season_rho=bad)
+            LCSConfig(input_csv="x", within_year_rho=bad)
 
 
-def test_within_season_latent_is_monotone_and_standardized():
+def test_within_year_latent_is_monotone_and_standardized():
     from life_cycle_simulation import calibration as C
     cdf = np.linspace(0.0, 1.0, 365)                              # uniform season
-    z = C.within_season_latent(np.array([10, 100, 200, 300, 360]), cdf)
+    z = C.within_year_latent(np.array([10, 100, 200, 300, 360]), cdf)
     assert np.all(np.diff(z) > 0)                                # increasing in day
-    full = C.within_season_latent(np.arange(1, 366), cdf)
+    full = C.within_year_latent(np.arange(1, 366), cdf)
     assert abs(full.mean()) < 1e-6 and abs(full.std() - 1.0) < 0.05
 
 
@@ -337,7 +337,7 @@ def test_within_season_estimator_recovers_rho():
     xi = rng.standard_normal(n_years)[years]
     for rho in (0.0, 0.45):                                       # shared-factor latent
         z = np.sqrt(rho) * xi + np.sqrt(1.0 - rho) * rng.standard_normal(years.size)
-        rho_hat, n = C.within_season_rho_estimate(z, years)
+        rho_hat, n = C.within_year_rho_estimate(z, years)
         assert n == n_years and abs(rho_hat - rho) < 0.08
 
 
@@ -351,8 +351,8 @@ def test_within_season_estimator_weights_downweight_far_group():
     zb = rng.standard_normal(yb.size)
     z = np.concatenate([za, zb]); grp = np.concatenate([ya, yb])
     w = np.concatenate([np.ones(ya.size), np.full(yb.size, 1e-6)])
-    rho_w, _ = C.within_season_rho_estimate(z, grp, w)           # taper -> near signal
-    rho_u, _ = C.within_season_rho_estimate(z, grp)              # uniform -> diluted
+    rho_w, _ = C.within_year_rho_estimate(z, grp, w)           # taper -> near signal
+    rho_u, _ = C.within_year_rho_estimate(z, grp)              # uniform -> diluted
     assert rho_w > rho_u + 0.1
 
 
@@ -361,7 +361,7 @@ def test_plot_within_season_renders(tmp_path):
     from life_cycle_simulation import plots
     s = srr_source.build_crl_srr(_srr_table(), _daily_table(), 1, day_method="daily")
     out = simulator.simulate(s, radius_km=200.0, sim_years=60, n_realizations=400,
-                             rng=np.random.default_rng(0), within_season_rho=0.4)
+                             rng=np.random.default_rng(0), within_year_rho=0.4)
     p = plots.plot_within_season(out.catalog, np.array([5.0, 10, 20, 30, 8, 15]),
                                  rho=0.4, subtitle="t", out_path=tmp_path / "ws.png")
     assert p.is_file()
@@ -371,7 +371,7 @@ def _sim_rho(rho, seed=4):
     srr_df, daily_df = _srr_table(), _daily_table()
     s = srr_source.build_crl_srr(srr_df, daily_df, 1, day_method="daily")
     return simulator.simulate(s, radius_km=200.0, sim_years=100, n_realizations=800,
-                              rng=np.random.default_rng(seed), within_season_rho=rho)
+                              rng=np.random.default_rng(seed), within_year_rho=rho)
 
 
 def test_within_season_preserves_count_and_seasonal_marginal():
@@ -392,7 +392,7 @@ def test_within_season_clustering_tightens_intra_year_gaps():
 
     def within_year_spread(rho):
         out = simulator.simulate(s, radius_km=200.0, sim_years=100, n_realizations=800,
-                                 rng=np.random.default_rng(4), within_season_rho=rho)
+                                 rng=np.random.default_rng(4), within_year_rho=rho)
         stds = out.catalog.groupby(["realization", "year"])["doy"].std().dropna()
         return float(stds.mean())                                 # multi-event years only
     # Clustering pulls a year's storms together -> smaller within-year day spread.
@@ -487,20 +487,20 @@ def test_end_to_end_correlation_calibration(tmp_path):
         tmp_path / "selection_atlantic_1938-2025_20260227.csv", index=False)
 
     result = api.run({"input_csv": in_csv, "crl_ids": [1, 2], "output_dir": tmp_path / "out",
-                      "n_realizations": 60, "sim_years": 40, "seed": 1, "correlation": True})
+                      "n_realizations": 60, "sim_years": 40, "seed": 1, "year_to_year": True})
     cat = pd.read_csv(result.results[1].catalog_path)
     assert {"event_time", "seq", "wait_yr"} <= set(cat.columns)   # sequencing applied
 
     # Regional pooling: a large pool radius merges both CRLs for the calibration.
     pooled = api.run({"input_csv": in_csv, "crl_ids": [1, 2], "output_dir": tmp_path / "out2",
-                      "n_realizations": 60, "sim_years": 40, "seed": 1, "correlation": True,
+                      "n_realizations": 60, "sim_years": 40, "seed": 1, "year_to_year": True,
                       "regional_pool_km": 50000.0})
     assert pooled.results[1].catalog_path.is_file()
 
     # Within-season layer with rho=None calibrates from the selection's doy column.
     ws = api.run({"input_csv": in_csv, "crl_ids": [1], "output_dir": tmp_path / "out3",
                   "n_realizations": 60, "sim_years": 40, "seed": 1,
-                  "intra_year_correlation": True})
+                  "within_year": True})
     assert ws.results[1].catalog_path.is_file()
 
 

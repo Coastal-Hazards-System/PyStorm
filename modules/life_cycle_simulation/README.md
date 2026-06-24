@@ -35,7 +35,7 @@ realizations. No C++ engine: the work is light and fully NumPy-vectorized.
 
 ### Serial correlation and clustering (optional)
 
-With `correlation=True` the independent Poisson in step 2 is replaced by a
+With `year_to_year=True` the independent Poisson in step 2 is replaced by a
 serially-correlated, overdispersed annual rate, so active and quiet years cluster
 (the annual mean is preserved, so the catalog still matches the SRR):
 
@@ -75,15 +75,15 @@ set `regional_pool_km` to roughly `2-3 sigma` to truncate only a negligible tail
 ### Within-season clustering (optional, intra-year)
 
 The correlation layer above acts on the annual *count*; it does not change *when*
-within a year storms land. `intra_year_correlation=False` (default) places a year's
+within a year storms land. `within_year=False` (default) places a year's
 storms independently from the seasonal shape (an inhomogeneous Poisson process). When
-**`intra_year_correlation=True`**, a year's storms bunch into a sub-seasonal active
+**`within_year=True`**, a year's storms bunch into a sub-seasonal active
 window (an MJO-phase or persistent-pattern effect) via a **shared-factor Gaussian
 copula** on the event days, which preserves **both** the annual count and the seasonal
 day-of-year marginal exactly; only the within-year inter-arrival gaps tighten. This is
-the *intra*-year analogue of `correlation` (the *inter*-year, count-level layer).
+the *intra*-year analogue of `year_to_year` (the *inter*-year, count-level layer).
 
-The strength `within_season_rho` in `[0, 1)` defaults to `None` = **calibrated** from
+The strength `within_year_rho` in `[0, 1)` defaults to `None` = **calibrated** from
 the historical within-year storm-day correlation: each selected storm's `doy` is
 mapped to its seasonal quantile and then to a latent normal, and rho is the within-year
 correlation of those normals (with a one-standard-error small-sample shrinkage so a
@@ -190,15 +190,15 @@ directly.
 | `n_realizations` | `1000` | Independent realizations |
 | `day_method` | `"daily"` | `"daily"` (smooth) or `"monthly"` (month + uniform day) |
 | `seed` | `12345` | Reproducible RNG; `None` = nondeterministic |
-| `correlation` | `False` | Serial correlation + overdispersion of annual counts (else independent Poisson) |
+| `year_to_year` | `False` | Serial correlation + overdispersion of annual counts (else independent Poisson) |
 | `ar_phi` | `None` | AR(1) persistence `[0, 1)`; `None` = calibrate from history |
 | `ar_beta` | `None` | Log-rate sensitivity to the state (lag-1 ACF); `None` = calibrate |
 | `overdispersion` | `None` | Rate-multiplier variance (`Fano = 1 + lambda*overdispersion`); `None` = calibrate |
 | `regional_pool_km` | `None` | Pool CRLs within this many km for the calibration (regional); `None` = per-CRL |
 | `regional_pool_sigma_km` | `None` | Gaussian distance taper for the pool (`exp(-d^2/2 sigma^2)`); `None` = uniform |
 | `selection_csv` | `None` | SCA selection table for calibration; `None` auto-locates next to `input_csv` |
-| `intra_year_correlation` | `False` | Within-season (intra-year) day clustering (else independent placement) |
-| `within_season_rho` | `None` | Intra-year clustering strength `[0, 1)`; `None` = calibrate from history |
+| `within_year` | `False` | Within-season (intra-year) day clustering (else independent placement) |
+| `within_year_rho` | `None` | Intra-year clustering strength `[0, 1)`; `None` = calibrate from history |
 | `sequencing` | `True` | Add the chronological event timeline (`event_time`, `seq`, `wait_yr`) |
 | `make_plots` | `False` | Write the per-CRL diagnostic figures |
 | `output_dir` | `data/outputs` | Where catalogs and summaries land |

@@ -189,7 +189,7 @@ def _norm_ppf(p: np.ndarray) -> np.ndarray:
     return x
 
 
-def within_season_latent(doy, doy_cdf) -> np.ndarray:
+def within_year_latent(doy, doy_cdf) -> np.ndarray:
     """Latent standard-normal z for each storm: z = Phi^-1(F(doy)), standardized.
 
     ``doy_cdf`` is the cumulative seasonal probability over days 1..365 (the stratum-
@@ -204,7 +204,7 @@ def within_season_latent(doy, doy_cdf) -> np.ndarray:
     return (z - z.mean()) / (z.std() + 1e-12) if z.size else z
 
 
-def within_season_rho_estimate(z, group, weight=None):
+def within_year_rho_estimate(z, group, weight=None):
     """Shared-factor copula rho from the within-group correlation of latent normals z.
 
     Storms grouped by (CRL, year) share a latent season-phase factor, so same-group
