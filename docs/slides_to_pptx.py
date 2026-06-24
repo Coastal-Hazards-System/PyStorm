@@ -250,7 +250,10 @@ for n_idx, sl in enumerate(slides, 1):
         rows = [r for r in tbl_rows if not re.match(r"\s*\|[\s:|-]+\|\s*$", r)]
         grid = [[c.strip() for c in r.strip().strip("|").split("|")] for r in rows]
         nr, nc = len(grid), max(len(r) for r in grid)
-        rh = 0.47
+        # Shrink row height so the table (and any trailing text) fits the body region.
+        reserve = 0.95 if post else 0.12
+        rh = min(0.47, max(0.28, (BODY_BOTTOM - cur - reserve) / nr))
+        tfont = 15 if rh >= 0.40 else (14 if rh >= 0.34 else 12)
         gt = s.shapes.add_table(nr, nc, Inches(MX), Inches(cur), Inches(CW),
                                 Inches(rh * nr)).table
         for ri, row in enumerate(grid):
@@ -258,9 +261,9 @@ for n_idx, sl in enumerate(slides, 1):
             for ci in range(nc):
                 cell = gt.cell(ri, ci)
                 cell.text = inline(row[ci]) if ci < len(row) else ""
-                cell.margin_top = cell.margin_bottom = Pt(2)
+                cell.margin_top = cell.margin_bottom = Pt(1)
                 for rn in cell.text_frame.paragraphs[0].runs:
-                    rn.font.size = Pt(15); rn.font.name = BODYF
+                    rn.font.size = Pt(tfont); rn.font.name = BODYF
                     rn.font.bold = (ri == 0)
                     rn.font.color.rgb = WHITE if ri == 0 else INK
         cur += rh * nr + 0.15
