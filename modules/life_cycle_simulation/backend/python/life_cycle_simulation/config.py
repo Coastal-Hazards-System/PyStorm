@@ -74,9 +74,9 @@ class LCSConfig(BaseModel):
     # Each CRL draws from an independent sub-stream derived from (seed, crl_id).
     seed: Optional[int] = 12345
 
-    # ── Serial correlation + clustering of annual counts (off by default) ───────
+    # ── Serial correlation + clustering of annual counts (on by default) ────────
     # year_to_year=False keeps the independent Poisson(lambda) baseline exactly.
-    # When True, the annual rate is modulated by a persistent latent climate state
+    # When True (default), the annual rate is modulated by a persistent latent climate state
     # and/or made overdispersed, so active and quiet years cluster:
     #     S_y      = ar_phi * S_{y-1} + sqrt(1-ar_phi^2) * eps_y   (AR(1), N(0,1))
     #     lambda_y = lambda * exp(ar_beta*S_y - ar_beta^2/2)       (mean-preserving)
@@ -90,7 +90,7 @@ class LCSConfig(BaseModel):
     # ar_beta/ar_phi from the lag-1/lag-2 count autocorrelation. Set a number to
     # override that estimate. A sparse, low-rate CRL typically calibrates to ~0
     # (Poisson), which is the statistically appropriate result.
-    year_to_year: bool = False
+    year_to_year: bool = True
     ar_phi: Optional[float] = None         # AR(1) persistence [0, 1); None -> calibrate
     ar_beta: Optional[float] = None        # log-rate sensitivity (>=0); None -> calibrate
     overdispersion: Optional[float] = None  # rate-multiplier variance (>=0); None -> calibrate
@@ -105,9 +105,9 @@ class LCSConfig(BaseModel):
     # fading toward the edge (e.g. sigma = regional_pool_km / 2). Needs regional_pool_km.
     regional_pool_sigma_km: Optional[float] = None
 
-    # ── Within-season (intra-year) clustering ──────────────────────────────────
+    # ── Within-season (intra-year) clustering (on by default) ──────────────────
     # within_year=False keeps the independent day placement exactly (an
-    # inhomogeneous Poisson process). When True, the days of a year's TCs are
+    # inhomogeneous Poisson process). When True (default), the days of a year's TCs are
     # correlated by an exchangeable Gaussian copula that preserves the annual count AND
     # the seasonal day-of-year marginal exactly (only the within-year inter-arrival
     # gaps change). This is the INTRA-year analogue of the INTER-year correlation layer.
@@ -117,7 +117,7 @@ class LCSConfig(BaseModel):
     # historical within-year storm-day correlation (the SCA selection's doy column),
     # regionally pooled like the count calibration; a number overrides. Ignored when
     # within_year is False.
-    within_year: bool = False
+    within_year: bool = True
     within_year_rho: Optional[float] = None
 
     # ── Event sequencing ───────────────────────────────────────────────────────

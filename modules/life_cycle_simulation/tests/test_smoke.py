@@ -238,8 +238,9 @@ def test_writers_roundtrip(tmp_path):
 # ---------------------------------------------------------------------------
 
 def test_config_correlation_validators():
-    assert LCSConfig(input_csv="x").year_to_year is False        # off by default
-    assert LCSConfig(input_csv="x").sequencing is True          # on by default
+    assert LCSConfig(input_csv="x").year_to_year is True         # on by default
+    assert LCSConfig(input_csv="x").within_year is True          # on by default
+    assert LCSConfig(input_csv="x").sequencing is True           # on by default
     assert LCSConfig(input_csv="x", ar_phi=0.7).ar_phi == 0.7
     for bad in (dict(ar_phi=1.0), dict(ar_phi=-0.1), dict(overdispersion=-1.0)):
         with pytest.raises(Exception):

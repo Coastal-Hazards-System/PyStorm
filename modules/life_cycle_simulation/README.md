@@ -191,14 +191,14 @@ directly.
 | `n_realizations` | `1000` | Independent realizations |
 | `day_method` | `"daily"` | `"daily"` (smooth) or `"monthly"` (month + uniform day) |
 | `seed` | `12345` | Reproducible RNG; `None` = nondeterministic |
-| `year_to_year` | `False` | Serial correlation + overdispersion of annual counts (else independent Poisson) |
+| `year_to_year` | `True` | Serial correlation + overdispersion of annual counts (on by default; `False` = independent Poisson) |
 | `ar_phi` | `None` | AR(1) persistence `[0, 1)`; `None` = calibrate from history |
 | `ar_beta` | `None` | Log-rate sensitivity to the state (lag-1 ACF); `None` = calibrate |
 | `overdispersion` | `None` | Rate-multiplier variance (`Fano = 1 + lambda*overdispersion`); `None` = calibrate |
 | `regional_pool_km` | `None` | Pool CRLs within this many km for the calibration (regional); `None` = per-CRL |
 | `regional_pool_sigma_km` | `None` | Gaussian distance taper for the pool (`exp(-d^2/2 sigma^2)`); `None` = uniform |
 | `selection_csv` | `None` | SCA selection table for calibration; `None` auto-locates next to `input_csv` |
-| `within_year` | `False` | Within-season (intra-year) day clustering (else independent placement) |
+| `within_year` | `True` | Within-season (intra-year) day clustering (on by default; `False` = independent placement) |
 | `within_year_rho` | `None` | Intra-year day correlation `(-1, 1)` (+ cluster, - regular); `None` = calibrate |
 | `sequencing` | `True` | Add the chronological event timeline (`event_time`, `seq`, `wait_yr`) |
 | `make_plots` | `False` | Write the per-CRL diagnostic figures |

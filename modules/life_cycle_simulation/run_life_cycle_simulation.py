@@ -101,11 +101,7 @@ N_REALIZATIONS = 1000     # independent realizations of that life cycle
 #             within that month. Uses only INPUT_CSV.
 DAY_METHOD = "daily"
 
-# Random seed for reproducibility (None = a fresh nondeterministic stream). Each
-# CRL draws from an independent sub-stream derived from (SEED, crl_id).
-SEED = 12345
-
-# ── Year-to-year (inter-year) clustering of annual counts (off by default) ────
+# ── Year-to-year (inter-year) clustering of annual counts (on by default) ─────
 # YEAR_TO_YEAR=False keeps the independent Poisson baseline exactly. When True, the
 # annual rate gains year-to-year memory and/or overdispersion, so active and quiet
 # years cluster (the annual mean rate is preserved). The three parameters below are
@@ -122,9 +118,9 @@ AR_PHI         = None    # None = calibrate from history; or set a value to over
 AR_BETA        = None
 OVERDISPERSION = None
 
-# ── Within-year (intra-year) clustering of storm days (off by default) ────────
+# ── Within-year (intra-year) clustering of storm days (on by default) ─────────
 # WITHIN_YEAR=False keeps independent day placement exactly (an inhomogeneous Poisson
-# process). When True, the days of a year's storms are correlated by an exchangeable
+# process). When True (default), the days of a year's storms are correlated by an exchangeable
 # Gaussian copula on the event days, so it preserves BOTH the annual count and the
 # seasonal day-of-year marginal exactly; only the within-year inter-arrival gaps
 # change. This is the INTRA-year analogue of YEAR_TO_YEAR (the INTER-year, count-level
@@ -137,8 +133,6 @@ OVERDISPERSION = None
 #                     doy); set a number to override.
 WITHIN_YEAR     = True
 WITHIN_YEAR_RHO = None    # None = calibrate from history; or set a value to override
-
-# ── Regional pooling for calibration (applies to BOTH layers above) ───────────
 # The clustering signals are basin/regional and weak at one sparse CRL, so the None
 # (calibrated) parameters of YEAR_TO_YEAR and WITHIN_YEAR can pool neighbouring CRLs.
 # REGIONAL_POOL_KM: pool every CRL within this many km of the target. None = per-CRL
@@ -188,6 +182,10 @@ PLOT_DIR   = DATA / "outputs" / "plots"
 
 # ── Output ───────────────────────────────────────────────────────────────────
 OUTPUT_DIR = DATA / "outputs"
+
+# Random seed for reproducibility (None = a fresh nondeterministic stream). Each
+# CRL draws from an independent sub-stream derived from (SEED, crl_id).
+SEED = 628
 
 # ===========================================================================
 # END USER OPTIONS  - nothing below should need editing for routine use
