@@ -62,6 +62,12 @@ surfaces the modest regional overdispersion that a single CRL cannot resolve (e.
 Gulf CRL moves from `Fano ~ 1.00` per-CRL to `~ 1.08` pooled over ~70 neighbours).
 `None` (default) keeps the per-CRL calibration.
 
+By default the pool weights every member CRL uniformly (a hard cutoff at
+`regional_pool_km`). Set **`regional_pool_sigma_km`** to instead taper the weights by
+distance, `w = exp(-d^2 / (2 sigma^2))`, so CRLs nearer the target (which share more
+of its climate state) count more, fading toward the edge; `sigma ~ regional_pool_km/2`
+is a reasonable choice. `None` keeps the uniform weighting.
+
 ### Sequencing
 
 With `sequencing=True` (default) the catalog gains a chronological event timeline:
@@ -160,6 +166,7 @@ directly.
 | `ar_beta` | `None` | Log-rate sensitivity to the state (lag-1 ACF); `None` = calibrate |
 | `overdispersion` | `None` | Rate-multiplier variance (`Fano = 1 + lambda*overdispersion`); `None` = calibrate |
 | `regional_pool_km` | `None` | Pool CRLs within this many km for the calibration (regional); `None` = per-CRL |
+| `regional_pool_sigma_km` | `None` | Gaussian distance taper for the pool (`exp(-d^2/2 sigma^2)`); `None` = uniform |
 | `selection_csv` | `None` | SCA selection table for calibration; `None` auto-locates next to `input_csv` |
 | `sequencing` | `True` | Add the chronological event timeline (`event_time`, `seq`, `wait_yr`) |
 | `make_plots` | `False` | Write the per-CRL diagnostic figures |

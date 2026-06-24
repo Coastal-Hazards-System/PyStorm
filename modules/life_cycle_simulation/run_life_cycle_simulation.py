@@ -125,7 +125,11 @@ OVERDISPERSION = None
 # REGIONAL_POOL_KM: when calibrating, pool every CRL within this many km of the
 # target so the basin/regional clustering signal is estimated from many records
 # instead of one sparse history. None = per-CRL calibration (default); e.g. 300.
-REGIONAL_POOL_KM = None
+# REGIONAL_POOL_SIGMA_KM: optional Gaussian distance taper for that pool. None =
+# uniform weight (hard cutoff); a value weights nearer CRLs more, w=exp(-d^2/2sigma^2),
+# fading toward the edge (e.g. REGIONAL_POOL_KM / 2). Needs REGIONAL_POOL_KM.
+REGIONAL_POOL_KM = 600 # None
+REGIONAL_POOL_SIGMA_KM = 200 # None
 
 # ── Event sequencing ──────────────────────────────────────────────────────────
 # Add the chronological event timeline to the catalog: event_time (years), a
@@ -183,6 +187,7 @@ CONFIG = {
     "ar_beta":        AR_BETA,
     "overdispersion": OVERDISPERSION,
     "regional_pool_km": REGIONAL_POOL_KM,
+    "regional_pool_sigma_km": REGIONAL_POOL_SIGMA_KM,
     "sequencing":     SEQUENCING,
     "make_plots":     MAKE_PLOTS,
     "plots":          PLOTS,
@@ -218,6 +223,8 @@ def _apply_cli(config: dict) -> dict:
     p.add_argument("--overdispersion", type=float, help="Override OVERDISPERSION.")
     p.add_argument("--regional-pool-km", type=float, dest="regional_pool_km",
                    help="Pool CRLs within this many km for the calibration (regional).")
+    p.add_argument("--regional-pool-sigma-km", type=float, dest="regional_pool_sigma_km",
+                   help="Gaussian distance taper (km) for the regional pool weights.")
     p.add_argument("--no-sequencing", dest="sequencing", action="store_false",
                    default=None, help="Skip the chronological event timeline columns.")
     p.add_argument("--plots", dest="plots_on", action="store_true", default=None,
@@ -231,7 +238,8 @@ def _apply_cli(config: dict) -> dict:
     config = dict(config)
     for key in ("storm_type", "input_csv", "daily_csv", "crl_ids", "radius_km",
                 "sim_years", "n_realizations", "day_method", "seed",
-                "ar_phi", "ar_beta", "overdispersion", "regional_pool_km"):
+                "ar_phi", "ar_beta", "overdispersion", "regional_pool_km",
+                "regional_pool_sigma_km"):
         val = getattr(args, key)
         if val is not None:
             config[key] = val

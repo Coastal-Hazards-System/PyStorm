@@ -98,6 +98,11 @@ class LCSConfig(BaseModel):
     # signal is estimated from many CRLs instead of one sparse record. None (default)
     # calibrates from the target CRL alone. Ignored where parameters are overridden.
     regional_pool_km: Optional[float] = None
+    # regional_pool_sigma_km : optional Gaussian distance taper for the pool. None
+    # (default) weights every pooled CRL uniformly (a hard cutoff at regional_pool_km);
+    # a value applies w = exp(-d^2 / (2 sigma^2)) so CRLs nearer the target count more,
+    # fading toward the edge (e.g. sigma = regional_pool_km / 2). Needs regional_pool_km.
+    regional_pool_sigma_km: Optional[float] = None
 
     # ── Event sequencing ───────────────────────────────────────────────────────
     # Add the chronological event timeline to the catalog: a continuous event_time
@@ -179,13 +184,13 @@ class LCSConfig(BaseModel):
             raise ValueError("ar_beta and overdispersion must be >= 0 or None.")
         return float(v)
 
-    @field_validator("regional_pool_km", mode="before")
+    @field_validator("regional_pool_km", "regional_pool_sigma_km", mode="before")
     @classmethod
     def _pool_km_or_none(cls, v):
         if v is None:
             return None
         if float(v) <= 0.0:
-            raise ValueError("regional_pool_km must be > 0 or None (per-CRL).")
+            raise ValueError("regional pool distances must be > 0 or None.")
         return float(v)
 
     @field_validator("plots", mode="before")

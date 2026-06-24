@@ -357,6 +357,22 @@ def test_calibrate_correlation_regional_pools_dispersion():
         over, overdispersion=0.05)["overdispersion"] == 0.05
 
 
+def test_calibrate_correlation_regional_distance_taper():
+    from life_cycle_simulation import calibration
+    rng = np.random.default_rng(1)
+    od = [rng.poisson(0.8 * rng.gamma(1 / 0.5, 0.5, 80)).astype(float) for _ in range(6)]
+    pois = [rng.poisson(0.8, 80).astype(float) for _ in range(6)]
+    series = od + pois                                   # overdispersed near, Poisson far
+    # Uniform weights see both groups; a taper that zeroes the far (Poisson) group
+    # recovers a higher dispersion (closer to the near group alone).
+    uniform = calibration.calibrate_correlation_regional(series)
+    w = np.array([1.0] * 6 + [1e-6] * 6)                 # down-weight the far group
+    tapered = calibration.calibrate_correlation_regional(series, w)
+    near_only = calibration.calibrate_correlation_regional(od)
+    assert tapered["overdispersion"] > uniform["overdispersion"]
+    assert abs(tapered["overdispersion"] - near_only["overdispersion"]) < 0.05
+
+
 def test_end_to_end_correlation_calibration(tmp_path):
     import api_life_cycle_simulation as api
     in_csv = tmp_path / "srr_atlantic_1938-2025_20260227.csv"

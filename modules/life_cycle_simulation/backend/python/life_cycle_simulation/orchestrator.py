@@ -61,9 +61,9 @@ class LCSOrchestrator:
                 f"{self.cfg.n_realizations}real")
 
     def _pool_ids(self, srr_df, crl_id, pool_km):
-        """CRL ids within ``pool_km`` great-circle km of ``crl_id`` (incl. itself)."""
+        """(ids, dist_km) for CRLs within ``pool_km`` great-circle km of ``crl_id``."""
         if crl_id not in srr_df.index:
-            return [crl_id]
+            return [crl_id], np.zeros(1)
         lat0 = float(srr_df.loc[crl_id, "lat"]); lon0 = float(srr_df.loc[crl_id, "lon"])
         lat = np.radians(srr_df["lat"].to_numpy(float))
         lon = np.radians(srr_df["lon"].to_numpy(float))
@@ -71,7 +71,8 @@ class LCSOrchestrator:
         a = (np.sin(dlat / 2) ** 2
              + np.cos(np.radians(lat0)) * np.cos(lat) * np.sin(dlon / 2) ** 2)
         dist_km = 2.0 * 6371.0 * np.arcsin(np.sqrt(np.clip(a, 0.0, 1.0)))
-        return [int(c) for c in srr_df.index.to_numpy()[dist_km <= pool_km]]
+        mask = dist_km <= pool_km
+        return [int(c) for c in srr_df.index.to_numpy()[mask]], dist_km[mask]
 
     def _resolve_correlation(self, crl_id, srr_df, selection_df, cal_start):
         """Resolve (ar_phi, ar_beta, overdispersion): calibrate the None ones from
@@ -87,11 +88,15 @@ class LCSOrchestrator:
         kw = dict(ar_phi=cfg.ar_phi, ar_beta=cfg.ar_beta,
                   overdispersion=cfg.overdispersion)
         if cfg.regional_pool_km:
-            pool = self._pool_ids(srr_df, crl_id, cfg.regional_pool_km)
+            pool, dist_km = self._pool_ids(srr_df, crl_id, cfg.regional_pool_km)
             series = [calibration.crl_annual_counts(
                 selection_df, c, radius_km=cfg.radius_km, start_year=cal_start)
                 for c in pool]
-            cal = calibration.calibrate_correlation_regional(series, **kw)
+            weights = None
+            if cfg.regional_pool_sigma_km:                # Gaussian distance taper
+                sig = cfg.regional_pool_sigma_km
+                weights = np.exp(-(dist_km ** 2) / (2.0 * sig * sig))
+            cal = calibration.calibrate_correlation_regional(series, weights, **kw)
         else:
             counts = calibration.crl_annual_counts(
                 selection_df, crl_id, radius_km=cfg.radius_km, start_year=cal_start)

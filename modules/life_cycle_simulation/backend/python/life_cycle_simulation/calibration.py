@@ -108,7 +108,7 @@ def _series_moments(counts: np.ndarray):
     return mean, float(c.var()), autocov(1), autocov(2)
 
 
-def calibrate_correlation_regional(series, *, ar_phi: Optional[float] = None,
+def calibrate_correlation_regional(series, weights=None, *, ar_phi: Optional[float] = None,
                                    ar_beta: Optional[float] = None,
                                    overdispersion: Optional[float] = None,
                                    default_phi: float = 0.5, beta_max: float = 2.0) -> Dict:
@@ -120,21 +120,27 @@ def calibrate_correlation_regional(series, *, ar_phi: Optional[float] = None,
     Var_i - mean_i = mean_i^2 * v and lag-k autocovariance gamma_k,i = mean_i^2 *
     v_serial * phi^k, so the pooled, mean^2-weighted moments give
 
-        v       = sum_i (Var_i - mean_i) / sum_i mean_i^2          (total dispersion)
-        phi     = sum_i gamma_2,i / sum_i gamma_1,i                (geometric decay)
-        beta^2  = (sum_i gamma_1,i / sum_i mean_i^2) / phi,  capped by v
+        v       = sum_i w_i (Var_i - mean_i) / sum_i w_i mean_i^2  (total dispersion)
+        phi     = sum_i w_i gamma_2,i / sum_i w_i gamma_1,i        (geometric decay)
+        beta^2  = (sum_i w_i gamma_1,i / sum_i w_i mean_i^2) / phi, capped by v
         nu      = v - beta^2
 
-    This is mean-invariant (no bias from CRLs of different rate) and avoids storm
-    double-counting (it sums each CRL's own moments, never the overlapping counts).
-    Explicit (non-None) arguments override their estimate.
+    ``weights`` (aligned with ``series``, default all 1) multiply each CRL's
+    contribution: pass a Gaussian distance taper exp(-d^2/2 sigma^2) to make
+    neighbours nearer the target count more. This is mean-invariant (no bias from CRLs
+    of different rate) and avoids storm double-counting (it sums each CRL's own
+    moments, never the overlapping counts). Explicit (non-None) arguments override.
     """
-    moments = [_series_moments(c) for c in series if np.asarray(c).size]
-    m2 = sum(m * m for m, _, _, _ in moments)
-    g0 = sum(v - m for m, v, _, _ in moments)        # pooled excess variance
-    g1 = sum(g for _, _, g, _ in moments)
-    g2 = sum(g for _, _, _, g in moments)
-    mean_pool = float(np.mean([m for m, _, _, _ in moments])) if moments else 0.0
+    if weights is None:
+        weights = np.ones(len(series))
+    rows = [(float(w),) + _series_moments(c)
+            for w, c in zip(weights, series) if np.asarray(c).size]
+    m2 = sum(w * m * m for w, m, _, _, _ in rows)
+    g0 = sum(w * (v - m) for w, m, v, _, _ in rows)  # pooled excess variance
+    g1 = sum(w * g for w, _, _, g, _ in rows)
+    g2 = sum(w * g for w, _, _, _, g in rows)
+    wsum = sum(w for w, _, _, _, _ in rows)
+    mean_pool = sum(w * m for w, m, _, _, _ in rows) / wsum if wsum > 0 else 0.0
 
     disp = max(0.0, g0 / m2) if m2 > 0 else 0.0
     # Attribute variance to the serial term only with geometric-decay evidence
@@ -154,5 +160,5 @@ def calibrate_correlation_regional(series, *, ar_phi: Optional[float] = None,
         "ar_beta": beta_auto if ar_beta is None else float(ar_beta),
         "overdispersion": nu_auto if overdispersion is None else float(overdispersion),
         "mean": mean_pool, "fano": 1.0 + disp * mean_pool if mean_pool > 0 else 1.0,
-        "acf1": float(g1 / g0) if g0 > 0 else 0.0, "n_pooled": len(moments),
+        "acf1": float(g1 / g0) if g0 > 0 else 0.0, "n_pooled": len(rows),
     }
