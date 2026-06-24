@@ -25,16 +25,9 @@ archive/
 *.mat
 *.asv
 
-# White paper (local document, not versioned)
-GP_Metamodel_Whitepaper.md
-
 # Python caches
 __pycache__/
 *.pyc
 .pytest_cache/
 
-# Slide deck and its rendered artifacts (local documents, not versioned)
-GP_Metamodel_Slides.md
-GP_Metamodel_Slides*.pptx
-GP_Metamodel_Slides*.pdf
-GP_Metamodel_Slides*.html
+# Companion whitepaper + slide deck are ignored globally (repo-root .gitignore)
