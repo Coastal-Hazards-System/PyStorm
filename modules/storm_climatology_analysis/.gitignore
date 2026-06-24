@@ -1,2 +1,8 @@
 # White paper (local document, not versioned)
 SRR_GKF_Whitepaper.md
+
+# Slide deck and its rendered artifacts (local documents, not versioned)
+SRR_GKF_Slides.md
+SRR_GKF_Slides*.pptx
+SRR_GKF_Slides*.pdf
+SRR_GKF_Slides*.html
