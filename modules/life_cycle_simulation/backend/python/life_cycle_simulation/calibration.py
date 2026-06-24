@@ -204,26 +204,30 @@ def within_season_latent(doy, doy_cdf) -> np.ndarray:
     return (z - z.mean()) / (z.std() + 1e-12) if z.size else z
 
 
-def within_season_rho_estimate(z, group):
+def within_season_rho_estimate(z, group, weight=None):
     """Shared-factor copula rho from the within-group correlation of latent normals z.
 
     Storms grouped by (CRL, year) share a latent season-phase factor, so same-group
     pairs have correlation rho. Estimated as the pooled mean cross-product over all
     within-group pairs (sum of products / number of pairs), using only groups with at
-    least two storms. The raw estimate is shrunk toward zero by one standard error
-    (~1/sqrt(number of multi-storm years), the effective sample size) so a sparse CRL
-    is not assigned spurious strong clustering. Returns (rho in [0, 0.99], n groups).
+    least two storms. ``weight`` (per storm, default 1) multiplies each group's
+    contribution; pass a Gaussian distance taper to pool neighbours regionally with
+    nearer CRLs counting more. The raw estimate is shrunk toward zero by one standard
+    error (~1/sqrt(number of multi-storm groups), the effective sample size) so a
+    sparse pool is not assigned spurious strong clustering. Returns (rho, n groups).
     """
-    df = pd.DataFrame({"g": np.asarray(group), "z": np.asarray(z, float)})
-    gb = df.groupby("g")["z"]
-    s = gb.sum().to_numpy()
-    q = gb.apply(lambda v: float(np.dot(v, v))).to_numpy()
-    n = gb.count().to_numpy().astype(float)
+    df = pd.DataFrame({"g": np.asarray(group), "z": np.asarray(z, float),
+                       "w": 1.0 if weight is None else np.asarray(weight, float)})
+    gb = df.groupby("g")
+    s = gb["z"].sum().to_numpy()
+    q = gb["z"].apply(lambda v: float(np.dot(v, v))).to_numpy()
+    n = gb["z"].count().to_numpy().astype(float)
+    w = gb["w"].mean().to_numpy()                            # one weight per CRL-year
     m = n >= 2
     n_groups = int(m.sum())
-    pairs = (n[m] * (n[m] - 1.0) / 2.0).sum()
+    pairs = (w[m] * n[m] * (n[m] - 1.0) / 2.0).sum()
     if pairs <= 0:
         return 0.0, 0
-    rho_raw = ((s[m] ** 2 - q[m]) / 2.0).sum() / pairs       # sum_{i<j} z_i z_j / pairs
-    shrink = 1.0 / np.sqrt(max(n_groups, 1))                 # ~1 SE in the year count
-    return float(np.clip(rho_raw - shrink, 0.0, 0.99)), n_groups
+    cross = (w[m] * (s[m] ** 2 - q[m]) / 2.0).sum()          # weighted sum_{i<j} z_i z_j
+    shrink = 1.0 / np.sqrt(max(n_groups, 1))                 # ~1 SE in the group count
+    return float(np.clip(cross / pairs - shrink, 0.0, 0.99)), n_groups

@@ -23,7 +23,8 @@ STRATA = ("low", "med", "high")
 # so config validation stays free of the matplotlib import chain. "all" expands to
 # this tuple; see life_cycle_simulation.plots for what each figure shows.
 PLOT_KEYS = ("annual_fan", "annual_heatmap", "annual_violin", "cumulative",
-             "count_dist", "seasonality", "waiting_times", "clustering", "diagnostic")
+             "count_dist", "seasonality", "waiting_times", "within_season",
+             "clustering", "diagnostic")
 
 
 class LCSConfig(BaseModel):

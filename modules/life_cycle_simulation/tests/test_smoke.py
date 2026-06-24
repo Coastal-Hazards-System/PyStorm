@@ -341,6 +341,32 @@ def test_within_season_estimator_recovers_rho():
         assert n == n_years and abs(rho_hat - rho) < 0.08
 
 
+def test_within_season_estimator_weights_downweight_far_group():
+    from life_cycle_simulation import calibration as C
+    rng = np.random.default_rng(2)
+    g0 = 800
+    ya = np.repeat(np.arange(g0), 3)                             # near CRL: correlated
+    za = np.sqrt(0.5) * rng.standard_normal(g0)[ya] + np.sqrt(0.5) * rng.standard_normal(ya.size)
+    yb = np.repeat(np.arange(g0) + 10000, 3)                     # far CRL: independent
+    zb = rng.standard_normal(yb.size)
+    z = np.concatenate([za, zb]); grp = np.concatenate([ya, yb])
+    w = np.concatenate([np.ones(ya.size), np.full(yb.size, 1e-6)])
+    rho_w, _ = C.within_season_rho_estimate(z, grp, w)           # taper -> near signal
+    rho_u, _ = C.within_season_rho_estimate(z, grp)              # uniform -> diluted
+    assert rho_w > rho_u + 0.1
+
+
+def test_plot_within_season_renders(tmp_path):
+    pytest.importorskip("matplotlib")
+    from life_cycle_simulation import plots
+    s = srr_source.build_crl_srr(_srr_table(), _daily_table(), 1, day_method="daily")
+    out = simulator.simulate(s, radius_km=200.0, sim_years=60, n_realizations=400,
+                             rng=np.random.default_rng(0), within_season_rho=0.4)
+    p = plots.plot_within_season(out.catalog, np.array([5.0, 10, 20, 30, 8, 15]),
+                                 rho=0.4, subtitle="t", out_path=tmp_path / "ws.png")
+    assert p.is_file()
+
+
 def _sim_rho(rho, seed=4):
     srr_df, daily_df = _srr_table(), _daily_table()
     s = srr_source.build_crl_srr(srr_df, daily_df, 1, day_method="daily")

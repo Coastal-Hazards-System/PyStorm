@@ -103,10 +103,11 @@ class LCSOrchestrator:
             cal = calibration.calibrate_correlation(counts, **kw)
         return cal["ar_phi"], cal["ar_beta"], cal["overdispersion"], cal
 
-    def _resolve_within_season(self, crl_id, srr, selection_df, cal_start):
+    def _resolve_within_season(self, crl_id, srr, srr_df, selection_df, cal_start):
         """Resolve the within-season rho when intra_year_correlation is on: an explicit
         within_season_rho, else (None) calibrate it from the within-year correlation of
-        the historical storm days. Returns (rho, n_years). Off -> (0, None)."""
+        the historical storm days, regionally pooled when regional_pool_km is set.
+        Returns (rho, n_groups). Off -> (0, None)."""
         cfg = self.cfg
         if not cfg.intra_year_correlation:
             return 0.0, None
@@ -114,15 +115,35 @@ class LCSOrchestrator:
             return float(cfg.within_season_rho), None
         if selection_df is None or "doy" not in getattr(selection_df, "columns", []):
             return 0.0, None
+        # Stratum-weighted seasonal CDF for the probability-integral transform. Nearby
+        # CRLs share seasonality, so the target's CDF is used across a regional pool.
+        p = simulator.stratum_probs(srr.annual)
+        csum = np.cumsum((np.asarray(p, float)[:, None] * srr.doy_pmf).sum(axis=0))
+        cdf = csum / csum[-1] if csum[-1] > 0 else csum
+
+        if cfg.regional_pool_km:
+            pool, dist_km = self._pool_ids(srr_df, crl_id, cfg.regional_pool_km)
+            sub = selection_df[selection_df["crl_id"].isin(set(pool))
+                               & (selection_df["dist"] <= cfg.radius_km)
+                               & (selection_df["year"] >= cal_start)]
+            if len(sub) < 2:
+                return 0.0, 0
+            # One (CRL, year) group per storm; optional Gaussian distance taper.
+            group = sub["crl_id"].to_numpy() * 100000 + sub["year"].to_numpy()
+            weight = None
+            if cfg.regional_pool_sigma_km:
+                sig = cfg.regional_pool_sigma_km
+                wmap = {int(c): float(np.exp(-(d * d) / (2.0 * sig * sig)))
+                        for c, d in zip(pool, dist_km)}
+                weight = sub["crl_id"].map(wmap).to_numpy()
+            z = calibration.within_season_latent(sub["doy"].to_numpy(), cdf)
+            return calibration.within_season_rho_estimate(z, group, weight)
+
         sub = selection_df[(selection_df["crl_id"] == crl_id)
                            & (selection_df["dist"] <= cfg.radius_km)
                            & (selection_df["year"] >= cal_start)]
         if len(sub) < 2:
             return 0.0, 0
-        # Stratum-weighted seasonal CDF for the probability-integral transform.
-        p = simulator.stratum_probs(srr.annual)
-        csum = np.cumsum((np.asarray(p, float)[:, None] * srr.doy_pmf).sum(axis=0))
-        cdf = csum / csum[-1] if csum[-1] > 0 else csum
         z = calibration.within_season_latent(sub["doy"].to_numpy(), cdf)
         return calibration.within_season_rho_estimate(z, sub["year"].to_numpy())
 
@@ -137,7 +158,8 @@ class LCSOrchestrator:
         if cfg.correlation:
             ar_phi, ar_beta, overdispersion, cal = self._resolve_correlation(
                 crl_id, srr_df, selection_df, cal_start)
-        ws_rho, ws_n = self._resolve_within_season(crl_id, srr, selection_df, cal_start)
+        ws_rho, ws_n = self._resolve_within_season(
+            crl_id, srr, srr_df, selection_df, cal_start)
 
         out = simulator.simulate(
             srr, radius_km=cfg.radius_km, sim_years=cfg.sim_years,
@@ -170,7 +192,9 @@ class LCSOrchestrator:
 
         plot_paths: List[Path] = []
         if cfg.make_plots and cfg.plots:
-            plot_paths = self._render_plots(out, summary, srr, crl_id, tag)
+            hist_intra = self._hist_within_year_gaps(crl_id, selection_df, cal_start)
+            plot_paths = self._render_plots(out, summary, srr, crl_id, tag,
+                                            within_rho=ws_rho, hist_intra=hist_intra)
 
         return CRLResult(
             crl_id=int(crl_id), lat=srr.lat, lon=srr.lon, lam=out.lam,
@@ -179,7 +203,23 @@ class LCSOrchestrator:
             catalog_path=catalog_path, summary_path=summary_path,
             fano=out.fano, acf1=out.acf1, plot_paths=plot_paths)
 
-    def _render_plots(self, out, summary, srr, crl_id, tag) -> List[Path]:
+    def _hist_within_year_gaps(self, crl_id, selection_df, cal_start):
+        """Historical within-year inter-arrival gaps (days) for the CRL, for the
+        within-season validation plot. None if no dated selection is available."""
+        cfg = self.cfg
+        if selection_df is None or "doy" not in getattr(selection_df, "columns", []):
+            return None
+        sub = selection_df[(selection_df["crl_id"] == crl_id)
+                           & (selection_df["dist"] <= cfg.radius_km)
+                           & (selection_df["year"] >= cal_start)]
+        if sub.empty:
+            return None
+        g = (sub.sort_values(["year", "doy"]).groupby("year")["doy"]
+             .diff().dropna().to_numpy())
+        return g if g.size else None
+
+    def _render_plots(self, out, summary, srr, crl_id, tag, within_rho=0.0,
+                      hist_intra=None) -> List[Path]:
         cfg = self.cfg
         from life_cycle_simulation import plots
         base = Path(cfg.plot_dir) if cfg.plot_dir else (Path(cfg.output_dir) / "plots")
@@ -188,7 +228,8 @@ class LCSOrchestrator:
             paths = plots.render_suite(
                 out.catalog, summary, srr, lam=out.lam, p=out.p,
                 sim_years=cfg.sim_years, n_realizations=cfg.n_realizations,
-                plots=cfg.plots, out_dir=crl_dir, tag=tag)
+                plots=cfg.plots, out_dir=crl_dir, tag=tag,
+                hist_intra=hist_intra, within_rho=within_rho)
             print(f"[lcs] CRL {crl_id}: wrote {len(paths)} figure(s) -> {crl_dir}")
             return paths
         except RuntimeError as exc:                    # matplotlib missing

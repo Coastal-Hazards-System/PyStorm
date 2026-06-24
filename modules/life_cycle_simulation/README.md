@@ -91,6 +91,12 @@ sparse CRL is not given spurious clustering). A number overrides. A branching
 Hawkes/Neyman-Scott process is deliberately *not* used: it would change the
 SRR-calibrated count, whereas the copula keeps the count fixed.
 
+Setting `regional_pool_km` pools the same neighbouring CRLs (and optional Gaussian
+taper) the count calibration uses, sharpening the estimate from a handful of per-CRL
+multi-storm years to thousands of CRL-years. The **`within_season`** figure validates
+the result: the simulated distribution of same-year inter-arrival gaps against the
+historical one from the selection (pdf + ECDF); when rho is right the two overlie.
+
 ### Sequencing
 
 With `sequencing=True` (default) the catalog gains a chronological event timeline:

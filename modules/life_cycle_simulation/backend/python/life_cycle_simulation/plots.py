@@ -415,6 +415,53 @@ def plot_waiting_times(catalog, lam, *, n_realizations, subtitle, out_path) -> P
     return save_figure(fig, Path(out_path), close=True)
 
 
+def plot_within_season(catalog, hist_gaps, *, rho, subtitle, out_path) -> Path:
+    """Validation of the within-season (intra-year) layer: the simulated distribution
+    of same-year inter-arrival gaps (days) against the historical one from the SCA
+    selection. A pdf panel and an ECDF panel (robust to the sparse historical sample);
+    when the calibrated rho reproduces the data the two curves overlie."""
+    plt = _mpl()
+    sim = (catalog.sort_values(["realization", "year", "doy"])
+           .groupby(["realization", "year"])["doy"].diff().dropna().to_numpy())
+    hist = np.asarray(hist_gaps, float) if hist_gaps is not None else np.empty(0)
+
+    fig, axes = plt.subplots(1, 2, figsize=(12, 4.4))
+    dmax = max((float(np.percentile(sim, 99)) if sim.size else 1.0),
+               (float(np.percentile(hist, 99)) if hist.size else 1.0), 1.0)
+    bins = np.linspace(0.0, dmax, 30)
+
+    ax = axes[0]
+    if sim.size:
+        ax.hist(sim, bins=bins, density=True, color=RAMP[200], edgecolor=_DEEP,
+                linewidth=0.5, label=f"simulated (median {np.median(sim):.0f} d)")
+    if hist.size:
+        ax.hist(hist, bins=bins, density=True, histtype="step", color=EMPH_DARK,
+                linewidth=1.8,
+                label=f"historical (n={hist.size}, median {np.median(hist):.0f} d)")
+    ax.set_xlabel("days between same-year TCs")
+    ax.set_ylabel("probability density")
+    ax.set_title("Within-year inter-arrival pdf")
+    ax.legend(frameon=False, fontsize=8)
+    style_ax(ax)
+
+    ax = axes[1]
+    for data, color, lab in ((sim, _DEEP, "simulated"), (hist, EMPH_DARK, "historical")):
+        if data.size:
+            xs = np.sort(data)
+            ys = np.arange(1, xs.size + 1) / xs.size
+            ax.plot(xs, ys, color=color, linewidth=1.8, drawstyle="steps-post", label=lab)
+    ax.set_xlim(0, dmax)
+    ax.set_xlabel("days between same-year TCs")
+    ax.set_ylabel("cumulative probability")
+    ax.set_title("Within-year inter-arrival CDF")
+    ax.legend(frameon=False, fontsize=8, loc="lower right")
+    style_ax(ax)
+
+    _suptitle(fig, subtitle, f"within-season validation (rho={rho:.2f})")
+    fig.tight_layout(rect=(0, 0, 1, 0.94))
+    return save_figure(fig, Path(out_path), close=True)
+
+
 # ---------------------------------------------------------------------------
 # Quick three-panel diagnostic (count / stratum / seasonality)
 # ---------------------------------------------------------------------------
@@ -540,7 +587,8 @@ def plot_clustering(counts, lam, *, subtitle, out_path) -> Path:
 
 def render_suite(catalog: pd.DataFrame, summary: pd.DataFrame, srr, *,
                  lam: float, p, sim_years: int, n_realizations: int,
-                 plots: Sequence[str], out_dir, tag: str) -> List[Path]:
+                 plots: Sequence[str], out_dir, tag: str,
+                 hist_intra=None, within_rho: float = 0.0) -> List[Path]:
     """Render the selected figures for one CRL; returns the written paths.
 
     ``plots`` is a subset of PLOT_KEYS. Figures that need events (seasonality,
@@ -560,7 +608,7 @@ def render_suite(catalog: pd.DataFrame, summary: pd.DataFrame, srr, *,
 
     paths: List[Path] = []
     for key in wanted:
-        if key in ("seasonality", "waiting_times") and not has_events:
+        if key in ("seasonality", "waiting_times", "within_season") and not has_events:
             print(f"[lcs]     {key}: skipped (no synthetic TCs to plot)")
             continue
         if key == "annual_fan":
@@ -578,6 +626,9 @@ def render_suite(catalog: pd.DataFrame, summary: pd.DataFrame, srr, *,
             paths.append(plot_seasonality(catalog, srr, p, subtitle=subtitle, out_path=path(key)))
         elif key == "waiting_times":
             paths.append(plot_waiting_times(catalog, lam, n_realizations=n_realizations,
+                                            subtitle=subtitle, out_path=path(key)))
+        elif key == "within_season":
+            paths.append(plot_within_season(catalog, hist_intra, rho=within_rho,
                                             subtitle=subtitle, out_path=path(key)))
         elif key == "clustering":
             paths.append(plot_clustering(counts, lam, subtitle=subtitle, out_path=path(key)))
