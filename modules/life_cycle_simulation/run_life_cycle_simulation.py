@@ -135,9 +135,17 @@ REGIONAL_POOL_KM = 600 # None
 REGIONAL_POOL_SIGMA_KM = 200 # None
 
 # ── Event sequencing ──────────────────────────────────────────────────────────
-# Add the chronological event timeline to the catalog: event_time (years), a
-# per-realization chronological order (seq), and the inter-arrival waiting time
-# from the previous event (wait_yr).
+# When True, append a chronological event timeline to each catalog row, as the last
+# three columns in this order:
+#   event_time - the event's position on the life-cycle clock, in years:
+#                (year - 1) + (doy - 1)/365  (e.g. year 1, day 194 -> 0.528).
+#   seq        - the event's chronological rank within its realization (1, 2, 3, ...),
+#                i.e. its 1-based position after that realization is sorted by time.
+#   wait_yr    - the inter-arrival gap, in years, since the previous event of the same
+#                realization (the difference in event_time); blank for each
+#                realization's first event, which has no predecessor.
+# Rows are ordered by realization, then by event_time, so each realization reads top
+# to bottom as one chronological storm timeline. False omits all three columns.
 SEQUENCING = True
 
 # ── Visualization suite (optional, off by default) ───────────────────────────
