@@ -3,7 +3,7 @@ Life_Cycle_Simulation_Whitepaper.md
 
 # Slide deck and its rendered artifacts (local documents, not versioned)
 Life_Cycle_Simulation_Slides.md
-Life_Cycle_Simulation_Slides.pptx
-Life_Cycle_Simulation_Slides.pdf
-Life_Cycle_Simulation_Slides.html
+Life_Cycle_Simulation_Slides*.pptx
+Life_Cycle_Simulation_Slides*.pdf
+Life_Cycle_Simulation_Slides*.html
 slides_to_pptx.py
