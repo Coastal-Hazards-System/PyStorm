@@ -314,9 +314,31 @@ def test_norm_cdf_matches_known_values():
 
 def test_within_season_rho_validator():
     LCSConfig(input_csv="x", within_season_rho=0.5)
+    assert LCSConfig(input_csv="x", within_season_rho=None).within_season_rho is None
     for bad in (1.0, -0.1):
         with pytest.raises(Exception):
             LCSConfig(input_csv="x", within_season_rho=bad)
+
+
+def test_within_season_latent_is_monotone_and_standardized():
+    from life_cycle_simulation import calibration as C
+    cdf = np.linspace(0.0, 1.0, 365)                              # uniform season
+    z = C.within_season_latent(np.array([10, 100, 200, 300, 360]), cdf)
+    assert np.all(np.diff(z) > 0)                                # increasing in day
+    full = C.within_season_latent(np.arange(1, 366), cdf)
+    assert abs(full.mean()) < 1e-6 and abs(full.std() - 1.0) < 0.05
+
+
+def test_within_season_estimator_recovers_rho():
+    from life_cycle_simulation import calibration as C
+    rng = np.random.default_rng(0)
+    n_years, per = 2000, 3
+    years = np.repeat(np.arange(n_years), per)
+    xi = rng.standard_normal(n_years)[years]
+    for rho in (0.0, 0.45):                                       # shared-factor latent
+        z = np.sqrt(rho) * xi + np.sqrt(1.0 - rho) * rng.standard_normal(years.size)
+        rho_hat, n = C.within_season_rho_estimate(z, years)
+        assert n == n_years and abs(rho_hat - rho) < 0.08
 
 
 def _sim_rho(rho, seed=4):
@@ -431,7 +453,8 @@ def test_end_to_end_correlation_calibration(tmp_path):
     _daily_table().to_csv(tmp_path / "srr_daily_atlantic_1938-2025_20260227.csv", index=False)
     # A selection table next to the SRR drives the calibration.
     rng = np.random.default_rng(3)
-    rows = [{"crl_id": cid, "year": y, "dist": rng.uniform(0, 300)}
+    rows = [{"crl_id": cid, "year": y, "dist": rng.uniform(0, 300),
+             "doy": int(rng.integers(150, 300))}
             for cid in (1, 2) for y in range(1940, 2020)
             for _ in range(rng.poisson(1.0))]
     pd.DataFrame(rows).to_csv(
@@ -447,6 +470,12 @@ def test_end_to_end_correlation_calibration(tmp_path):
                       "n_realizations": 60, "sim_years": 40, "seed": 1, "correlation": True,
                       "regional_pool_km": 50000.0})
     assert pooled.results[1].catalog_path.is_file()
+
+    # Within-season layer with rho=None calibrates from the selection's doy column.
+    ws = api.run({"input_csv": in_csv, "crl_ids": [1], "output_dir": tmp_path / "out3",
+                  "n_realizations": 60, "sim_years": 40, "seed": 1,
+                  "intra_year_correlation": True})
+    assert ws.results[1].catalog_path.is_file()
 
 
 # ---------------------------------------------------------------------------

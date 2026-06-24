@@ -94,15 +94,18 @@ def locate_selection_companion(input_csv) -> Optional[Path]:
 
 
 def load_selection_table(path, crl_ids=None) -> "pd.DataFrame":
-    """Load the per-CRL selected-TC table (crl_id, year, dist) for calibration.
+    """Load the per-CRL selected-TC table (crl_id, year, dist, doy) for calibration.
 
-    Reads only the columns the correlation calibration needs; optionally keeps just
-    the requested CRLs.
+    Reads only the columns the calibration needs (counts use crl_id/year/dist; the
+    within-season layer also uses doy, the day-of-year of closest approach);
+    optionally keeps just the requested CRLs. ``doy`` is tolerated as optional.
     """
     path = Path(path)
     if not path.is_file():
         raise FileNotFoundError(f"SCA selection table not found: {path}")
-    df = pd.read_csv(path, usecols=["crl_id", "year", "dist"])
+    head = pd.read_csv(path, nrows=0).columns
+    cols = [c for c in ("crl_id", "year", "dist", "doy") if c in head]
+    df = pd.read_csv(path, usecols=cols)
     if crl_ids is not None:
         df = df[df["crl_id"].isin(set(int(c) for c in crl_ids))]
     return df

@@ -162,3 +162,68 @@ def calibrate_correlation_regional(series, weights=None, *, ar_phi: Optional[flo
         "mean": mean_pool, "fano": 1.0 + disp * mean_pool if mean_pool > 0 else 1.0,
         "acf1": float(g1 / g0) if g0 > 0 else 0.0, "n_pooled": len(rows),
     }
+
+
+def _norm_ppf(p: np.ndarray) -> np.ndarray:
+    """Inverse standard normal CDF (probit), vectorized (Acklam's algorithm, ~1e-9)."""
+    p = np.asarray(p, float)
+    a = (-3.969683028665376e+01, 2.209460984245205e+02, -2.759285104469687e+02,
+         1.383577518672690e+02, -3.066479806614716e+01, 2.506628277459239e+00)
+    b = (-5.447609879822406e+01, 1.615858368580409e+02, -1.556989798598866e+02,
+         6.680131188771972e+01, -1.328068155288572e+01)
+    c = (-7.784894002430293e-03, -3.223964580411365e-01, -2.400758277161838e+00,
+         -2.549732539343734e+00, 4.374664141464968e+00, 2.938163982698783e+00)
+    d = (7.784695709041462e-03, 3.224671290700398e-01, 2.445134137142996e+00,
+         3.754408661907416e+00)
+    plow, phigh = 0.02425, 1.0 - 0.02425
+    x = np.empty_like(p)
+    lo, hi = p < plow, p > phigh
+    mid = ~(lo | hi)
+    q = np.sqrt(-2.0 * np.log(np.clip(p[lo], 1e-300, None)))
+    x[lo] = (((((c[0]*q+c[1])*q+c[2])*q+c[3])*q+c[4])*q+c[5]) / ((((d[0]*q+d[1])*q+d[2])*q+d[3])*q+1.0)
+    q = np.sqrt(-2.0 * np.log(np.clip(1.0 - p[hi], 1e-300, None)))
+    x[hi] = -(((((c[0]*q+c[1])*q+c[2])*q+c[3])*q+c[4])*q+c[5]) / ((((d[0]*q+d[1])*q+d[2])*q+d[3])*q+1.0)
+    q = p[mid] - 0.5
+    r = q * q
+    x[mid] = (((((a[0]*r+a[1])*r+a[2])*r+a[3])*r+a[4])*r+a[5])*q / (((((b[0]*r+b[1])*r+b[2])*r+b[3])*r+b[4])*r+1.0)
+    return x
+
+
+def within_season_latent(doy, doy_cdf) -> np.ndarray:
+    """Latent standard-normal z for each storm: z = Phi^-1(F(doy)), standardized.
+
+    ``doy_cdf`` is the cumulative seasonal probability over days 1..365 (the stratum-
+    weighted daily SRR). The probability-integral transform maps each storm day to a
+    seasonal quantile; the probit lifts it to the copula's latent normal scale.
+    Re-standardizing makes the estimate robust to small mismatch between the empirical
+    days and the climatological seasonal shape.
+    """
+    cdf = np.asarray(doy_cdf, float)
+    u = np.clip(cdf[np.clip(np.asarray(doy, int) - 1, 0, cdf.size - 1)], 1e-6, 1 - 1e-6)
+    z = _norm_ppf(u)
+    return (z - z.mean()) / (z.std() + 1e-12) if z.size else z
+
+
+def within_season_rho_estimate(z, group):
+    """Shared-factor copula rho from the within-group correlation of latent normals z.
+
+    Storms grouped by (CRL, year) share a latent season-phase factor, so same-group
+    pairs have correlation rho. Estimated as the pooled mean cross-product over all
+    within-group pairs (sum of products / number of pairs), using only groups with at
+    least two storms. The raw estimate is shrunk toward zero by one standard error
+    (~1/sqrt(number of multi-storm years), the effective sample size) so a sparse CRL
+    is not assigned spurious strong clustering. Returns (rho in [0, 0.99], n groups).
+    """
+    df = pd.DataFrame({"g": np.asarray(group), "z": np.asarray(z, float)})
+    gb = df.groupby("g")["z"]
+    s = gb.sum().to_numpy()
+    q = gb.apply(lambda v: float(np.dot(v, v))).to_numpy()
+    n = gb.count().to_numpy().astype(float)
+    m = n >= 2
+    n_groups = int(m.sum())
+    pairs = (n[m] * (n[m] - 1.0) / 2.0).sum()
+    if pairs <= 0:
+        return 0.0, 0
+    rho_raw = ((s[m] ** 2 - q[m]) / 2.0).sum() / pairs       # sum_{i<j} z_i z_j / pairs
+    shrink = 1.0 / np.sqrt(max(n_groups, 1))                 # ~1 SE in the year count
+    return float(np.clip(rho_raw - shrink, 0.0, 0.99)), n_groups

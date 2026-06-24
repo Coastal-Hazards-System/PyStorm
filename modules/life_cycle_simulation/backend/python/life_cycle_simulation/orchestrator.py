@@ -103,6 +103,29 @@ class LCSOrchestrator:
             cal = calibration.calibrate_correlation(counts, **kw)
         return cal["ar_phi"], cal["ar_beta"], cal["overdispersion"], cal
 
+    def _resolve_within_season(self, crl_id, srr, selection_df, cal_start):
+        """Resolve the within-season rho when intra_year_correlation is on: an explicit
+        within_season_rho, else (None) calibrate it from the within-year correlation of
+        the historical storm days. Returns (rho, n_years). Off -> (0, None)."""
+        cfg = self.cfg
+        if not cfg.intra_year_correlation:
+            return 0.0, None
+        if cfg.within_season_rho is not None:
+            return float(cfg.within_season_rho), None
+        if selection_df is None or "doy" not in getattr(selection_df, "columns", []):
+            return 0.0, None
+        sub = selection_df[(selection_df["crl_id"] == crl_id)
+                           & (selection_df["dist"] <= cfg.radius_km)
+                           & (selection_df["year"] >= cal_start)]
+        if len(sub) < 2:
+            return 0.0, 0
+        # Stratum-weighted seasonal CDF for the probability-integral transform.
+        p = simulator.stratum_probs(srr.annual)
+        csum = np.cumsum((np.asarray(p, float)[:, None] * srr.doy_pmf).sum(axis=0))
+        cdf = csum / csum[-1] if csum[-1] > 0 else csum
+        z = calibration.within_season_latent(sub["doy"].to_numpy(), cdf)
+        return calibration.within_season_rho_estimate(z, sub["year"].to_numpy())
+
     def _process_crl(self, crl_id, srr_df, daily_df, selection_df=None,
                      cal_start=1938) -> CRLResult:
         cfg = self.cfg
@@ -114,12 +137,13 @@ class LCSOrchestrator:
         if cfg.correlation:
             ar_phi, ar_beta, overdispersion, cal = self._resolve_correlation(
                 crl_id, srr_df, selection_df, cal_start)
+        ws_rho, ws_n = self._resolve_within_season(crl_id, srr, selection_df, cal_start)
 
         out = simulator.simulate(
             srr, radius_km=cfg.radius_km, sim_years=cfg.sim_years,
             n_realizations=cfg.n_realizations, rng=rng,
             correlation=cfg.correlation, ar_phi=ar_phi, ar_beta=ar_beta,
-            overdispersion=overdispersion, within_season_rho=cfg.within_season_rho,
+            overdispersion=overdispersion, within_season_rho=ws_rho,
             sequencing=cfg.sequencing)
 
         tag = self._file_tag(crl_id)
@@ -135,6 +159,10 @@ class LCSOrchestrator:
                     else "")
             corr = (f"  corr: phi={ar_phi:.2f} beta={ar_beta:.2f} "
                     f"od={overdispersion:.3f}{pool}  Fano={out.fano:.2f} ACF1={out.acf1:+.2f}")
+        if cfg.intra_year_correlation:
+            src = "cal" if cfg.within_season_rho is None else "set"
+            yrs = f"/{ws_n}yr" if ws_n else ""
+            corr += f"  intra: rho={ws_rho:.2f}({src}{yrs})"
         print(f"[lcs] CRL {crl_id}: lambda={out.lam:.4f} TC/yr  "
               f"split low/med/high={out.p[0]:.2f}/{out.p[1]:.2f}/{out.p[2]:.2f}  "
               f"{out.n_events:,} TCs (mean {mean_rate:.3f}/yr)  "
@@ -189,16 +217,17 @@ class LCSOrchestrator:
                 daily_df = srr_source.load_daily_table(daily_csv, cfg.crl_ids)
                 print(f"[lcs] daily SRR seasonal shape from {Path(daily_csv).name}")
 
-        # Correlation calibration source: the SCA selection table and the rate-period
-        # start year (parsed from the SRR filename, e.g. ..._1938-2025_...).
+        # Calibration source: the SCA selection table and the rate-period start year
+        # (parsed from the SRR filename, e.g. ..._1938-2025_...). Needed by the count
+        # correlation layer and by the within-season layer (the latter for its doy).
         selection_df = None
         cal_start = 1938
-        if cfg.correlation:
+        if cfg.correlation or cfg.intra_year_correlation:
             m = re.search(r"_(\d{4})-(\d{4})_", Path(cfg.input_csv).name)
             cal_start = int(m.group(1)) if m else 1938
             sel_csv = cfg.selection_csv or srr_source.locate_selection_companion(cfg.input_csv)
             if sel_csv is None:
-                print("[lcs] correlation on but no selection table found next to "
+                print("[lcs] calibration on but no selection table found next to "
                       "input_csv; using explicit/neutral params (no calibration).")
             else:
                 # Regional pooling needs the neighbours too, so load the whole table;
@@ -206,7 +235,7 @@ class LCSOrchestrator:
                 sel_filter = None if cfg.regional_pool_km else cfg.crl_ids
                 selection_df = srr_source.load_selection_table(sel_csv, sel_filter)
                 pooled = " (regional pooling)" if cfg.regional_pool_km else ""
-                print(f"[lcs] correlation calibration from {Path(sel_csv).name} "
+                print(f"[lcs] calibration from {Path(sel_csv).name} "
                       f"(history from {cal_start}){pooled}")
 
         result = LCSResult(sim_years=cfg.sim_years, n_realizations=cfg.n_realizations)

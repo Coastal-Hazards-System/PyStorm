@@ -135,6 +135,20 @@ OVERDISPERSION = None
 REGIONAL_POOL_KM = 600 # None
 REGIONAL_POOL_SIGMA_KM = 200 # None
 
+# ── Within-season (intra-year) clustering ─────────────────────────────────────
+# INTRA_YEAR_CORRELATION=False keeps independent day placement exactly (an
+# inhomogeneous Poisson process). When True, each year's storms bunch into a
+# sub-seasonal active window beyond the seasonal SRR shape (e.g. an MJO active phase or
+# a persistent favorable pattern that makes a few weeks much more active). It is a
+# shared-factor Gaussian copula on the event days, so it preserves BOTH the annual
+# count and the seasonal day-of-year marginal exactly; only the within-year
+# inter-arrival gaps tighten. This is the INTRA-year analogue of CORRELATION (the
+# INTER-year, count-level layer).
+#   WITHIN_SEASON_RHO - clustering strength in [0, 1). None (default) CALIBRATES it
+#                       from the historical within-year storm-day correlation (the SCA
+#                       selection's doy column); set a number to override.
+INTRA_YEAR_CORRELATION = True
+WITHIN_SEASON_RHO      = None
 # ── Event sequencing ──────────────────────────────────────────────────────────
 # When True, append a chronological event timeline to each catalog row, as the last
 # three columns in this order:
@@ -148,19 +162,6 @@ REGIONAL_POOL_SIGMA_KM = 200 # None
 # Rows are ordered by realization, then by event_time, so each realization reads top
 # to bottom as one chronological storm timeline. False omits all three columns.
 SEQUENCING = True
-
-# ── Within-season (intra-year) clustering ─────────────────────────────────────
-# WITHIN_SEASON_RHO concentrates each year's storms into a sub-seasonal active window,
-# beyond the seasonal SRR shape (e.g. an MJO active phase or a persistent favorable
-# pattern that makes a few weeks much more active):
-#   0   - independent placement: each storm's day is drawn independently from the
-#         seasonal shape (an inhomogeneous Poisson process; no event-to-event bunching).
-#   >0  - up to <1, a year's storms bunch closer in time; larger = tighter clusters.
-# It is a shared-factor Gaussian copula on the event days, so it preserves BOTH the
-# annual count and the seasonal day-of-year marginal exactly; only the within-year
-# inter-arrival gaps tighten. This is INTRA-year clustering, independent of CORRELATION
-# (which is the INTER-year, count-level layer).
-WITHIN_SEASON_RHO = 0.0
 
 # ── Visualization suite (optional, off by default) ───────────────────────────
 # MAKE_PLOTS is the master switch. PLOTS selects which per-CRL figures to render;
@@ -213,6 +214,7 @@ CONFIG = {
     "overdispersion": OVERDISPERSION,
     "regional_pool_km": REGIONAL_POOL_KM,
     "regional_pool_sigma_km": REGIONAL_POOL_SIGMA_KM,
+    "intra_year_correlation": INTRA_YEAR_CORRELATION,
     "within_season_rho": WITHIN_SEASON_RHO,
     "sequencing":     SEQUENCING,
     "make_plots":     MAKE_PLOTS,
@@ -251,8 +253,13 @@ def _apply_cli(config: dict) -> dict:
                    help="Pool CRLs within this many km for the calibration (regional).")
     p.add_argument("--regional-pool-sigma-km", type=float, dest="regional_pool_sigma_km",
                    help="Gaussian distance taper (km) for the regional pool weights.")
+    p.add_argument("--intra-year-correlation", dest="intra_year_correlation",
+                   action="store_true", default=None,
+                   help="Enable within-season (intra-year) day clustering.")
+    p.add_argument("--no-intra-year-correlation", dest="intra_year_correlation",
+                   action="store_false", help="Disable within-season day clustering.")
     p.add_argument("--within-season-rho", type=float, dest="within_season_rho",
-                   help="Within-season (intra-year) clustering strength in [0, 1).")
+                   help="Within-season clustering strength in [0, 1) (overrides calibration).")
     p.add_argument("--no-sequencing", dest="sequencing", action="store_false",
                    default=None, help="Skip the chronological event timeline columns.")
     p.add_argument("--plots", dest="plots_on", action="store_true", default=None,
@@ -273,6 +280,8 @@ def _apply_cli(config: dict) -> dict:
             config[key] = val
     if args.correlation is not None:
         config["correlation"] = args.correlation
+    if args.intra_year_correlation is not None:
+        config["intra_year_correlation"] = args.intra_year_correlation
     if args.sequencing is not None:
         config["sequencing"] = args.sequencing
     if args.plots_on is not None:

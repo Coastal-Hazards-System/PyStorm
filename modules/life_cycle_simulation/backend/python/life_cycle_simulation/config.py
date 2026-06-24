@@ -105,14 +105,17 @@ class LCSConfig(BaseModel):
     regional_pool_sigma_km: Optional[float] = None
 
     # ── Within-season (intra-year) clustering ──────────────────────────────────
-    # within_season_rho concentrates each year's TCs into a sub-seasonal active window
-    # beyond the seasonal SRR shape: 0 (default) = independent placement (an
-    # inhomogeneous Poisson process); larger values in [0, 1) bunch a year's storms
-    # closer in time. It is a shared-factor Gaussian copula on the event days, so it
-    # preserves the annual count AND the seasonal day-of-year marginal exactly; only
-    # the within-year inter-arrival gaps tighten. Independent of the count-level
-    # correlation layer (that is inter-year; this is intra-year).
-    within_season_rho: float = 0.0
+    # intra_year_correlation=False keeps the independent day placement exactly (an
+    # inhomogeneous Poisson process). When True, each year's TCs bunch into a
+    # sub-seasonal active window beyond the seasonal SRR shape, via a shared-factor
+    # Gaussian copula on the event days that preserves the annual count AND the
+    # seasonal day-of-year marginal exactly (only the within-year inter-arrival gaps
+    # tighten). This is the INTRA-year analogue of the INTER-year correlation layer.
+    # within_season_rho is the clustering strength in [0, 1): None (default) CALIBRATES
+    # it from the historical within-year storm-day correlation (the SCA selection's doy
+    # column); a number overrides. Ignored when intra_year_correlation is False.
+    intra_year_correlation: bool = False
+    within_season_rho: Optional[float] = None
 
     # ── Event sequencing ───────────────────────────────────────────────────────
     # Add the chronological event timeline to the catalog: a continuous event_time
@@ -206,9 +209,11 @@ class LCSConfig(BaseModel):
     @field_validator("within_season_rho", mode="before")
     @classmethod
     def _rho_unit_range(cls, v):
+        if v is None:
+            return None
         v = float(v)
         if not (0.0 <= v < 1.0):
-            raise ValueError("within_season_rho must be in [0, 1).")
+            raise ValueError("within_season_rho must be in [0, 1) or None (calibrate).")
         return v
 
     @field_validator("plots", mode="before")
