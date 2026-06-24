@@ -28,3 +28,6 @@ Thumbs.db
 *.env
 .idea/
 .claude/
+
+# Office lock/temp files (e.g. an open slide-deck .pptx in PowerPoint)
+~$*
