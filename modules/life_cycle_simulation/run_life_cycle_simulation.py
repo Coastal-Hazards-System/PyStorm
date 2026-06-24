@@ -126,8 +126,11 @@ OVERDISPERSION = None
 # target so the basin/regional clustering signal is estimated from many records
 # instead of one sparse history. None = per-CRL calibration (default); e.g. 300.
 # REGIONAL_POOL_SIGMA_KM: optional Gaussian distance taper for that pool. None =
-# uniform weight (hard cutoff); a value weights nearer CRLs more, w=exp(-d^2/2sigma^2),
-# fading toward the edge (e.g. REGIONAL_POOL_KM / 2). Needs REGIONAL_POOL_KM.
+# uniform weight (hard cutoff). A value is the kernel bandwidth (ideally the climate
+# decorrelation length): w=exp(-d^2/(2*sigma^2)), half-weight at ~1.18*sigma. The fade
+# is set by the ratio R/sigma, not by R alone: the weight at the pool edge is
+# exp(-0.5*(R/sigma)^2) (~0.14 at R=2*sigma, ~0.01 at R=3*sigma), so set
+# REGIONAL_POOL_KM to about 2-3 sigma. Needs REGIONAL_POOL_KM.
 REGIONAL_POOL_KM = 600 # None
 REGIONAL_POOL_SIGMA_KM = 200 # None
 

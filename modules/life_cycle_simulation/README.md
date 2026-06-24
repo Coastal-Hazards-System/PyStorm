@@ -65,8 +65,12 @@ Gulf CRL moves from `Fano ~ 1.00` per-CRL to `~ 1.08` pooled over ~70 neighbours
 By default the pool weights every member CRL uniformly (a hard cutoff at
 `regional_pool_km`). Set **`regional_pool_sigma_km`** to instead taper the weights by
 distance, `w = exp(-d^2 / (2 sigma^2))`, so CRLs nearer the target (which share more
-of its climate state) count more, fading toward the edge; `sigma ~ regional_pool_km/2`
-is a reasonable choice. `None` keeps the uniform weighting.
+of its climate state) count more. Here `sigma` is the kernel bandwidth, ideally the
+climate decorrelation length: the half-weight distance is `~1.18 sigma`. The fade at
+the cutoff is set by the ratio `R/sigma`, not by `R` alone, the edge weight being
+`exp(-0.5 (R/sigma)^2)` (about `0.14` at `R = 2 sigma`, `0.01` at `R = 3 sigma`), so
+set `regional_pool_km` to roughly `2-3 sigma` to truncate only a negligible tail.
+`None` keeps the uniform weighting.
 
 ### Sequencing
 
