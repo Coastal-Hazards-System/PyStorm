@@ -28,8 +28,11 @@ dev = [
   "pytest>=7.4",
 ]
 
+[project.scripts]
+pystorm-jdm = "run_joint_distribution_model:main"
+
 [tool.setuptools]
-py-modules = ["api_joint_distribution_model"]
+py-modules = ["api_joint_distribution_model", "run_joint_distribution_model"]
 
 [tool.setuptools.packages.find]
 where    = ["backend/python"]

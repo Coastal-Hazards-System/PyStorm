@@ -403,7 +403,7 @@ def _apply_cli(config: dict) -> dict:
     return config
 
 
-if __name__ == "__main__":
+def main():
     cfg = _apply_cli(CONFIG)
     if cfg.get("impute_gpm"):
         _ensure_cpp_extension()   # build _gpm on first GPM run if needed
@@ -419,3 +419,6 @@ if __name__ == "__main__":
         if r.n_pmin_gpm or r.n_rmax_gpm:
             extra += f"  (GPM +{r.n_pmin_gpm:,} pmin, +{r.n_rmax_gpm:,} Rmax)"
         print(f"      {basin:9s} {r.n_storms:>6,} storms  {r.n_rows:>8,} rows{extra}  -> {r.csv_path}")
+
+if __name__ == "__main__":
+    main()

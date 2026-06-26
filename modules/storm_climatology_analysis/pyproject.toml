@@ -31,8 +31,11 @@ dev = [
   "pytest>=7.4",
 ]
 
+[project.scripts]
+pystorm-sca = "run_storm_climatology_analysis:main"
+
 [tool.setuptools]
-py-modules = ["api_storm_climatology_analysis"]
+py-modules = ["api_storm_climatology_analysis", "run_storm_climatology_analysis"]
 
 [tool.setuptools.packages.find]
 where    = ["backend/python"]

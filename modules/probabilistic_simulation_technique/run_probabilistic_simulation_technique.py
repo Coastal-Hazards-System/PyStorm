@@ -427,9 +427,12 @@ def _apply_cli(config: dict) -> dict:
     return config
 
 
-if __name__ == "__main__":
+def main():
     _ensure_cpp_extension()   # build _pst on first run if needed
     # Orchestrator entry lives in backend/python (added to sys.path above);
     # resolve it dynamically so there is no static import for the IDE to flag.
     from importlib import import_module
     import_module("api_probabilistic_simulation_technique").run(_apply_cli(CONFIG))
+
+if __name__ == "__main__":
+    main()

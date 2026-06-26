@@ -273,10 +273,13 @@ def _apply_cli(config: dict) -> dict:
     return config
 
 
-if __name__ == "__main__":
+def main():
     _ensure_cpp_extension()   # build _pot on first run if needed
     # The orchestrator entry (api_peaks_over_threshold) lives in backend/python,
     # added to sys.path above at runtime. Resolve it dynamically so there is no
     # static import for the IDE to flag as unresolved.
     from importlib import import_module
     import_module("api_peaks_over_threshold").run(_apply_cli(CONFIG))
+
+if __name__ == "__main__":
+    main()

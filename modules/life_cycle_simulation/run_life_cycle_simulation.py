@@ -294,7 +294,7 @@ def _apply_cli(config: dict) -> dict:
     return config
 
 
-if __name__ == "__main__":
+def main():
     cfg = _apply_cli(CONFIG)
     from importlib import import_module
     try:
@@ -307,3 +307,6 @@ if __name__ == "__main__":
         print(f"      CRL {crl_id:<5} lambda={r.lam:.4f} TC/yr  "
               f"{r.n_events:,} TCs over {result.n_realizations:,} x "
               f"{result.sim_years} yr{figs}  -> {r.catalog_path}")
+
+if __name__ == "__main__":
+    main()

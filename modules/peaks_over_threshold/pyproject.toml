@@ -26,8 +26,11 @@ dev = [
   "pytest>=7.4",      # test-time
 ]
 
+[project.scripts]
+pystorm-pot = "run_peaks_over_threshold:main"
+
 [tool.setuptools]
-py-modules = ["api_peaks_over_threshold"]
+py-modules = ["api_peaks_over_threshold", "run_peaks_over_threshold"]
 
 [tool.setuptools.packages.find]
 where    = ["backend/python"]

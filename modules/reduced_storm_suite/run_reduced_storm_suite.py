@@ -545,7 +545,7 @@ def _parse_cli():
     return p.parse_args()
 
 
-if __name__ == "__main__":
+def main():
     _ensure_cpp_extension()   # build _rss on first run if needed
 
     args = _parse_cli()
@@ -571,3 +571,6 @@ if __name__ == "__main__":
     )
     _run(cfg)
     raise SystemExit(0)
+
+if __name__ == "__main__":
+    main()

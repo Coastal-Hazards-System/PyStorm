@@ -177,7 +177,7 @@ def _apply_cli(config: dict) -> dict:
     return config
 
 
-if __name__ == "__main__":
+def main():
     cfg = _apply_cli(CONFIG)
     from importlib import import_module
     try:
@@ -189,3 +189,6 @@ if __name__ == "__main__":
         extra = f"  ({r.n_plots:,} figs)" if r.n_plots else ""
         print(f"      {basin:9s} {r.n_crls:>5,} CRLs  {r.n_records:>7,} marginal rows"
               f"{extra}  -> {r.marginals_path}")
+
+if __name__ == "__main__":
+    main()

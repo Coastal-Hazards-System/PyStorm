@@ -28,8 +28,11 @@ dev = [
   "pytest>=7.4",
 ]
 
+[project.scripts]
+pystorm-csh = "run_coastal_storm_hydrograph:main"
+
 [tool.setuptools]
-py-modules = ["api_coastal_storm_hydrograph"]
+py-modules = ["api_coastal_storm_hydrograph", "run_coastal_storm_hydrograph"]
 
 [tool.setuptools.packages.find]
 where    = ["backend/python"]

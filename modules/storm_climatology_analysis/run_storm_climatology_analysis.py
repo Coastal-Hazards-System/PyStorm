@@ -293,7 +293,7 @@ def _apply_cli(config: dict) -> dict:
     return config
 
 
-if __name__ == "__main__":
+def main():
     cfg = _apply_cli(CONFIG)
     from importlib import import_module
     try:
@@ -312,3 +312,6 @@ if __name__ == "__main__":
         extra = f"  ({', '.join(bits)})" if bits else ""
         print(f"      {basin:9s} {r.n_crls:>5,} CRLs  {r.n_selected:>8,} CRL-TC pairs  "
               f"Nyrs={r.nyrs}{extra}  -> {r.srr_path}")
+
+if __name__ == "__main__":
+    main()

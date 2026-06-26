@@ -1,0 +1,33 @@
+# PyStorm - aggregated dependencies for a one-shot install
+# ========================================================
+# Installs everything needed to run all eight modules (and their plots).
+# Requires Python >= 3.10.
+#
+#   pip install -r requirements.txt
+#
+# This is a convenience superset. Each module also declares its own exact
+# dependencies in modules/<module>/pyproject.toml; to install a single module
+# in isolation, use that instead (pip install -e modules/<module>).
+#
+# Version floors are the highest floor across all modules that require a given
+# package, so a single environment satisfies every module.
+
+# --- Core runtime (required by one or more modules) ---
+numpy>=1.24
+scipy>=1.10
+pandas>=2.0
+matplotlib>=3.7
+pydantic>=2.0
+requests>=2.28
+pyproj>=3.4          # AHD: best-track geodesy
+h5py>=3.10           # RSS: tc_data.h5 bundle I/O
+PyYAML>=6.0          # RSS: preprocess.yaml config
+scikit-learn>=1.3    # RSS: k-medoids selection
+pyshp>=2.3           # SCA: Natural Earth basemap (per-CRL maps)
+
+# --- Build + test (C++ engines and the test suite) ---
+pybind11>=2.11       # build-time for the POT / PST / RSS / JDM / AHD kernels
+pytest>=7.4          # test suite
+
+# --- Optional accelerators / backends (uncomment if wanted) ---
+# scikit-learn-extra>=0.3   # RSS: optional second-tier k-medoids backend

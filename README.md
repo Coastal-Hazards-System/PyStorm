@@ -94,6 +94,58 @@ What each module ships varies with its workload:
 | RSS | `_rss` kernel | `scripts/` (preprocess, DSW) |
 | CSH | none (pure Python) | `analysis/` (shape/timescale studies) |
 
+## Install
+
+All modules target Python >= 3.10. The fastest path installs every module and
+builds the C++ kernels in one step:
+
+```bash
+./install.sh            # Linux / macOS / Git Bash
+.\install.ps1           # Windows PowerShell
+```
+
+This installs the dependencies, registers each module (editable) so the
+`pystorm-<acro>` commands and orchestrators are importable from anywhere, and
+builds the kernels (a failed build is non-fatal: that module runs on its
+pure-Python fallback). Then check the environment:
+
+```bash
+python check_env.py
+```
+
+The doctor reports the Python version, every required package, and whether a C++
+toolchain is present, so you know up front whether the fast kernels will build.
+
+If you only want the dependencies (no editable install), the root
+`requirements.txt` is a convenience superset of every module's needs:
+
+```bash
+pip install -r requirements.txt
+```
+
+Each module also declares its own exact dependencies in
+`modules/<module>/pyproject.toml`, so to install a single module in isolation use
+that instead (`pip install -e modules/<module>`). Installing the packages is the
+only manual step: the C++ kernels then build automatically on first run (see
+[Building the C++ engines](#building-the-c-engines)).
+
+### Task runner
+
+A `Makefile` (Linux / macOS) and `tasks.ps1` (Windows) wrap the common verbs:
+
+```bash
+make install            # or:  .\tasks.ps1 install
+make doctor             #      .\tasks.ps1 doctor
+make build              #      .\tasks.ps1 build      (build all C++ kernels)
+make test               #      .\tasks.ps1 test       (every module's tests)
+make run M=rss ARGS="--mode optimal --scope regional"
+#                              .\tasks.ps1 run rss --mode optimal --scope regional
+```
+
+After an editable install, each launcher is also exposed as a console command:
+`pystorm-ahd`, `pystorm-sca`, `pystorm-lcs`, `pystorm-jdm`, `pystorm-pot`,
+`pystorm-pst`, `pystorm-rss`, `pystorm-csh`.
+
 ## Quickstart
 
 Run a module from its directory. Where a module has a C++ kernel it builds

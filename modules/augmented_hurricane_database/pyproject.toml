@@ -31,8 +31,11 @@ dev = [
   "pytest>=7.4",      # test-time
 ]
 
+[project.scripts]
+pystorm-ahd = "run_augmented_hurricane_database:main"
+
 [tool.setuptools]
-py-modules = ["api_augmented_hurricane_database"]
+py-modules = ["api_augmented_hurricane_database", "run_augmented_hurricane_database"]
 
 [tool.setuptools.packages.find]
 where    = ["backend/python"]

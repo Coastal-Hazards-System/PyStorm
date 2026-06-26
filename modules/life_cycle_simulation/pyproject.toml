@@ -27,8 +27,11 @@ dev = [
   "pytest>=7.4",
 ]
 
+[project.scripts]
+pystorm-lcs = "run_life_cycle_simulation:main"
+
 [tool.setuptools]
-py-modules = ["api_life_cycle_simulation"]
+py-modules = ["api_life_cycle_simulation", "run_life_cycle_simulation"]
 
 [tool.setuptools.packages.find]
 where    = ["backend/python"]

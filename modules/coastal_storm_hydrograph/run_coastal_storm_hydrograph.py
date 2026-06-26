@@ -180,7 +180,7 @@ def _apply_cli(config: dict) -> dict:
     return config
 
 
-if __name__ == "__main__":
+def main():
     cfg = _apply_cli(CONFIG)
     from importlib import import_module
     try:
@@ -191,3 +191,6 @@ if __name__ == "__main__":
     for spid, r in sorted(result.results.items()):
         print(f"      SP{spid:05d}  {r.n_storms:3d} storms  ground={r.ground_elev:+.2f} m  "
               f"W_eq={r.median_equiv_width:.1f} h  -> {r.unit_path.name}")
+
+if __name__ == "__main__":
+    main()
