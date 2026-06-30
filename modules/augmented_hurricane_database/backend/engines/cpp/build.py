@@ -15,6 +15,12 @@ Usage
     python build.py clean    # remove build artefacts
 
 Requires: pybind11 (pip install pybind11)
+
+Build strategies (tried in order)
+---------------------------------
+  1. setuptools Extension (MSVC on Windows, gcc/clang elsewhere)
+  2. CMake (if available; finds OpenMP automatically when present)
+  3. Direct g++/clang++ invocation
 """
 
 import shutil
@@ -78,6 +84,27 @@ def _build_setuptools() -> None:
     print("[build.py] WARNING: compiled module not found in build output")
 
 
+def _build_cmake() -> None:
+    BUILD_DIR.mkdir(exist_ok=True)
+    cmake_args = ["cmake", str(HERE), f"-DPython3_EXECUTABLE={sys.executable}"]
+    if shutil.which("ninja"):
+        cmake_args += ["-G", "Ninja"]
+    elif sys.platform == "win32" and not shutil.which("cl"):
+        if shutil.which("g++") or shutil.which("gcc"):
+            cmake_args += ["-G", "MinGW Makefiles"]
+
+    print(f"[build.py] Configuring in {BUILD_DIR} ...")
+    subprocess.check_call(cmake_args, cwd=BUILD_DIR)
+
+    print("[build.py] Building ...")
+    subprocess.check_call(
+        ["cmake", "--build", ".", "--config", "Release"], cwd=BUILD_DIR)
+
+    print("[build.py] Installing ...")
+    subprocess.check_call(
+        ["cmake", "--install", ".", "--config", "Release"], cwd=BUILD_DIR)
+
+
 def _build_direct() -> None:
     import pybind11
 
@@ -111,6 +138,10 @@ def _build_direct() -> None:
         ver = f"{sys.version_info.major}{sys.version_info.minor}"
         py_dll = os.path.join(sys.base_prefix, f"python{ver}.dll")
         link += ["-static"]
+    elif sys.platform == "darwin":
+        # Apple clang does not support -static-libgcc / -static-libstdc++;
+        # it links the system libc++ dynamically, which is always present.
+        pass
     else:
         link += ["-static-libgcc", "-static-libstdc++"]
     link += ["-o", str(output), str(obj)]
@@ -127,6 +158,15 @@ def build() -> None:
         return
     except Exception as e:                                       # noqa: BLE001
         print(f"[build.py] setuptools build failed: {e}")
+
+    if shutil.which("cmake"):
+        try:
+            print("[build.py] Trying CMake build ...")
+            _build_cmake()
+            return
+        except Exception as e:                                   # noqa: BLE001
+            print(f"[build.py] CMake build failed: {e}")
+
     print("[build.py] Trying direct compiler build ...")
     _build_direct()
 
